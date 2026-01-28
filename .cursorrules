@@ -1,0 +1,429 @@
+# Planilla Project Cursor Context
+
+- You are an expert in TypeScript, Next.js, React, Prisma, Shadcn UI, and Tailwind.
+
+- Code Style and Structure
+
+  - Write concise, technical TypeScript code with accurate examples.
+  - Use functional and declarative programming patterns; avoid classes.
+  - Prefer iteration and modularization over code duplication.
+  - Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
+  - Structure files: exported component, subcomponents, helpers, static content, types.
+
+- Naming Conventions
+
+  - Use lowercase with dashes for directories (e.g., components/auth-wizard).
+  - Favor named exports for components.
+
+- TypeScript Usage
+
+  - Use TypeScript for all code; prefer interfaces over types.
+  - Avoid enums; use maps instead.
+  - Use functional components with TypeScript interfaces.
+
+- Syntax and Formatting
+
+  - Use the "function" keyword for pure functions.
+  - Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements.
+  - Use declarative JSX.
+
+- UI and Styling
+
+  - Use Shadcn UI, and Tailwind for components and styling.
+  - Implement responsive design with Tailwind CSS;
+
+- Prisma
+
+  - Use Prisma best practices
+
+- Performance Optimization
+
+  - Minimize 'use client', 'useEffect', and 'setState'; favor React Server Components (RSC).
+  - Wrap client components in Suspense with fallback.
+  - Use dynamic loading for non-critical components.
+  - Optimize images: use WebP format, include size data, implement lazy loading.
+
+## Environment Configuration
+
+**CRITICAL: Never use `process.env` directly in application code.**
+
+- All environment variables must be accessed through the centralized configuration system:
+
+  - Server-side: Use `getServerConfig()` from `@/lib/server-config`
+  - Client-side: Use `getClientConfig()` from `@/lib/client-config`
+  - Combined: Use `getConfig()` from `@/lib/server-config` (server-side only)
+
+- Environment variable definitions:
+
+  - Add all new environment variables to `src/types/env.d.ts` ProcessEnv interface
+  - Add server-side variables to the schema in `src/lib/server-config.ts`
+  - Add client-side variables (NEXT*PUBLIC*\*) to the schema in `src/lib/client-config.ts`
+
+- Exception: Direct `process.env` access is only allowed in:
+
+  - Configuration files themselves (`src/lib/server-config.ts`, `src/lib/client-config.ts`)
+  - Build scripts and setup scripts (e.g., `scripts/setup-db.js`)
+  - Configuration files like `next.config.js` (but prefer using centralized config when possible)
+
+- Benefits of centralized configuration:
+
+  - Type safety for environment variables
+  - Runtime validation with Zod schemas
+  - Default values and error handling
+  - Clear separation between client and server variables
+  - Easier testing and mocking
+
+- Key Conventions
+
+  - Use 'nuqs' for URL search parameter state management.
+  - Optimize Web Vitals (LCP, CLS, FID).
+  - Limit 'use client':
+    - Favor server components and Next.js SSR.
+    - Use only for Web API access in small components.
+    - Avoid for data fetching or state management.
+  - Follow Next.js docs for Data Fetching, Rendering, and Routing.
+  - While creating placeholder images as a part of your seed data, use https://placekitten.com/
+  - Place both the /app and /components folders under a /src directory. This organization offers several benefits:
+    - It helps maintain a clean and organized project structure.
+    - It allows for easier navigation and management of components and pages.
+    - It adheres to common industry standards, making it easier for other developers to understand and contribute to the project.
+    - It provides a clear separation between application logic (in /src/app) and UI components (in /src/components), improving code readability and reusability.
+    - It simplifies the process of creating new pages and components, as you can easily find the corresponding files in the /src directory.
+    - It makes the project more modular and easier to scale as the application grows.
+    - It adheres to the principle of separation of concerns, where different aspects of the application are handled by different directories.
+
+## Database Setup
+
+The project uses PostgreSQL as its database system, managed through Prisma ORM.
+
+### Available Setup Scripts
+
+- `npm run db:setup` - Start the Docker database container, create the development database, and run migrations
+- `npm run db:setup:test` - Start the Docker database container, create the test database, and run migrations
+- `npm run db:setup:all` - Set up both development and test databases at once
+
+### Individual Database Commands
+
+- `npm run db:start` - Start the Docker database container
+- `npm run db:create` - Create the development database
+- `npm run db:create:test` - Create the test database
+- `npm run prisma:migrate` - Run migrations on the development database
+- `npm run prisma:migrate:test` - Run migrations on the test database
+- `npm run prisma:studio` - Open Prisma Studio for the development database
+- `npm run prisma:studio:test` - Open Prisma Studio for the test database
+
+## Components Organization
+
+Within the /src/components folder, consider organizing components by type or feature:
+
+By Type: Group components like forms, buttons, layout elements, etc.
+
+By Feature: For larger applications, group components related to specific features or domains
+
+For example:
+
+/src/components
+├── /ui
+│ ├── /Button
+│ ├── /Modal
+│ └── /Card
+├── /forms
+│ ├── /TextField
+│ └── /Select
+└── /layout
+├── /Navbar
+└── /Footer
+
+## tRPC Architecture
+
+Our application uses tRPC for end-to-end type safety between client and server. This eliminates the need for manual API type definitions and client implementation.
+
+### Directory Structure
+
+```
+/src
+├── /app
+│   └── /_trpc
+│       ├── /client.ts      # tRPC client configuration
+│       └── /Provider.tsx   # React context provider for tRPC
+├── /server
+│   └── /api
+│       ├── /root.ts        # Root router that merges all sub-routers
+│       ├── /trpc.ts        # tRPC initialization and context
+│       └── /routers
+│           ├── /companies.ts   # Company-related procedures
+│           └── /departments.ts # Department-related procedures
+└── /types
+    └── /router.ts          # Exported router types
+```
+
+### Implementation Pattern
+
+1. **Router Definition**: Define type-safe procedures in router files
+
+```typescript
+// src/server/api/routers/companies.ts
+export const companiesRouter = createTRPCRouter({
+  getAll: publicProcedure.query(async ({ ctx }) => {
+    return await ctx.db.company.findMany();
+  }),
+
+  create: protectedProcedure
+    .input(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.company.create({
+        data: input,
+      });
+    }),
+});
+```
+
+2. **Client Usage**: Use generated hooks in components
+
+```typescript
+// In a React component
+'use client'
+import { api } from "@/app/_trpc/client";
+
+export function CompaniesList() {
+  const companiesQuery = api.companies.getAll.useQuery();
+
+  if (companiesQuery.isLoading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      {companiesQuery.data.map(company => (
+        <div key={company.id}>{company.name}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+3. **Input Validation**: Use Zod for runtime validation of inputs
+
+4. **Context Access**: Access database and services through tRPC context
+
+5. **Error Handling**: Utilize tRPC's built-in error handling mechanisms
+
+- Private Components: For components used only within specific pages, you can create a \_components folder within the relevant /app subdirectory.
+
+- Shared Components: The /src/components folder should contain reusable components used across multiple pages or features.
+
+- Modular Approach: As your project grows, consider adopting a more modular structure, where each feature or domain has its own folder containing components, hooks, and utilities specific to that feature
+
+## API Communication Standards
+
+### Type Structure
+
+1. **API Types Directory**: All API-related types should be defined in the `src/types/api` directory
+   - Each domain has its own subdirectory (e.g., `holdings`, `employees`, etc.)
+   - Each subdirectory contains `index.ts` files. The pattern of using `requests.ts`, `responses.ts` files is deprecated.
+   - Types should be exported as interfaces
+
+- Complex types should leverage zod for runtime validation
+- For Create functions that return the same object with an ID, createdAt, updatedAt and potentially some additional fields, also leverage zod. Company types are a good example/
+
+2. **Request/Response Naming**:
+
+   - Request types should be suffixed with `Request` (e.g., `CreateHoldingRequest`)
+   - Response types should be suffixed with `Response` (e.g., `GetHoldingsResponse`)
+
+3. **Standard Response Format**:
+   - All API responses should follow the `ApiResponse<T>` format defined in `src/types/api/common.ts`
+   - Success responses: `{ success: true, data: T }`
+   - Error responses: `{ success: false, error: string }`
+
+### API Implementation
+
+1. **Backend (API Routes)**:
+
+   - API routes should be lightweight handlers in `app/api` directories
+   - They should validate inputs and handle errors
+   - Business logic should be delegated to services in `lib/services`
+   - All responses should use the standard response format
+
+2. **Frontend (API Clients)**:
+   - Client-side API clients should be defined in `lib/api/clients`
+   - They should use the type definitions from `src/types/api`
+   - API endpoints should be defined in `lib/api/endpoints.ts`
+
+### Development Workflow
+
+When implementing new API functionality:
+
+1. Define the types first in the appropriate `src/types/api` directory
+2. Implement the API route in `app/api`
+3. Implement the service logic in `lib/services`
+4. Create the client-side API client in `lib/api/clients`
+
+### Project Architecture
+
+- **React Components** → **API Clients** → **HTTP Requests** → **API Routes**
+- **API Routes** → **Server Services** → **Database** → **Server Services** → **API Routes** → **React Components**
+
+### Directories to Reference
+
+- `src/types/api/` - API types
+- `src/app/api/` - API routes
+- `src/lib/api/clients/` - Client-side API clients
+- `src/lib/services/` - Server-side services
+
+## tRPC Router Security Standards
+
+- All tRPC router endpoints must use `protectedProcedure` instead of `procedure` to ensure authentication.
+- Each router endpoint that accepts a resource ID (employeeId, companyId, etc.) must include appropriate authorization checks:
+
+  - For employee-related endpoints:
+    ```typescript
+    // Verify employee access before proceeding
+    await authorizationService.verifyEmployeeAccess(input.employeeId, ctx.organizationId);
+    ```
+  - For company-related endpoints:
+    ```typescript
+    // Verify company access before proceeding
+    await authorizationService.verifyCompanyAccess(input.companyId, ctx.organizationId);
+    ```
+
+- Authorization checks should be placed at the beginning of the procedure handler.
+
+- Prefer allowing authorization errors to naturally propagate rather than using try/catch blocks.
+
+- Consider higher-level access checks for more complex resources (e.g., ensuring a deduction ID belongs to a company the user has access to).
+
+### Implementation Example
+
+```typescript
+// Good practice
+export const employeeRouter = router({
+  getWorkInfo: protectedProcedure
+    .input(
+      z.object({
+        employeeId: z.string().uuid('Invalid employee ID'),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      // Authorization check first
+      await authorizationService.verifyEmployeeAccess(input.employeeId, ctx.organizationId);
+
+      // Then business logic
+      const workInfo = await employeeService.getWorkInfo(input.employeeId);
+      return { workInfo };
+    }),
+});
+```
+
+## Testing Strategy
+
+Our project uses Vitest for testing with a database truncation approach:
+
+1. **Table Truncation Between Tests**: Database is cleaned by truncating all tables between each test
+2. **Dependency-Aware Cleaning**: Tables are truncated in the correct order based on their foreign key relationships
+
+### Test Directory Structure
+
+```
+src/test/
+├── setup.ts                      # Global test setup and mocks
+├── factories/                    # Test data factories
+│   └── company.factory.ts        # Company factory
+├── helpers/                      # Test helper functions
+│   ├── db-cleaner.ts             # Database truncation helpers
+│   └── prisma.helper.ts          # Prisma utility functions
+├── services/                     # Service tests
+│   └── company.service.test.ts
+├── utils/                        # Utility function tests
+│   └── storage.test.ts
+└── integration/                  # Cross-service integration tests
+    └── employee-management.test.ts
+```
+
+### Testing Guidelines
+
+1. **Test Organization**
+
+   - Organize tests by domain (services, utils, etc.)
+   - Keep test files close to the implementation they test
+   - Use clear naming conventions: `[filename].test.ts` or `[filename].spec.ts`
+
+2. **Database Cleaning**
+
+   - Tables are automatically truncated before each test
+   - No mocking of database interactions
+   - Database cleaning happens in the correct order to respect foreign key constraints
+   - All services interact directly with the database
+   - Test with real database operations
+   - Follow AAA pattern: Arrange, Act, Assert
+
+3. **External Service Mocking**
+
+   - Only mock external APIs or third-party services (not database)
+   - Use Vitest mocking capabilities for external services
+   - Mock environment variables in `setup.ts` using `vi.stubEnv`
+
+4. **Test Data Management**
+   - Use factories to create consistent test data
+   - No need to worry about cleanup - tables are truncated before each test
+   - To reduce log verbosity, use the PRISMA_QUIET_LOGS environment variable
+
+### Test Example Pattern
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { prisma } from '@/lib/prisma';
+import { someService } from '@/lib/services/some/service';
+
+describe('SomeService', () => {
+  it('should perform an operation correctly', async () => {
+    // Arrange: Create test data
+    // (Database is already clean thanks to beforeEach hook)
+    const testEntity = await prisma.entityName.create({
+      data: {
+        name: 'Test Entity',
+        // other properties...
+      },
+    });
+
+    // Act: Call the service method
+    const result = await someService.performOperation(testEntity.id);
+
+    // Assert: Verify the result
+    expect(result).toEqual(expectedResult);
+
+    // Check database state
+    const updatedEntity = await prisma.entityName.findUnique({
+      where: { id: testEntity.id },
+    });
+    expect(updatedEntity.status).toBe('completed');
+
+    // No cleanup needed - database will be truncated before next test
+  });
+});
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+npm run test
+
+# Run in watch mode (for development)
+npm run test:watch
+
+# Run tests with reduced logging
+npm run test:quiet
+
+# Generate coverage report
+npm run test:coverage
+
+# Run only unit tests
+npm run test:unit
+
+# Run only integration tests
+npm run test:integration
+```

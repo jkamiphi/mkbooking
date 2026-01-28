@@ -1,0 +1,31 @@
+services:
+  db:
+    container_name: postgres-mkbooking
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mkbooking_core_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mkbooking-network
+
+  adminer:
+    container_name: adminer-mkbooking
+    image: adminer
+    restart: always
+    ports:
+      - '8080:8080'
+    networks:
+      - mkbooking-network
+
+networks:
+  mkbooking-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
