@@ -9,6 +9,10 @@ datasource db {
   provider = "postgresql"
 }
 
+// ============================================================================
+// BETTER AUTH MODELS
+// ============================================================================
+
 model user {
   id            String   @id
   name          String
@@ -20,6 +24,7 @@ model user {
 
   sessions session[]
   accounts account[]
+  profile  UserProfile?
 
   @@map("user")
 }
@@ -68,4 +73,345 @@ model verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+// ============================================================================
+// USER PROFILE EXTENSION
+// ============================================================================
+
+model UserProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Personal Information
+  firstName String?
+  lastName  String?
+  phone     String?
+  locale    String  @default("es-PA")
+  timezone  String  @default("America/Panama")
+
+  // Preferences
+  emailNotifications    Boolean @default(true)
+  whatsappNotifications Boolean @default(false)
+  smsNotifications      Boolean @default(false)
+
+  // Status
+  isActive   Boolean @default(true)
+  isVerified Boolean @default(false)
+
+  // Audit Fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  // Relations
+  user                 user                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationRoles    OrganizationMember[]
+  createdOrganizations Organization[]       @relation("OrganizationCreator")
+  auditLogs            AuditLog[]           @relation("AuditLogActor")
+
+  @@index([userId])
+  @@index([isActive])
+  @@map("user_profile")
+}
+
+// ============================================================================
+// ORGANIZATION MODULE
+// ============================================================================
+
+enum OrganizationType {
+  ADVERTISER
+  AGENCY
+  MEDIA_OWNER
+  PLATFORM_ADMIN
+
+  @@map("organization_type")
+}
+
+enum LegalEntityType {
+  NATURAL_PERSON
+  LEGAL_ENTITY
+
+  @@map("legal_entity_type")
+}
+
+model Organization {
+  id String @id @default(cuid())
+
+  // Basic Information
+  name             String
+  legalName        String?
+  tradeName        String?
+  organizationType OrganizationType
+  legalEntityType  LegalEntityType
+
+  // Tax/Legal Identifiers
+  taxId          String? @unique
+  dvCode         String?
+  cedula         String? @unique
+  passportNumber String?
+
+  // Contact Information
+  email    String?
+  phone    String?
+  whatsapp String?
+  website  String?
+
+  // Address
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  province     String?
+  country      String  @default("PA")
+  postalCode   String?
+
+  // Business Details
+  description String? @db.Text
+  logoUrl     String?
+  industry    String?
+
+  // Status
+  isActive   Boolean @default(true)
+  isVerified Boolean @default(false)
+
+  // Audit Fields
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedBy   String?
+
+  // Relations
+  creator   UserProfile?           @relation("OrganizationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  members   OrganizationMember[]
+  contacts  OrganizationContact[]
+  documents OrganizationDocument[]
+
+  @@index([organizationType])
+  @@index([isActive])
+  @@index([taxId])
+  @@index([cedula])
+  @@index([createdById])
+  @@map("organization")
+}
+
+// ============================================================================
+// TEAM MEMBERSHIP MODULE
+// ============================================================================
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  SALES
+  OPERATIONS
+  FINANCE
+  VIEWER
+  CLIENT_VIEWER
+
+  @@map("organization_role")
+}
+
+model OrganizationMember {
+  id String @id @default(cuid())
+
+  organizationId String
+  userProfileId  String
+
+  // Role and Permissions
+  role        OrganizationRole
+  permissions Json?
+
+  // Status
+  isActive   Boolean   @default(true)
+  invitedAt  DateTime  @default(now())
+  acceptedAt DateTime?
+  expiresAt  DateTime?
+
+  // Audit Fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  invitedBy String?
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userProfile  UserProfile  @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userProfileId])
+  @@index([organizationId])
+  @@index([userProfileId])
+  @@index([role])
+  @@index([isActive])
+  @@map("organization_member")
+}
+
+// ============================================================================
+// ORGANIZATION CONTACTS MODULE
+// ============================================================================
+
+enum ContactRole {
+  PRIMARY
+  BILLING
+  OPERATIONS
+  LEGAL
+  TECHNICAL
+  EMERGENCY
+  OTHER
+
+  @@map("contact_role")
+}
+
+model OrganizationContact {
+  id String @id @default(cuid())
+
+  organizationId String
+
+  // Contact Information
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  whatsapp  String?
+
+  // Role
+  contactRole ContactRole
+  title       String?
+  department  String?
+
+  // Preferences
+  isPrimary            Boolean @default(false)
+  receiveNotifications Boolean @default(true)
+
+  // Notes
+  notes String? @db.Text
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Audit Fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([contactRole])
+  @@index([isPrimary])
+  @@map("organization_contact")
+}
+
+// ============================================================================
+// DOCUMENT MANAGEMENT MODULE
+// ============================================================================
+
+enum DocumentType {
+  TAX_CERTIFICATE
+  LEGAL_REGISTRATION
+  ID_DOCUMENT
+  POWER_OF_ATTORNEY
+  TAX_EXEMPTION
+  BANK_REFERENCE
+  OTHER
+
+  @@map("document_type")
+}
+
+model OrganizationDocument {
+  id String @id @default(cuid())
+
+  organizationId String
+
+  // Document Information
+  documentType DocumentType
+  name         String
+  description  String?      @db.Text
+
+  // File Storage
+  fileUrl  String
+  fileName String
+  fileSize Int
+  mimeType String
+
+  // Metadata
+  documentNumber String?
+  issueDate      DateTime?
+  expiryDate     DateTime?
+
+  // Status
+  isVerified Boolean @default(false)
+  isExpired  Boolean @default(false)
+
+  // Audit Fields
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  uploadedBy String?
+  verifiedBy String?
+  verifiedAt DateTime?
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([documentType])
+  @@index([expiryDate])
+  @@index([isVerified])
+  @@map("organization_document")
+}
+
+// ============================================================================
+// AUDIT LOG MODULE
+// ============================================================================
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  INVITE_USER
+  REMOVE_USER
+  CHANGE_ROLE
+  VERIFY_DOCUMENT
+  APPROVE
+  REJECT
+  CANCEL
+
+  @@map("audit_action")
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  // Actor Information
+  actorId    String?
+  actorEmail String?
+  actorName  String?
+
+  // Action Details
+  action     AuditAction
+  entityType String
+  entityId   String
+
+  // Context
+  description String? @db.Text
+  changes     Json?
+  metadata    Json?
+
+  // Request Information
+  ipAddress String?
+  userAgent String?
+
+  // Timestamp
+  createdAt DateTime @default(now())
+
+  // Relations
+  actor UserProfile? @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_log")
 }
