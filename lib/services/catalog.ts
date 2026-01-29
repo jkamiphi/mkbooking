@@ -231,6 +231,7 @@ export async function listCatalogFaces(options?: {
   isPublished?: boolean;
   structureTypeId?: string;
   zoneId?: string;
+  organizationId?: string;
   skip?: number;
   take?: number;
 }) {
@@ -239,6 +240,7 @@ export async function listCatalogFaces(options?: {
     isPublished,
     structureTypeId,
     zoneId,
+    organizationId,
     skip = 0,
     take = 50,
   } = options ?? {};
@@ -322,7 +324,9 @@ export async function listCatalogFaces(options?: {
             startDate: { lte: now },
             AND: [
               { OR: [{ endDate: null }, { endDate: { gte: now } }] },
-              { organizationId: null },
+              organizationId
+                ? { OR: [{ organizationId }, { organizationId: null }] }
+                : { organizationId: null },
               { OR: ruleOr },
             ],
           },
@@ -335,6 +339,7 @@ export async function listCatalogFaces(options?: {
       faceId: face.id,
       zoneId: face.asset.zoneId,
       structureTypeId: face.asset.structureTypeId,
+      organizationId: organizationId ?? undefined,
     });
     return {
       ...face,
