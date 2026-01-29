@@ -1,12 +1,12 @@
 import { initTRPC, TRPCError } from "@trpc/server";
+import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import superjson from "superjson";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 
-export async function createContext() {
+export async function createContext(opts: FetchCreateContextFnOptions) {
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: opts.req.headers,
   });
 
   return {

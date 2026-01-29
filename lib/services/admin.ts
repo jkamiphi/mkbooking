@@ -1,14 +1,16 @@
 import { db } from "@/lib/db";
-import { SystemRole, Prisma } from "@prisma/client";
+import type { SystemRole, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 // ============================================================================
 // Schemas
 // ============================================================================
 
+const systemRoleSchema = z.enum(["SUPERADMIN", "STAFF", "CUSTOMER"]);
+
 export const updateSystemRoleSchema = z.object({
   userId: z.string(),
-  systemRole: z.nativeEnum(SystemRole),
+  systemRole: systemRoleSchema,
 });
 
 export const createStaffUserSchema = z.object({
@@ -21,7 +23,7 @@ export const createStaffUserSchema = z.object({
 });
 
 export const adminListUsersSchema = z.object({
-  systemRole: z.nativeEnum(SystemRole).optional(),
+  systemRole: systemRoleSchema.optional(),
   isActive: z.boolean().optional(),
   search: z.string().optional(),
   skip: z.number().min(0).default(0),

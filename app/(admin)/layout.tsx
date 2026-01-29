@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { AdminSidebar } from "./_components/admin-sidebar";
 import { AdminHeader } from "./_components/admin-header";
-import { SystemRole } from "@prisma/client";
+import type { SystemRole } from "@prisma/client";
 
 export default async function AdminLayout({
   children,

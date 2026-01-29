@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { SystemRole, OrganizationType, LegalEntityType } from "@prisma/client";
+import type { SystemRole, OrganizationType, LegalEntityType } from "@prisma/client";
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();

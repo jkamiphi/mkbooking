@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SystemRole } from "@prisma/client";
+import type { SystemRole } from "@prisma/client";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

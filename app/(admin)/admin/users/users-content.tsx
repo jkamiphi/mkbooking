@@ -6,7 +6,7 @@ import { trpc } from "@/lib/trpc/client";
 import { UserListTable } from "./_components/user-list-table";
 import { UserFilters } from "./_components/user-filters";
 import { UserStats } from "./_components/user-stats";
-import { SystemRole } from "@prisma/client";
+import type { SystemRole } from "@prisma/client";
 
 export function UsersContent() {
   const searchParams = useSearchParams();

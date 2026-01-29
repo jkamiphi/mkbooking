@@ -16,7 +16,7 @@ import {
   UserCheck,
   UserX,
 } from "lucide-react";
-import { SystemRole } from "@prisma/client";
+import type { SystemRole } from "@prisma/client";
 
 interface UserDetailContentProps {
   userId: string;

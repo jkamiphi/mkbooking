@@ -11,7 +11,7 @@ import {
   Settings,
   Shield,
 } from "lucide-react";
-import { SystemRole } from "@prisma/client";
+import type { SystemRole } from "@prisma/client";
 
 interface AdminSidebarProps {
   systemRole: SystemRole;

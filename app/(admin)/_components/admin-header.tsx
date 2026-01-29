@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { SystemRole } from "@prisma/client";
+import type { SystemRole } from "@prisma/client";
 
 interface AdminHeaderProps {
   user: {

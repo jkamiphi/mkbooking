@@ -7,6 +7,7 @@ import {
   adminSearchUsers,
   updateSystemRole,
   adminListUsersSchema,
+  updateSystemRoleSchema,
 } from "@/lib/services/admin";
 import {
   verifyUserProfile,
@@ -14,7 +15,6 @@ import {
   reactivateUserProfile,
 } from "@/lib/services/user-profile";
 import { TRPCError } from "@trpc/server";
-import { SystemRole } from "@prisma/client";
 
 export const adminRouter = router({
   // Get dashboard stats
@@ -57,12 +57,7 @@ export const adminRouter = router({
 
   // Update user's system role (superadmin only)
   updateSystemRole: superAdminProcedure
-    .input(
-      z.object({
-        userId: z.string(),
-        systemRole: z.nativeEnum(SystemRole),
-      })
-    )
+    .input(updateSystemRoleSchema)
     .mutation(async ({ ctx, input }) => {
       // Prevent self-demotion
       if (input.userId === ctx.user.id && input.systemRole !== "SUPERADMIN") {
