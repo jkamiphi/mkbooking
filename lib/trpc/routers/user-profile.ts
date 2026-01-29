@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure, publicProcedure } from "../init";
+import { router, protectedProcedure } from "../init";
 import {
   getUserProfileByUserId,
   getOrCreateUserProfile,
