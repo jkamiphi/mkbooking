@@ -122,6 +122,7 @@ model UserProfile {
   organizationRoles    OrganizationMember[]
   createdOrganizations Organization[]       @relation("OrganizationCreator")
   auditLogs            AuditLog[]           @relation("AuditLogActor")
+  catalogHolds         CatalogHold[]        @relation("CatalogHoldCreator")
 
   @@index([userId])
   @@index([isActive])
@@ -199,6 +200,8 @@ model Organization {
   members   OrganizationMember[]
   contacts  OrganizationContact[]
   documents OrganizationDocument[]
+  catalogPriceRules CatalogPriceRule[]
+  catalogHolds      CatalogHold[]
 
   @@index([organizationType])
   @@index([isActive])
@@ -302,6 +305,7 @@ model Zone {
 
   province Province @relation(fields: [provinceId], references: [id], onDelete: Cascade)
   assets   Asset[]
+  catalogPriceRules CatalogPriceRule[]
 
   @@unique([provinceId, name])
   @@index([provinceId])
@@ -313,6 +317,7 @@ model StructureType {
   name String @unique
 
   assets Asset[]
+  catalogPriceRules CatalogPriceRule[]
 
   @@map("structure_type")
 }
@@ -407,6 +412,7 @@ model AssetFace {
   permits            Permit[]
   restrictionTags    AssetFaceRestriction[]
   maintenanceWindows MaintenanceWindow[]
+  catalogFace        CatalogFace?
 
   @@unique([assetId, code])
   @@index([assetId])
@@ -540,6 +546,119 @@ model MaintenanceWindow {
   @@index([faceId])
   @@index([startDate])
   @@map("maintenance_window")
+}
+
+// ============================================================================
+// CATALOG MODULE (Face-based)
+// ============================================================================
+
+enum CatalogPromoType {
+  PERCENT @map("percent")
+  FIXED   @map("fixed")
+
+  @@map("catalog_promo_type")
+}
+
+enum CatalogHoldStatus {
+  ACTIVE    @map("active")
+  EXPIRED   @map("expired")
+  RELEASED  @map("released")
+  CONVERTED @map("converted")
+
+  @@map("catalog_hold_status")
+}
+
+model CatalogFace {
+  id String @id @default(cuid())
+
+  faceId String @unique
+  title  String?
+  summary String?
+  highlight String?
+  primaryImageUrl String?
+  isPublished Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  face AssetFace @relation(fields: [faceId], references: [id], onDelete: Cascade)
+  priceRules CatalogPriceRule[]
+  holds CatalogHold[]
+
+  @@index([isPublished])
+  @@map("catalog_face")
+}
+
+model CatalogPriceRule {
+  id String @id @default(cuid())
+
+  faceId          String?
+  structureTypeId String?
+  zoneId          String?
+  organizationId  String?
+
+  priceDaily Decimal @db.Decimal(12, 2)
+  currency String @default("USD")
+  startDate DateTime @default(now())
+  endDate DateTime?
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  face          CatalogFace?   @relation(fields: [faceId], references: [faceId], onDelete: Cascade)
+  structureType StructureType? @relation(fields: [structureTypeId], references: [id], onDelete: Restrict)
+  zone          Zone?          @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  organization  Organization?  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([faceId])
+  @@index([structureTypeId])
+  @@index([zoneId])
+  @@index([organizationId])
+  @@index([isActive])
+  @@index([startDate])
+  @@map("catalog_price_rule")
+}
+
+model CatalogPromo {
+  id String @id @default(cuid())
+
+  name String
+  type CatalogPromoType
+  value Decimal @db.Decimal(12, 2)
+  startDate DateTime @default(now())
+  endDate DateTime?
+  isActive Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([isActive])
+  @@index([startDate])
+  @@map("catalog_promo")
+}
+
+model CatalogHold {
+  id String @id @default(cuid())
+
+  faceId String
+  organizationId String?
+  createdById String?
+
+  status CatalogHoldStatus @default(ACTIVE)
+  expiresAt DateTime
+  releasedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  face CatalogFace @relation(fields: [faceId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdBy UserProfile? @relation("CatalogHoldCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([faceId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("catalog_hold")
 }
 
 // ============================================================================

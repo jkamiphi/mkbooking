@@ -8,6 +8,7 @@ import {
   Users,
   Building2,
   Boxes,
+  BookOpen,
   FileText,
   Settings,
   Shield,
@@ -41,6 +42,12 @@ const navigation = [
     name: "Inventory",
     href: "/admin/inventory",
     icon: Boxes,
+    roles: ["SUPERADMIN", "STAFF"],
+  },
+  {
+    name: "Catalog",
+    href: "/admin/catalog",
+    icon: BookOpen,
     roles: ["SUPERADMIN", "STAFF"],
   },
   {
