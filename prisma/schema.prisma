@@ -79,9 +79,21 @@ model verification {
 // USER PROFILE EXTENSION
 // ============================================================================
 
+// System-level roles for platform access control
+enum SystemRole {
+  SUPERADMIN // Full platform access
+  STAFF      // Platform employee with limited admin access
+  CUSTOMER   // Regular users (advertisers, agencies) - default
+
+  @@map("system_role")
+}
+
 model UserProfile {
   id     String @id @default(cuid())
   userId String @unique
+
+  // System Role (platform-level access)
+  systemRole SystemRole @default(CUSTOMER)
 
   // Personal Information
   firstName String?
@@ -113,6 +125,7 @@ model UserProfile {
 
   @@index([userId])
   @@index([isActive])
+  @@index([systemRole])
   @@map("user_profile")
 }
 

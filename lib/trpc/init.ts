@@ -42,4 +42,60 @@ const isAuthed = t.middleware(({ ctx, next }) => {
   });
 });
 
+// Middleware to check if user is admin (SUPERADMIN or STAFF)
+const isAdmin = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.session || !ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const profile = await ctx.db.userProfile.findUnique({
+    where: { userId: ctx.user.id },
+    select: { systemRole: true },
+  });
+
+  if (!profile || !["SUPERADMIN", "STAFF"].includes(profile.systemRole)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Admin access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      session: ctx.session,
+      user: ctx.user,
+      systemRole: profile.systemRole,
+    },
+  });
+});
+
+// Middleware to check if user is superadmin only
+const isSuperAdmin = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.session || !ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const profile = await ctx.db.userProfile.findUnique({
+    where: { userId: ctx.user.id },
+    select: { systemRole: true },
+  });
+
+  if (!profile || profile.systemRole !== "SUPERADMIN") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Superadmin access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      session: ctx.session,
+      user: ctx.user,
+      systemRole: profile.systemRole,
+    },
+  });
+});
+
 export const protectedProcedure = t.procedure.use(isAuthed);
+export const adminProcedure = t.procedure.use(isAdmin);
+export const superAdminProcedure = t.procedure.use(isSuperAdmin);
