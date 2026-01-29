@@ -258,6 +258,291 @@ model OrganizationMember {
 }
 
 // ============================================================================
+// INVENTORY MODULE
+// ============================================================================
+
+enum AssetStatus {
+  ACTIVE      @map("active")
+  INACTIVE    @map("inactive")
+  MAINTENANCE @map("maintenance")
+  RETIRED     @map("retired")
+
+  @@map("asset_status")
+}
+
+enum AssetFaceStatus {
+  ACTIVE      @map("active")
+  INACTIVE    @map("inactive")
+  MAINTENANCE @map("maintenance")
+  RETIRED     @map("retired")
+
+  @@map("asset_face_status")
+}
+
+enum AssetFaceFacing {
+  TRAFFIC          @map("traffic")
+  OPPOSITE_TRAFFIC @map("opposite_traffic")
+
+  @@map("asset_face_facing")
+}
+
+model Province {
+  id   String @id @default(cuid())
+  name String @unique
+
+  zones Zone[]
+
+  @@map("province")
+}
+
+model Zone {
+  id         String @id @default(cuid())
+  name       String
+  provinceId String
+
+  province Province @relation(fields: [provinceId], references: [id], onDelete: Cascade)
+  assets   Asset[]
+
+  @@unique([provinceId, name])
+  @@index([provinceId])
+  @@map("zone")
+}
+
+model StructureType {
+  id   String @id @default(cuid())
+  name String @unique
+
+  assets Asset[]
+
+  @@map("structure_type")
+}
+
+model RoadType {
+  id   String @id @default(cuid())
+  name String @unique
+
+  assets Asset[]
+
+  @@map("road_type")
+}
+
+model Asset {
+  id String @id @default(cuid())
+
+  code           String @unique
+  structureTypeId String
+  zoneId         String
+  roadTypeId     String?
+
+  address  String
+  landmark String?
+
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
+
+  illuminated     Boolean @default(false)
+  digital         Boolean @default(false)
+  powered         Boolean @default(false)
+  hasPrintService Boolean @default(false)
+
+  status AssetStatus @default(ACTIVE)
+
+  notes String? @db.Text
+
+  installedDate DateTime? @db.Date
+  retiredDate   DateTime? @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  structureType StructureType @relation(fields: [structureTypeId], references: [id], onDelete: Restrict)
+  zone          Zone          @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  roadType      RoadType?     @relation(fields: [roadTypeId], references: [id], onDelete: Restrict)
+
+  faces               AssetFace[]
+  images              AssetImage[]
+  permits             Permit[]
+  maintenanceWindows  MaintenanceWindow[]
+
+  @@index([structureTypeId])
+  @@index([zoneId])
+  @@index([roadTypeId])
+  @@index([status])
+  @@map("asset")
+}
+
+model FacePosition {
+  id   String @id @default(cuid())
+  name String @unique
+
+  faces AssetFace[]
+
+  @@map("face_position")
+}
+
+model AssetFace {
+  id String @id @default(cuid())
+
+  assetId    String
+  code       String
+  positionId String?
+
+  width  Decimal @db.Decimal(6, 2)
+  height Decimal @db.Decimal(6, 2)
+
+  facing AssetFaceFacing @default(TRAFFIC)
+
+  visibilityNotes String? @db.Text
+
+  status AssetFaceStatus @default(ACTIVE)
+
+  restrictions String? @db.Text
+  notes        String? @db.Text
+
+  asset    Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  position FacePosition? @relation(fields: [positionId], references: [id], onDelete: Restrict)
+
+  images             AssetFaceImage[]
+  productionSpec     ProductionSpec?
+  permits            Permit[]
+  restrictionTags    AssetFaceRestriction[]
+  maintenanceWindows MaintenanceWindow[]
+
+  @@unique([assetId, code])
+  @@index([assetId])
+  @@index([positionId])
+  @@index([status])
+  @@map("asset_face")
+}
+
+model AssetImage {
+  id        String  @id @default(cuid())
+  assetId   String
+  image     String
+  caption   String?
+  isPrimary Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([isPrimary])
+  @@map("asset_image")
+}
+
+model AssetFaceImage {
+  id        String  @id @default(cuid())
+  faceId    String
+  image     String
+  caption   String?
+  isPrimary Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  face AssetFace @relation(fields: [faceId], references: [id], onDelete: Cascade)
+
+  @@index([faceId])
+  @@index([isPrimary])
+  @@map("asset_face_image")
+}
+
+model MountingType {
+  id   String @id @default(cuid())
+  name String @unique
+
+  productionSpecs ProductionSpec[]
+
+  @@map("mounting_type")
+}
+
+model ProductionSpec {
+  id String @id @default(cuid())
+
+  faceId         String @unique
+  mountingTypeId String?
+
+  material       String?
+  bleedCm        Decimal? @db.Decimal(5, 2)
+  safeMarginCm   Decimal? @db.Decimal(5, 2)
+
+  dpiRecommended Int?
+  fileFormat     String?
+
+  installNotes   String? @db.Text
+  uninstallNotes String? @db.Text
+
+  face         AssetFace    @relation(fields: [faceId], references: [id], onDelete: Cascade)
+  mountingType MountingType? @relation(fields: [mountingTypeId], references: [id], onDelete: Restrict)
+
+  @@index([mountingTypeId])
+  @@map("production_spec")
+}
+
+model Permit {
+  id String @id @default(cuid())
+
+  assetId String
+  faceId  String?
+
+  permitNumber String?
+  authority    String?
+  issuedDate   DateTime? @db.Date
+  expiresDate  DateTime? @db.Date
+  document     String?
+  notes        String? @db.Text
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  face  AssetFace? @relation(fields: [faceId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([faceId])
+  @@map("permit")
+}
+
+model RestrictionTag {
+  id    String @id @default(cuid())
+  code  String @unique
+  label String
+
+  faceRestrictions AssetFaceRestriction[]
+
+  @@map("restriction_tag")
+}
+
+model AssetFaceRestriction {
+  id     String @id @default(cuid())
+  faceId String
+  tagId  String
+
+  face AssetFace     @relation(fields: [faceId], references: [id], onDelete: Cascade)
+  tag  RestrictionTag @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  @@unique([faceId, tagId])
+  @@index([faceId])
+  @@index([tagId])
+  @@map("asset_face_restriction")
+}
+
+model MaintenanceWindow {
+  id String @id @default(cuid())
+
+  assetId String
+  faceId  String?
+
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String
+  notes     String? @db.Text
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  face  AssetFace? @relation(fields: [faceId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([faceId])
+  @@index([startDate])
+  @@map("maintenance_window")
+}
+
+// ============================================================================
 // ORGANIZATION CONTACTS MODULE
 // ============================================================================
 

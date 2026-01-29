@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Users,
   Building2,
+  Boxes,
   FileText,
   Settings,
   Shield,
@@ -34,6 +35,12 @@ const navigation = [
     name: "Organizations",
     href: "/admin/organizations",
     icon: Building2,
+    roles: ["SUPERADMIN", "STAFF"],
+  },
+  {
+    name: "Inventory",
+    href: "/admin/inventory",
+    icon: Boxes,
     roles: ["SUPERADMIN", "STAFF"],
   },
   {
