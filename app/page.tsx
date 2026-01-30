@@ -119,60 +119,58 @@ export default async function Home({
       />
 
       <header className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-6 pb-6 pt-6">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30">
-              <Sparkles className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">
-                MK Booking
-              </p>
-              <p className="text-lg font-semibold tracking-tight">
-                Catálogo OOH
-              </p>
-            </div>
-          </Link>
+        <Link href="/" className="flex items-center gap-2">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">
+              MK Booking
+            </p>
+            <p className="text-lg font-semibold tracking-tight">Catálogo OOH</p>
+          </div>
+        </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-medium text-neutral-600 lg:flex">
-            <span className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-neutral-800 shadow-sm">
-              <CircleDollarSign className="h-4 w-4 text-[#fcb814]" />
-              Precio diario
-            </span>
-            <span className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-neutral-500" />
-              Inventario global
-            </span>
-            <span className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-neutral-500" />
-              Caras seleccionadas
-            </span>
-          </nav>
+        <nav className="hidden items-center gap-6 text-sm font-medium text-neutral-600 lg:flex">
+          <span className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-neutral-800 shadow-sm">
+            <CircleDollarSign className="h-4 w-4 text-[#fcb814]" />
+            Precio diario
+          </span>
+          <span className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-neutral-500" />
+            Inventario global
+          </span>
+          <span className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-neutral-500" />
+            Caras seleccionadas
+          </span>
+        </nav>
 
-          <div className="flex items-center gap-3 text-sm">
-            {session ? (
+        <div className="flex items-center gap-3 text-sm">
+          {session ? (
+            <Link
+              href="/profile"
+              className="rounded-full border border-neutral-200 bg-white/80 px-4 py-2 font-medium text-neutral-900 shadow-sm hover:bg-white"
+            >
+              Mi Panel
+            </Link>
+          ) : (
+            <>
               <Link
-                href="/profile"
+                href="/login"
                 className="rounded-full border border-neutral-200 bg-white/80 px-4 py-2 font-medium text-neutral-900 shadow-sm hover:bg-white"
               >
-                Mi Panel
+                Iniciar sesión
               </Link>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="rounded-full border border-neutral-200 bg-white/80 px-4 py-2 font-medium text-neutral-900 shadow-sm hover:bg-white"
-                >
-                  Iniciar sesión
-                </Link>
-                <Link
-                  href="/register"
-                  className="rounded-full bg-[#0359A8] px-4 py-2 font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
-                >
-                  Crear cuenta
-                </Link>
-              </>
-            )}
-          </div>
+              <Link
+                href="/register"
+                className="rounded-full bg-[#0359A8] px-4 py-2 font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
+              >
+                Crear cuenta
+              </Link>
+            </>
+          )}
+        </div>
       </header>
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-12 pt-4">
@@ -213,7 +211,15 @@ export default async function Home({
             style={{ animation: "rise 0.7s ease 0.1s forwards" }}
           >
             <Sparkles className="h-4 w-4" />
-            Promoción activa: {catalog.promo.name}. Se aplica automáticamente al pagar.
+            Promoción activa:{" "}
+            <span className="font-semibold">{catalog.promo.name}</span>
+            <span className="font-medium">
+              {catalog.promo.type === "PERCENT"
+                ? `${catalog.promo.value}% de descuento`
+                : catalog.promo.type === "FIXED"
+                  ? `${catalog.promo.value} de descuento`
+                  : `${catalog.promo.value}`}
+            </span>
           </div>
         ) : null}
       </section>
@@ -367,8 +373,8 @@ export default async function Home({
         <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {catalog.faces.length === 0 ? (
             <div className="col-span-full rounded-3xl border border-dashed border-neutral-300 bg-white p-10 text-center text-sm text-neutral-500">
-              Aún no hay caras publicadas. Agrega inventario y publica caras desde
-              el catálogo de administración.
+              Aún no hay caras publicadas. Agrega inventario y publica caras
+              desde el catálogo de administración.
             </div>
           ) : (
             catalog.faces.map((face, index) => {
