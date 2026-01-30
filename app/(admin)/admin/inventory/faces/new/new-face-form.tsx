@@ -15,7 +15,7 @@ type FaceFacing = (typeof facingOptions)[number];
 export function NewFaceForm() {
   const router = useRouter();
   const utils = trpc.useUtils();
-  const assetsQuery = trpc.inventory.assets.list.useQuery({ take: 200 });
+  const assetsQuery = trpc.inventory.assets.list.useQuery({ take: 100 });
   const positionsQuery = trpc.inventory.facePositions.list.useQuery();
 
   const [form, setForm] = useState({

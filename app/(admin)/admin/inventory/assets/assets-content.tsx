@@ -21,7 +21,7 @@ export function AssetsContent() {
     status: status ? (status as (typeof statusOptions)[number]) : undefined,
     structureTypeId: structureTypeId || undefined,
     zoneId: zoneId || undefined,
-    take: 200,
+    take: 100,
   });
 
   return (

@@ -11,11 +11,11 @@ export function FacesContent() {
   const [assetId, setAssetId] = useState("");
   const [status, setStatus] = useState<string>("");
 
-  const assetsQuery = trpc.inventory.assets.list.useQuery({ take: 200 });
+  const assetsQuery = trpc.inventory.assets.list.useQuery({ take: 100 });
   const facesQuery = trpc.inventory.faces.list.useQuery({
     assetId: assetId || undefined,
     status: status ? (status as (typeof statusOptions)[number]) : undefined,
-    take: 200,
+    take: 100,
   });
 
   return (
@@ -89,7 +89,7 @@ export function FacesContent() {
                       {face.position?.name ?? "-"}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                      {face.width} x {face.height}
+                      {String(face.width)} x {String(face.height)}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
                       {face.facing}

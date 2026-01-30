@@ -21,10 +21,25 @@ export const createProvinceSchema = z.object({
 export const createZoneSchema = z.object({
   name: z.string().min(1),
   provinceId: z.string().min(1),
+  imageUrl: z.string().url().optional(),
+});
+
+export const updateZoneSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).optional(),
+  provinceId: z.string().min(1).optional(),
+  imageUrl: z.string().url().nullish(),
 });
 
 export const createStructureTypeSchema = z.object({
   name: z.string().min(1),
+  imageUrl: z.string().url().optional(),
+});
+
+export const updateStructureTypeSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).optional(),
+  imageUrl: z.string().url().nullish(),
 });
 
 export const createRoadTypeSchema = z.object({
@@ -149,7 +164,9 @@ export const createMaintenanceWindowSchema = z.object({
 
 export type CreateProvinceInput = z.infer<typeof createProvinceSchema>;
 export type CreateZoneInput = z.infer<typeof createZoneSchema>;
+export type UpdateZoneInput = z.infer<typeof updateZoneSchema>;
 export type CreateStructureTypeInput = z.infer<typeof createStructureTypeSchema>;
+export type UpdateStructureTypeInput = z.infer<typeof updateStructureTypeSchema>;
 export type CreateRoadTypeInput = z.infer<typeof createRoadTypeSchema>;
 export type CreateFacePositionInput = z.infer<typeof createFacePositionSchema>;
 export type CreateMountingTypeInput = z.infer<typeof createMountingTypeSchema>;
@@ -192,7 +209,24 @@ export async function listZones(options?: { provinceId?: string }) {
 }
 
 export async function createZone(input: CreateZoneInput) {
-  return db.zone.create({ data: input });
+  return db.zone.create({
+    data: {
+      ...input,
+      imageUrl: input.imageUrl || null,
+    },
+  });
+}
+
+export async function updateZone(input: UpdateZoneInput) {
+  const { id, ...data } = input;
+  return db.zone.update({
+    where: { id },
+    data: {
+      ...data,
+      imageUrl: data.imageUrl === null ? null : data.imageUrl || undefined,
+    },
+    include: { province: true },
+  });
 }
 
 export async function listStructureTypes() {
@@ -200,7 +234,23 @@ export async function listStructureTypes() {
 }
 
 export async function createStructureType(input: CreateStructureTypeInput) {
-  return db.structureType.create({ data: input });
+  return db.structureType.create({
+    data: {
+      ...input,
+      imageUrl: input.imageUrl || null,
+    },
+  });
+}
+
+export async function updateStructureType(input: UpdateStructureTypeInput) {
+  const { id, ...data } = input;
+  return db.structureType.update({
+    where: { id },
+    data: {
+      ...data,
+      imageUrl: data.imageUrl === null ? null : data.imageUrl || undefined,
+    },
+  });
 }
 
 export async function listRoadTypes() {

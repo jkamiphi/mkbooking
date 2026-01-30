@@ -244,7 +244,7 @@ export function CatalogFaceDetail({ faceId }: { faceId: string }) {
                   className="border-b border-neutral-100 dark:border-neutral-800"
                 >
                   <td className="py-2 pr-4 text-neutral-900 dark:text-white">
-                    {rule.currency} {rule.priceDaily}
+                    {rule.currency} {String(rule.priceDaily)}
                   </td>
                   <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
                     {rule.startDate.toLocaleDateString()}

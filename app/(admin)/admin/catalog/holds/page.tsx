@@ -12,8 +12,8 @@ export default function HoldsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   const utils = trpc.useUtils();
-  const facesQuery = trpc.inventory.faces.list.useQuery({ take: 200 });
-  const orgsQuery = trpc.organization.list.useQuery({ skip: 0, take: 200 });
+  const facesQuery = trpc.inventory.faces.list.useQuery({ take: 100 });
+  const orgsQuery = trpc.organization.list.useQuery({ skip: 0, take: 100 });
   const holdsQuery = trpc.catalog.holds.list.useQuery({
     status: statusFilter
       ? (statusFilter as (typeof statusOptions)[number])

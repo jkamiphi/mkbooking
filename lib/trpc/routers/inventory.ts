@@ -16,6 +16,8 @@ import {
   createZoneSchema,
   updateAssetFaceSchema,
   updateAssetSchema,
+  updateStructureTypeSchema,
+  updateZoneSchema,
   listAssets,
   listAssetFaces,
   listFacePositions,
@@ -38,6 +40,8 @@ import {
   createZone,
   updateAsset,
   updateAssetFace,
+  updateStructureType,
+  updateZone,
 } from "@/lib/services/inventory";
 
 export const inventoryRouter = router({
@@ -67,6 +71,9 @@ export const inventoryRouter = router({
     create: adminProcedure.input(createZoneSchema).mutation(async ({ input }) => {
       return createZone(input);
     }),
+    update: adminProcedure.input(updateZoneSchema).mutation(async ({ input }) => {
+      return updateZone(input);
+    }),
   }),
 
   structureTypes: router({
@@ -77,6 +84,11 @@ export const inventoryRouter = router({
       .input(createStructureTypeSchema)
       .mutation(async ({ input }) => {
         return createStructureType(input);
+      }),
+    update: adminProcedure
+      .input(updateStructureTypeSchema)
+      .mutation(async ({ input }) => {
+        return updateStructureType(input);
       }),
   }),
 

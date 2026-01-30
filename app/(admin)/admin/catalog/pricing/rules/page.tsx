@@ -15,10 +15,10 @@ export default function PriceRulesPage() {
   const [endDate, setEndDate] = useState("");
 
   const utils = trpc.useUtils();
-  const facesQuery = trpc.inventory.faces.list.useQuery({ take: 200 });
+  const facesQuery = trpc.inventory.faces.list.useQuery({ take: 100 });
   const structureTypesQuery = trpc.inventory.structureTypes.list.useQuery();
   const zonesQuery = trpc.inventory.zones.list.useQuery();
-  const orgsQuery = trpc.organization.list.useQuery({ skip: 0, take: 200 });
+  const orgsQuery = trpc.organization.list.useQuery({ skip: 0, take: 100 });
   const rulesQuery = trpc.catalog.priceRules.list.useQuery();
 
   const createRule = trpc.catalog.priceRules.create.useMutation({
@@ -160,7 +160,7 @@ export default function PriceRulesPage() {
                     {rule.organization ? ` · ${rule.organization.name}` : ""}
                   </td>
                   <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                    {rule.currency} {rule.priceDaily}
+                    {rule.currency} {String(rule.priceDaily)}
                   </td>
                   <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
                     {rule.startDate.toLocaleDateString()}

@@ -16,6 +16,7 @@ export function NewAssetForm() {
   const structureTypesQuery = trpc.inventory.structureTypes.list.useQuery();
   const zonesQuery = trpc.inventory.zones.list.useQuery();
   const roadTypesQuery = trpc.inventory.roadTypes.list.useQuery();
+  const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     code: "",
@@ -41,6 +42,15 @@ export function NewAssetForm() {
       utils.inventory.assets.list.invalidate();
       router.push("/admin/inventory/assets");
     },
+    onError: (err) => {
+      if (err.message.includes("Unique constraint failed on the fields: (`code`)")) {
+        setError("An asset with this code already exists. Please use a different code.");
+      } else if (err.message.includes("Unique constraint")) {
+        setError("A record with this value already exists.");
+      } else {
+        setError(err.message);
+      }
+    },
   });
 
   const canSave =
@@ -55,7 +65,21 @@ export function NewAssetForm() {
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
+          setError(null);
           if (!canSave) return;
+
+          const lat = form.latitude.trim() ? Number(form.latitude) : undefined;
+          const lng = form.longitude.trim() ? Number(form.longitude) : undefined;
+
+          if (lat !== undefined && (lat < -90 || lat > 90)) {
+            setError("Latitude must be between -90 and 90");
+            return;
+          }
+          if (lng !== undefined && (lng < -180 || lng > 180)) {
+            setError("Longitude must be between -180 and 180");
+            return;
+          }
+
           createAsset.mutate({
             code: form.code.trim(),
             structureTypeId: form.structureTypeId,
@@ -63,8 +87,8 @@ export function NewAssetForm() {
             roadTypeId: form.roadTypeId || undefined,
             address: form.address.trim(),
             landmark: form.landmark.trim() || undefined,
-            latitude: form.latitude.trim() ? Number(form.latitude) : undefined,
-            longitude: form.longitude.trim() ? Number(form.longitude) : undefined,
+            latitude: lat,
+            longitude: lng,
             illuminated: form.illuminated,
             digital: form.digital,
             powered: form.powered,
@@ -177,11 +201,14 @@ export function NewAssetForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Latitude
+              Latitude (-90 to 90)
             </label>
             <input
               type="number"
               step="0.000001"
+              min="-90"
+              max="90"
+              placeholder="e.g. 8.9824"
               value={form.latitude}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, latitude: event.target.value }))
@@ -191,11 +218,14 @@ export function NewAssetForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Longitude
+              Longitude (-180 to 180)
             </label>
             <input
               type="number"
               step="0.000001"
+              min="-180"
+              max="180"
+              placeholder="e.g. -79.5199"
               value={form.longitude}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, longitude: event.target.value }))
@@ -318,6 +348,12 @@ export function NewAssetForm() {
             />
           </div>
         </div>
+
+        {error && (
+          <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
 
         <div className="flex gap-3">
           <Button type="submit" disabled={!canSave || createAsset.isPending}>

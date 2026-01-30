@@ -256,7 +256,7 @@ export default async function Home({
               Explore structure types
             </h2>
           </div>
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+          <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
             {structureTypes.slice(0, 12).map((type) => {
               const url = buildSearchUrl({ ...currentFilters, type: type.id });
               const isActive = type.id === typeId;
@@ -264,14 +264,39 @@ export default async function Home({
                 <Link
                   key={type.id}
                   href={url}
-                  className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  className={`group relative flex-shrink-0 overflow-hidden rounded-2xl transition ${
                     isActive
-                      ? "border-[#0359A8] bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30"
-                      : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300"
+                      ? "ring-2 ring-[#0359A8] ring-offset-2"
+                      : "hover:shadow-lg"
                   }`}
+                  style={{ width: 160 }}
                 >
-                  <span className="h-2 w-2 rounded-full bg-[#fcb814]" />
-                  {type.name}
+                  {type.imageUrl ? (
+                    <div className="relative aspect-[4/3] w-full overflow-hidden">
+                      <img
+                        src={type.imageUrl}
+                        alt={type.name}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <span className="absolute bottom-2 left-3 right-3 text-sm font-semibold text-white">
+                        {type.name}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="aspect-[4/3] w-full bg-gradient-to-br from-[#fcb814]/30 to-[#0359A8]/30 flex flex-col items-center justify-center p-4">
+                      <span className="h-3 w-3 rounded-full bg-[#fcb814] mb-2" />
+                      <span className="text-sm font-semibold text-neutral-800 text-center">
+                        {type.name}
+                      </span>
+                    </div>
+                  )}
+                  {isActive && (
+                    <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-[#0359A8] flex items-center justify-center">
+                      <span className="h-2 w-2 rounded-full bg-white" />
+                    </div>
+                  )}
                 </Link>
               );
             })}
@@ -284,7 +309,7 @@ export default async function Home({
               Browse zones
             </h2>
           </div>
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+          <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
             {zones.slice(0, 12).map((zone) => {
               const url = buildSearchUrl({ ...currentFilters, zone: zone.id });
               const isActive = zone.id === zoneId;
@@ -292,14 +317,47 @@ export default async function Home({
                 <Link
                   key={zone.id}
                   href={url}
-                  className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  className={`group relative flex-shrink-0 overflow-hidden rounded-2xl transition ${
                     isActive
-                      ? "border-[#0359A8] bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30"
-                      : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300"
+                      ? "ring-2 ring-[#0359A8] ring-offset-2"
+                      : "hover:shadow-lg"
                   }`}
+                  style={{ width: 160 }}
                 >
-                  <MapPin className="h-4 w-4 text-[#0359A8]" />
-                  {zone.name}
+                  {zone.imageUrl ? (
+                    <div className="relative aspect-[4/3] w-full overflow-hidden">
+                      <img
+                        src={zone.imageUrl}
+                        alt={zone.name}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute bottom-2 left-3 right-3">
+                        <span className="text-sm font-semibold text-white block">
+                          {zone.name}
+                        </span>
+                        <span className="text-xs text-white/80">
+                          {zone.province.name}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aspect-[4/3] w-full bg-gradient-to-br from-[#0359A8]/30 to-[#fcb814]/30 flex flex-col items-center justify-center p-4">
+                      <MapPin className="h-5 w-5 text-[#0359A8] mb-2" />
+                      <span className="text-sm font-semibold text-neutral-800 text-center">
+                        {zone.name}
+                      </span>
+                      <span className="text-xs text-neutral-500">
+                        {zone.province.name}
+                      </span>
+                    </div>
+                  )}
+                  {isActive && (
+                    <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-[#0359A8] flex items-center justify-center">
+                      <span className="h-2 w-2 rounded-full bg-white" />
+                    </div>
+                  )}
                 </Link>
               );
             })}
@@ -322,7 +380,7 @@ export default async function Home({
               const priceLabel =
                 face.effectivePrice && showPrices
                   ? formatPrice(
-                      face.effectivePrice.priceDaily,
+                      Number(face.effectivePrice.priceDaily),
                       face.effectivePrice.currency ?? "USD",
                     )
                   : null;

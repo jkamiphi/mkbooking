@@ -15,7 +15,7 @@ export function CatalogFacesContent() {
       publishedFilter === ""
         ? undefined
         : publishedFilter === "published",
-    take: 200,
+    take: 100,
   });
 
   const promo = facesQuery.data?.promo;
@@ -29,7 +29,7 @@ export function CatalogFacesContent() {
           </p>
           <p className="text-lg font-semibold text-neutral-900 dark:text-white">
             {promo
-              ? `${promo.name} (${promo.type} ${promo.value})`
+              ? `${promo.name} (${promo.type} ${String(promo.value)})`
               : "No active promo"}
           </p>
         </div>

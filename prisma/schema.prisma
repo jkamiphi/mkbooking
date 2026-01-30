@@ -302,6 +302,7 @@ model Zone {
   id         String @id @default(cuid())
   name       String
   provinceId String
+  imageUrl   String?
 
   province Province @relation(fields: [provinceId], references: [id], onDelete: Cascade)
   assets   Asset[]
@@ -313,8 +314,9 @@ model Zone {
 }
 
 model StructureType {
-  id   String @id @default(cuid())
-  name String @unique
+  id       String @id @default(cuid())
+  name     String @unique
+  imageUrl String?
 
   assets Asset[]
   catalogPriceRules CatalogPriceRule[]

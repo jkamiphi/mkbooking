@@ -104,7 +104,7 @@ export default function PromosPage() {
                     {promo.type}
                   </td>
                   <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                    {promo.value}
+                    {String(promo.value)}
                   </td>
                   <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
                     {promo.isActive ? "Yes" : "No"}

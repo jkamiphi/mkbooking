@@ -5,10 +5,11 @@ export const metadata = {
   description: "Manage catalog face",
 };
 
-export default function CatalogFacePage({
+export default async function CatalogFacePage({
   params,
 }: {
-  params: { faceId: string };
+  params: Promise<{ faceId: string }>;
 }) {
-  return <CatalogFaceDetail faceId={params.faceId} />;
+  const { faceId } = await params;
+  return <CatalogFaceDetail faceId={faceId} />;
 }
