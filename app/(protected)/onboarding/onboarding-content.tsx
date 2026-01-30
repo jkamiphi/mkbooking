@@ -111,10 +111,10 @@ function NaturalPersonForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-neutral-900 dark:text-white">
-          Personal Information
+          Información Personal
         </h3>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Please provide your personal details to complete your registration.
+          Por favor proporciona tus datos personales para completar tu registro.
         </p>
       </div>
 
@@ -130,7 +130,7 @@ function NaturalPersonForm({
             htmlFor="firstName"
             className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
           >
-            First Name *
+            Nombre *
           </label>
           <input
             id="firstName"
@@ -139,7 +139,7 @@ function NaturalPersonForm({
             onChange={(e) => setFirstName(e.target.value)}
             required
             className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-            placeholder="John"
+            placeholder="Juan"
           />
         </div>
         <div>
@@ -147,7 +147,7 @@ function NaturalPersonForm({
             htmlFor="lastName"
             className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
           >
-            Last Name *
+            Apellido *
           </label>
           <input
             id="lastName"
@@ -156,7 +156,7 @@ function NaturalPersonForm({
             onChange={(e) => setLastName(e.target.value)}
             required
             className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-            placeholder="Doe"
+            placeholder="Pérez"
           />
         </div>
       </div>
@@ -166,7 +166,7 @@ function NaturalPersonForm({
           htmlFor="cedula"
           className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
         >
-          Cedula (Personal ID) *
+          Cédula *
         </label>
         <input
           id="cedula"
@@ -178,7 +178,7 @@ function NaturalPersonForm({
           placeholder="8-123-4567"
         />
         <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          Your personal identification number
+          Tu número de identificación personal
         </p>
       </div>
 
@@ -188,7 +188,7 @@ function NaturalPersonForm({
             htmlFor="phone"
             className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
           >
-            Phone Number
+            Número de Teléfono
           </label>
           <input
             id="phone"
@@ -204,7 +204,7 @@ function NaturalPersonForm({
             htmlFor="contactEmail"
             className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
           >
-            Contact Email
+            Correo de Contacto
           </label>
           <input
             id="contactEmail"
@@ -212,10 +212,10 @@ function NaturalPersonForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-            placeholder="contact@example.com"
+            placeholder="contacto@ejemplo.com"
           />
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            Optional: A different email for business communications
+            Opcional: Un correo diferente para comunicaciones de negocio
           </p>
         </div>
       </div>
@@ -225,7 +225,7 @@ function NaturalPersonForm({
         disabled={isLoading}
         className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
-        {isLoading ? "Setting up your account..." : "Complete Registration"}
+        {isLoading ? "Configurando tu cuenta..." : "Completar Registro"}
       </button>
     </form>
   );
@@ -273,10 +273,10 @@ function BusinessForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-neutral-900 dark:text-white">
-          Business Information
+          Info de Negocio
         </h3>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Please provide your company details to complete your registration.
+          Por favor proporciona los datos de tu empresa para completar tu registro.
         </p>
       </div>
 
@@ -291,7 +291,7 @@ function BusinessForm({
           htmlFor="legalName"
           className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
         >
-          Legal Name *
+          Razón Social *
         </label>
         <input
           id="legalName"
@@ -300,10 +300,10 @@ function BusinessForm({
           onChange={(e) => setLegalName(e.target.value)}
           required
           className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-          placeholder="Company Legal Name S.A."
+          placeholder="Nombre Legal de la Empresa S.A."
         />
         <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          The official registered name of your company
+          El nombre oficial registrado de tu empresa
         </p>
       </div>
 
@@ -312,7 +312,7 @@ function BusinessForm({
           htmlFor="tradeName"
           className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
         >
-          Trade Name / Brand Name
+          Nombre Comercial
         </label>
         <input
           id="tradeName"
@@ -320,10 +320,10 @@ function BusinessForm({
           value={tradeName}
           onChange={(e) => setTradeName(e.target.value)}
           className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-          placeholder="Brand Name"
+          placeholder="Nombre de Marca"
         />
         <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          The name your company operates under (if different from legal name)
+          El nombre con el que opera tu empresa (si es diferente al nombre legal)
         </p>
       </div>
 
@@ -333,7 +333,7 @@ function BusinessForm({
             htmlFor="taxId"
             className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
           >
-            RUC (Tax ID) *
+            RUC *
           </label>
           <input
             id="taxId"
@@ -350,7 +350,7 @@ function BusinessForm({
             htmlFor="dvCode"
             className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
           >
-            DV Code
+            DV
           </label>
           <input
             id="dvCode"
@@ -369,7 +369,7 @@ function BusinessForm({
             htmlFor="businessPhone"
             className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
           >
-            Business Phone
+            Teléfono de Negocio
           </label>
           <input
             id="businessPhone"
@@ -385,7 +385,7 @@ function BusinessForm({
             htmlFor="businessEmail"
             className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
           >
-            Business Email
+            Correo de Negocio
           </label>
           <input
             id="businessEmail"
@@ -393,7 +393,7 @@ function BusinessForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-            placeholder="info@company.com"
+            placeholder="info@empresa.com"
           />
         </div>
       </div>
@@ -403,7 +403,7 @@ function BusinessForm({
           htmlFor="industry"
           className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
         >
-          Industry
+          Industria
         </label>
         <select
           id="industry"
@@ -411,20 +411,20 @@ function BusinessForm({
           onChange={(e) => setIndustry(e.target.value)}
           className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
         >
-          <option value="">Select an industry</option>
-          <option value="retail">Retail</option>
-          <option value="food_beverage">Food & Beverage</option>
-          <option value="healthcare">Healthcare</option>
-          <option value="technology">Technology</option>
-          <option value="finance">Finance & Banking</option>
-          <option value="real_estate">Real Estate</option>
-          <option value="automotive">Automotive</option>
-          <option value="education">Education</option>
-          <option value="entertainment">Entertainment</option>
-          <option value="travel">Travel & Tourism</option>
-          <option value="professional_services">Professional Services</option>
-          <option value="manufacturing">Manufacturing</option>
-          <option value="other">Other</option>
+          <option value="">Selecciona una industria</option>
+          <option value="retail">Comercio</option>
+          <option value="food_beverage">Alimentos y Bebidas</option>
+          <option value="healthcare">Salud</option>
+          <option value="technology">Tecnología</option>
+          <option value="finance">Finanzas y Banca</option>
+          <option value="real_estate">Bienes Raíces</option>
+          <option value="automotive">Automotriz</option>
+          <option value="education">Educación</option>
+          <option value="entertainment">Entretenimiento</option>
+          <option value="travel">Viajes y Turismo</option>
+          <option value="professional_services">Servicios Profesionales</option>
+          <option value="manufacturing">Manufactura</option>
+          <option value="other">Otro</option>
         </select>
       </div>
 
@@ -433,7 +433,7 @@ function BusinessForm({
         disabled={isLoading}
         className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
-        {isLoading ? "Setting up your account..." : "Complete Registration"}
+        {isLoading ? "Configurando tu cuenta..." : "Completar Registro"}
       </button>
     </form>
   );
@@ -466,10 +466,10 @@ function SuccessStep() {
         </svg>
       </div>
       <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-2">
-        Registration Complete!
+        ¡Registro Completado!
       </h3>
       <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-        Your account has been set up successfully. Redirecting to your profile...
+        Tu cuenta ha sido configurada exitosamente. Redirigiendo a tu perfil...
       </p>
       <div className="animate-pulse">
         <div className="h-1 w-32 mx-auto bg-blue-200 dark:bg-blue-900 rounded-full overflow-hidden">
@@ -570,19 +570,19 @@ export function OnboardingContent() {
 
   const stepLabels =
     customerType === "natural"
-      ? ["Personal Info", "Complete"]
+      ? ["Info Personal", "Completar"]
       : customerType === "business"
-        ? ["Business Info", "Complete"]
-        : ["Account Type", "Details", "Complete"];
+        ? ["Info de Negocio", "Completar"]
+        : ["Tipo de Cuenta", "Detalles", "Completar"];
 
   return (
     <div className="max-w-2xl mx-auto">
       <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-md p-8">
         <h1 className="text-2xl font-bold text-center mb-2 text-neutral-900 dark:text-white">
-          Complete Your Registration
+          Completa Tu Registro
         </h1>
         <p className="text-center text-neutral-600 dark:text-neutral-400 mb-6">
-          Just a few more details to get you started
+          Solo unos detalles más para comenzar
         </p>
 
         <StepIndicator
@@ -594,7 +594,7 @@ export function OnboardingContent() {
           <div className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-center text-neutral-900 dark:text-white">
-                What type of account do you need?
+                ¿Qué tipo de cuenta necesitas?
               </h3>
             </div>
             <div className="grid grid-cols-1 gap-4">
@@ -622,10 +622,10 @@ export function OnboardingContent() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-neutral-900 dark:text-white">
-                      Natural Person
+                      Persona Natural
                     </h3>
                     <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                      For individuals advertising their own products or services
+                      Para individuos que anuncian sus propios productos o servicios
                     </p>
                   </div>
                 </div>
@@ -655,10 +655,10 @@ export function OnboardingContent() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-neutral-900 dark:text-white">
-                      Business / Company
+                      Empresa / Negocio
                     </h3>
                     <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                      For companies, agencies, or organizations
+                      Para empresas, agencias u organizaciones
                     </p>
                   </div>
                 </div>
@@ -691,7 +691,7 @@ export function OnboardingContent() {
             onClick={() => setCustomerType(null)}
             className="mt-4 text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
           >
-            &larr; Change account type
+            &larr; Cambiar tipo de cuenta
           </button>
         )}
       </div>

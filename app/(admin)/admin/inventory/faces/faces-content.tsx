@@ -6,6 +6,16 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
+const statusLabels: Record<(typeof statusOptions)[number], string> = {
+  ACTIVE: "ACTIVO",
+  INACTIVE: "INACTIVO",
+  MAINTENANCE: "MANTENIMIENTO",
+  RETIRED: "RETIRADO",
+};
+const facingLabels: Record<string, string> = {
+  TRAFFIC: "TRÁFICO",
+  OPPOSITE_TRAFFIC: "TRÁFICO OPUESTO",
+};
 
 export function FacesContent() {
   const [assetId, setAssetId] = useState("");
@@ -27,7 +37,7 @@ export function FacesContent() {
             onChange={(event) => setAssetId(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All assets</option>
+            <option value="">Todos los activos</option>
             {assetsQuery.data?.assets.map((asset) => (
               <option key={asset.id} value={asset.id}>
                 {asset.code}
@@ -39,38 +49,38 @@ export function FacesContent() {
             onChange={(event) => setStatus(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All status</option>
+            <option value="">Todos los estados</option>
             {statusOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {statusLabels[option]}
               </option>
             ))}
           </select>
         </div>
         <Button asChild>
-          <Link href="/admin/inventory/faces/new">New Face</Link>
+          <Link href="/admin/inventory/faces/new">Nueva Cara</Link>
         </Button>
       </div>
 
       <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-          Face List
+          Lista de Caras
         </h2>
         {facesQuery.isLoading ? (
           <div className="text-sm text-neutral-500 dark:text-neutral-400">
-            Loading faces...
+            Cargando caras...
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                  <th className="py-2 pr-4">Asset</th>
-                  <th className="py-2 pr-4">Face</th>
-                  <th className="py-2 pr-4">Position</th>
-                  <th className="py-2 pr-4">Size</th>
-                  <th className="py-2 pr-4">Facing</th>
-                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4">Activo</th>
+                  <th className="py-2 pr-4">Cara</th>
+                  <th className="py-2 pr-4">Posición</th>
+                  <th className="py-2 pr-4">Tamaño</th>
+                  <th className="py-2 pr-4">Orientación</th>
+                  <th className="py-2 pr-4">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,10 +102,10 @@ export function FacesContent() {
                       {String(face.width)} x {String(face.height)}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                      {face.facing}
+                      {facingLabels[face.facing] ?? face.facing}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                      {face.status}
+                      {statusLabels[face.status as (typeof statusOptions)[number]] ?? face.status}
                     </td>
                   </tr>
                 ))}
@@ -105,7 +115,7 @@ export function FacesContent() {
                       colSpan={6}
                       className="py-4 text-center text-neutral-500 dark:text-neutral-400"
                     >
-                      No faces found.
+                      No se encontraron caras.
                     </td>
                   </tr>
                 )}

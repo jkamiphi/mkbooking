@@ -25,12 +25,12 @@ export function CatalogFacesContent() {
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-4">
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Active promo
+            Promoción activa
           </p>
           <p className="text-lg font-semibold text-neutral-900 dark:text-white">
             {promo
               ? `${promo.name} (${promo.type} ${String(promo.value)})`
-              : "No active promo"}
+              : "Sin promoción activa"}
           </p>
         </div>
       </section>
@@ -40,7 +40,7 @@ export function CatalogFacesContent() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by face or asset code"
+            placeholder="Buscar por cara o código de activo"
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <select
@@ -48,31 +48,31 @@ export function CatalogFacesContent() {
             onChange={(event) => setPublishedFilter(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
+            <option value="">Todos</option>
+            <option value="published">Publicado</option>
+            <option value="draft">Borrador</option>
           </select>
         </div>
       </div>
 
       <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-          Faces
+          Caras
         </h2>
         {facesQuery.isLoading ? (
           <div className="text-sm text-neutral-500 dark:text-neutral-400">
-            Loading catalog faces...
+            Cargando caras del catálogo...
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                  <th className="py-2 pr-4">Asset</th>
-                  <th className="py-2 pr-4">Face</th>
-                  <th className="py-2 pr-4">Zone</th>
-                  <th className="py-2 pr-4">Published</th>
-                  <th className="py-2 pr-4">Face Price</th>
+                  <th className="py-2 pr-4">Activo</th>
+                  <th className="py-2 pr-4">Cara</th>
+                  <th className="py-2 pr-4">Zona</th>
+                  <th className="py-2 pr-4">Publicado</th>
+                  <th className="py-2 pr-4">Precio de Cara</th>
                   <th className="py-2 pr-4"></th>
                 </tr>
               </thead>
@@ -92,7 +92,7 @@ export function CatalogFacesContent() {
                       {face.asset.zone.province.name} - {face.asset.zone.name}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                      {face.catalogFace?.isPublished ? "Yes" : "No"}
+                      {face.catalogFace?.isPublished ? "Sí" : "No"}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
                       {face.effectivePrice
@@ -102,7 +102,7 @@ export function CatalogFacesContent() {
                     <td className="py-2 pr-4 text-right">
                       <Button size="sm" variant="outline" asChild>
                         <Link href={`/admin/catalog/faces/${face.id}`}>
-                          Manage
+                          Gestionar
                         </Link>
                       </Button>
                     </td>
@@ -114,7 +114,7 @@ export function CatalogFacesContent() {
                       colSpan={6}
                       className="py-4 text-center text-neutral-500 dark:text-neutral-400"
                     >
-                      No faces found.
+                      No se encontraron caras.
                     </td>
                   </tr>
                 )}

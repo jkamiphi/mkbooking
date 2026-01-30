@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
+const statusLabels: Record<(typeof statusOptions)[number], string> = {
+  ACTIVE: "ACTIVO",
+  INACTIVE: "INACTIVO",
+  MAINTENANCE: "MANTENIMIENTO",
+  RETIRED: "RETIRADO",
+};
 
 type AssetStatus = (typeof statusOptions)[number];
 
@@ -44,9 +50,9 @@ export function NewAssetForm() {
     },
     onError: (err) => {
       if (err.message.includes("Unique constraint failed on the fields: (`code`)")) {
-        setError("An asset with this code already exists. Please use a different code.");
+        setError("Ya existe un activo con este código. Por favor usa un código diferente.");
       } else if (err.message.includes("Unique constraint")) {
-        setError("A record with this value already exists.");
+        setError("Ya existe un registro con este valor.");
       } else {
         setError(err.message);
       }
@@ -72,11 +78,11 @@ export function NewAssetForm() {
           const lng = form.longitude.trim() ? Number(form.longitude) : undefined;
 
           if (lat !== undefined && (lat < -90 || lat > 90)) {
-            setError("Latitude must be between -90 and 90");
+            setError("La latitud debe estar entre -90 y 90");
             return;
           }
           if (lng !== undefined && (lng < -180 || lng > 180)) {
-            setError("Longitude must be between -180 and 180");
+            setError("La longitud debe estar entre -180 y 180");
             return;
           }
 
@@ -105,7 +111,7 @@ export function NewAssetForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Code
+              Código
             </label>
             <input
               value={form.code}
@@ -117,7 +123,7 @@ export function NewAssetForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Structure Type
+              Tipo de Estructura
             </label>
             <select
               value={form.structureTypeId}
@@ -129,7 +135,7 @@ export function NewAssetForm() {
               }
               className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
-              <option value="">Select</option>
+              <option value="">Seleccionar</option>
               {structureTypesQuery.data?.map((type) => (
                 <option key={type.id} value={type.id}>
                   {type.name}
@@ -139,7 +145,7 @@ export function NewAssetForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Zone
+              Zona
             </label>
             <select
               value={form.zoneId}
@@ -148,7 +154,7 @@ export function NewAssetForm() {
               }
               className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
-              <option value="">Select</option>
+              <option value="">Seleccionar</option>
               {zonesQuery.data?.map((zone) => (
                 <option key={zone.id} value={zone.id}>
                   {zone.province.name} - {zone.name}
@@ -158,7 +164,7 @@ export function NewAssetForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Road Type (optional)
+              Tipo de Vía (opcional)
             </label>
             <select
               value={form.roadTypeId}
@@ -167,7 +173,7 @@ export function NewAssetForm() {
               }
               className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
-              <option value="">Select</option>
+              <option value="">Seleccionar</option>
               {roadTypesQuery.data?.map((road) => (
                 <option key={road.id} value={road.id}>
                   {road.name}
@@ -177,7 +183,7 @@ export function NewAssetForm() {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Address
+              Dirección
             </label>
             <input
               value={form.address}
@@ -189,7 +195,7 @@ export function NewAssetForm() {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Landmark (optional)
+              Punto de Referencia (opcional)
             </label>
             <input
               value={form.landmark}
@@ -201,14 +207,14 @@ export function NewAssetForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Latitude (-90 to 90)
+              Latitud (-90 a 90)
             </label>
             <input
               type="number"
               step="0.000001"
               min="-90"
               max="90"
-              placeholder="e.g. 8.9824"
+              placeholder="ej. 8.9824"
               value={form.latitude}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, latitude: event.target.value }))
@@ -218,14 +224,14 @@ export function NewAssetForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Longitude (-180 to 180)
+              Longitud (-180 a 180)
             </label>
             <input
               type="number"
               step="0.000001"
               min="-180"
               max="180"
-              placeholder="e.g. -79.5199"
+              placeholder="ej. -79.5199"
               value={form.longitude}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, longitude: event.target.value }))
@@ -235,7 +241,7 @@ export function NewAssetForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Status
+              Estado
             </label>
             <select
               value={form.status}
@@ -249,7 +255,7 @@ export function NewAssetForm() {
             >
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {statusLabels[option]}
                 </option>
               ))}
             </select>
@@ -266,7 +272,7 @@ export function NewAssetForm() {
                   }))
                 }
               />
-              Illuminated
+              Iluminado
             </label>
             <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
               <input
@@ -286,7 +292,7 @@ export function NewAssetForm() {
                   setForm((prev) => ({ ...prev, powered: event.target.checked }))
                 }
               />
-              Powered
+              Con Energía
             </label>
             <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
               <input
@@ -299,12 +305,12 @@ export function NewAssetForm() {
                   }))
                 }
               />
-              Print Service
+              Servicio de Impresión
             </label>
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Installed Date
+              Fecha de Instalación
             </label>
             <input
               type="date"
@@ -320,7 +326,7 @@ export function NewAssetForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Retired Date
+              Fecha de Retiro
             </label>
             <input
               type="date"
@@ -336,7 +342,7 @@ export function NewAssetForm() {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Notes
+              Notas
             </label>
             <textarea
               value={form.notes}
@@ -357,10 +363,10 @@ export function NewAssetForm() {
 
         <div className="flex gap-3">
           <Button type="submit" disabled={!canSave || createAsset.isPending}>
-            {createAsset.isPending ? "Saving..." : "Create Asset"}
+            {createAsset.isPending ? "Guardando..." : "Crear Activo"}
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/admin/inventory/assets">Cancel</Link>
+            <Link href="/admin/inventory/assets">Cancelar</Link>
           </Button>
         </div>
       </form>

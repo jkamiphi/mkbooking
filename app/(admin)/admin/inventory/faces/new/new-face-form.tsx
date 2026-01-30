@@ -7,7 +7,17 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
+const statusLabels: Record<(typeof statusOptions)[number], string> = {
+  ACTIVE: "ACTIVO",
+  INACTIVE: "INACTIVO",
+  MAINTENANCE: "MANTENIMIENTO",
+  RETIRED: "RETIRADO",
+};
 const facingOptions = ["TRAFFIC", "OPPOSITE_TRAFFIC"] as const;
+const facingLabels: Record<(typeof facingOptions)[number], string> = {
+  TRAFFIC: "TRÁFICO",
+  OPPOSITE_TRAFFIC: "TRÁFICO OPUESTO",
+};
 
 type FaceStatus = (typeof statusOptions)[number];
 type FaceFacing = (typeof facingOptions)[number];
@@ -68,7 +78,7 @@ export function NewFaceForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Asset
+              Activo
             </label>
             <select
               value={form.assetId}
@@ -77,7 +87,7 @@ export function NewFaceForm() {
               }
               className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
-              <option value="">Select</option>
+              <option value="">Seleccionar</option>
               {assetsQuery.data?.assets.map((asset) => (
                 <option key={asset.id} value={asset.id}>
                   {asset.code}
@@ -87,7 +97,7 @@ export function NewFaceForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Code
+              Código
             </label>
             <input
               value={form.code}
@@ -99,7 +109,7 @@ export function NewFaceForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Position
+              Posición
             </label>
             <select
               value={form.positionId}
@@ -111,7 +121,7 @@ export function NewFaceForm() {
               }
               className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
-              <option value="">Select</option>
+              <option value="">Seleccionar</option>
               {positionsQuery.data?.map((pos) => (
                 <option key={pos.id} value={pos.id}>
                   {pos.name}
@@ -122,7 +132,7 @@ export function NewFaceForm() {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Width
+                Ancho
               </label>
               <input
                 type="number"
@@ -136,7 +146,7 @@ export function NewFaceForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Height
+                Alto
               </label>
               <input
                 type="number"
@@ -151,7 +161,7 @@ export function NewFaceForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Facing
+              Orientación
             </label>
             <select
               value={form.facing}
@@ -165,14 +175,14 @@ export function NewFaceForm() {
             >
               {facingOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {facingLabels[option]}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Status
+              Estado
             </label>
             <select
               value={form.status}
@@ -186,14 +196,14 @@ export function NewFaceForm() {
             >
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {statusLabels[option]}
                 </option>
               ))}
             </select>
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Visibility Notes
+              Notas de Visibilidad
             </label>
             <textarea
               value={form.visibilityNotes}
@@ -209,7 +219,7 @@ export function NewFaceForm() {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Restrictions
+              Restricciones
             </label>
             <textarea
               value={form.restrictions}
@@ -225,7 +235,7 @@ export function NewFaceForm() {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Notes
+              Notas
             </label>
             <textarea
               value={form.notes}
@@ -240,10 +250,10 @@ export function NewFaceForm() {
 
         <div className="flex gap-3">
           <Button type="submit" disabled={!canSave || createFace.isPending}>
-            {createFace.isPending ? "Saving..." : "Create Face"}
+            {createFace.isPending ? "Guardando..." : "Crear Cara"}
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/admin/inventory/faces">Cancel</Link>
+            <Link href="/admin/inventory/faces">Cancelar</Link>
           </Button>
         </div>
       </form>

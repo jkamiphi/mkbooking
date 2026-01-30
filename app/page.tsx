@@ -37,7 +37,7 @@ function buildSearchUrl(current: { q?: string; zone?: string; type?: string }) {
 
 function formatPrice(priceDaily: number, currency: string) {
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("es-PA", {
       style: "currency",
       currency,
       maximumFractionDigits: 0,
@@ -128,7 +128,7 @@ export default async function Home({
                 MK Booking
               </p>
               <p className="text-lg font-semibold tracking-tight">
-                OOH Catalog
+                Catálogo OOH
               </p>
             </div>
           </Link>
@@ -136,15 +136,15 @@ export default async function Home({
           <nav className="hidden items-center gap-6 text-sm font-medium text-neutral-600 lg:flex">
             <span className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-neutral-800 shadow-sm">
               <CircleDollarSign className="h-4 w-4 text-[#fcb814]" />
-              Daily pricing
+              Precio diario
             </span>
             <span className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-neutral-500" />
-              Global inventory
+              Inventario global
             </span>
             <span className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-neutral-500" />
-              Curated faces
+              Caras seleccionadas
             </span>
           </nav>
 
@@ -154,7 +154,7 @@ export default async function Home({
                 href="/profile"
                 className="rounded-full border border-neutral-200 bg-white/80 px-4 py-2 font-medium text-neutral-900 shadow-sm hover:bg-white"
               >
-                Dashboard
+                Mi Panel
               </Link>
             ) : (
               <>
@@ -162,13 +162,13 @@ export default async function Home({
                   href="/login"
                   className="rounded-full border border-neutral-200 bg-white/80 px-4 py-2 font-medium text-neutral-900 shadow-sm hover:bg-white"
                 >
-                  Sign in
+                  Iniciar sesión
                 </Link>
                 <Link
                   href="/register"
                   className="rounded-full bg-[#0359A8] px-4 py-2 font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
                 >
-                  Create account
+                  Crear cuenta
                 </Link>
               </>
             )}
@@ -185,7 +185,7 @@ export default async function Home({
             <input
               name="q"
               defaultValue={query ?? ""}
-              placeholder="Search by code, address, or landmark"
+              placeholder="Buscar por código, dirección o punto de referencia"
               className="w-full bg-transparent text-sm font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
             />
           </div>
@@ -197,13 +197,13 @@ export default async function Home({
             type="submit"
             className="flex items-center justify-center gap-2 rounded-2xl bg-[#0359A8] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
           >
-            Search
+            Buscar
             <ChevronRight className="h-4 w-4" />
           </button>
 
           <span className="hidden items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-xs font-semibold text-neutral-500 md:flex">
             <Calendar className="h-4 w-4" />
-            Date range
+            Rango de fechas
           </span>
         </form>
 
@@ -213,7 +213,7 @@ export default async function Home({
             style={{ animation: "rise 0.7s ease 0.1s forwards" }}
           >
             <Sparkles className="h-4 w-4" />
-            Promo active: {catalog.promo.name}. Auto-applied at checkout.
+            Promoción activa: {catalog.promo.name}. Se aplica automáticamente al pagar.
           </div>
         ) : null}
       </section>
@@ -225,11 +225,11 @@ export default async function Home({
         >
           <div>
             <p className="text-sm font-semibold text-neutral-900">
-              {catalog.total} faces ready to rent
+              {catalog.total} caras disponibles para alquilar
             </p>
             <p className="text-xs text-neutral-500">
-              {selectedStructureType?.name ?? "All structure types"} ·{" "}
-              {selectedZone?.name ?? "All zones"}
+              {selectedStructureType?.name ?? "Todos los tipos de estructura"} ·{" "}
+              {selectedZone?.name ?? "Todas las zonas"}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-neutral-600">
@@ -238,14 +238,14 @@ export default async function Home({
                 href="/"
                 className="rounded-full border border-neutral-200 bg-white px-3 py-1 hover:border-neutral-300"
               >
-                Clear filters
+                Limpiar filtros
               </Link>
             ) : null}
             <span className="rounded-full bg-[#0359A8] px-3 py-1 text-white">
-              Hold 24h
+              Reserva 24h
             </span>
             <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">
-              Daily pricing
+              Precio diario
             </span>
           </div>
         </div>
@@ -253,7 +253,7 @@ export default async function Home({
         <div className="mt-8">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-neutral-900">
-              Explore structure types
+              Explorar tipos de estructura
             </h2>
           </div>
           <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
@@ -306,7 +306,7 @@ export default async function Home({
         <div className="mt-10">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-neutral-900">
-              Browse zones
+              Explorar zonas
             </h2>
           </div>
           <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
@@ -367,14 +367,14 @@ export default async function Home({
         <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {catalog.faces.length === 0 ? (
             <div className="col-span-full rounded-3xl border border-dashed border-neutral-300 bg-white p-10 text-center text-sm text-neutral-500">
-              No faces published yet. Add inventory and publish faces from the
-              admin catalog.
+              Aún no hay caras publicadas. Agrega inventario y publica caras desde
+              el catálogo de administración.
             </div>
           ) : (
             catalog.faces.map((face, index) => {
               const title =
                 face.catalogFace?.title ||
-                `${face.asset.structureType.name} · Face ${face.code}`;
+                `${face.asset.structureType.name} · Cara ${face.code}`;
               const location = `${face.asset.zone.name}, ${face.asset.zone.province.name}`;
               const imageUrl = face.catalogFace?.primaryImageUrl;
               const priceLabel =
@@ -408,7 +408,7 @@ export default async function Home({
                       ) : null}
                       {face.asset.illuminated ? (
                         <span className="rounded-full bg-[#fcb814]/90 px-3 py-1 text-xs font-semibold text-neutral-900">
-                          Illuminated
+                          Iluminado
                         </span>
                       ) : null}
                       {face.catalogFace?.highlight ? (
@@ -421,7 +421,7 @@ export default async function Home({
                     <button
                       className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-neutral-700 shadow-md backdrop-blur"
                       type="button"
-                      aria-label="Save"
+                      aria-label="Guardar"
                     >
                       <Heart className="h-4 w-4" />
                     </button>
@@ -466,12 +466,12 @@ export default async function Home({
                       <div className="flex items-center justify-between pt-2">
                         <div>
                           <p className="text-lg font-semibold text-neutral-900">
-                            {priceLabel ?? "Price on request"}
+                            {priceLabel ?? "Precio a consultar"}
                           </p>
-                          <p className="text-xs text-neutral-500">per day</p>
+                          <p className="text-xs text-neutral-500">por día</p>
                         </div>
                         <span className="rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600">
-                          Hold 24h
+                          Reserva 24h
                         </span>
                       </div>
                     ) : (
@@ -479,7 +479,7 @@ export default async function Home({
                         href="/login"
                         className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 hover:border-neutral-300"
                       >
-                        Sign in to see pricing
+                        Inicia sesión para ver precios
                         <ChevronRight className="h-3 w-3" />
                       </Link>
                     )}

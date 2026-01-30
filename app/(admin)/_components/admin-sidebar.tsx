@@ -21,43 +21,43 @@ interface AdminSidebarProps {
 
 const navigation = [
   {
-    name: "Dashboard",
+    name: "Panel",
     href: "/admin",
     icon: LayoutDashboard,
     roles: ["SUPERADMIN", "STAFF"],
   },
   {
-    name: "Users",
+    name: "Usuarios",
     href: "/admin/users",
     icon: Users,
     roles: ["SUPERADMIN", "STAFF"],
   },
   {
-    name: "Organizations",
+    name: "Organizaciones",
     href: "/admin/organizations",
     icon: Building2,
     roles: ["SUPERADMIN", "STAFF"],
   },
   {
-    name: "Inventory",
+    name: "Inventario",
     href: "/admin/inventory",
     icon: Boxes,
     roles: ["SUPERADMIN", "STAFF"],
   },
   {
-    name: "Catalog",
+    name: "Catálogo",
     href: "/admin/catalog",
     icon: BookOpen,
     roles: ["SUPERADMIN", "STAFF"],
   },
   {
-    name: "Audit Logs",
+    name: "Registros de Auditoría",
     href: "/admin/audit-logs",
     icon: FileText,
     roles: ["SUPERADMIN"],
   },
   {
-    name: "Settings",
+    name: "Configuración",
     href: "/admin/settings",
     icon: Settings,
     roles: ["SUPERADMIN"],
@@ -102,7 +102,7 @@ export function AdminSidebar({ systemRole }: AdminSidebarProps) {
         <div className="flex items-center gap-2 text-sm">
           <Shield className="h-4 w-4 text-blue-600" />
           <span className="text-neutral-600 dark:text-neutral-400">
-            {systemRole === "SUPERADMIN" ? "Super Admin" : "Staff"}
+            {systemRole === "SUPERADMIN" ? "Super Admin" : "Personal"}
           </span>
         </div>
       </div>

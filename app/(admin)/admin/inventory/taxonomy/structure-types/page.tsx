@@ -79,10 +79,10 @@ export default function StructureTypesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Structure Types
+          Tipos de Estructura
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Manage structure types (Mupi, Valla, etc.) with images.
+          Gestionar tipos de estructura (Mupi, Valla, etc.) con imágenes.
         </p>
       </div>
 
@@ -102,14 +102,14 @@ export default function StructureTypesPage() {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Structure type name"
+              placeholder="Nombre del tipo de estructura"
               className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
             <Button
               type="submit"
               disabled={!name.trim() || createType.isPending || isUploading}
             >
-              {createType.isPending ? "Saving..." : "Add Type"}
+              {createType.isPending ? "Guardando..." : "Agregar Tipo"}
             </Button>
           </div>
 
@@ -128,13 +128,13 @@ export default function StructureTypesPage() {
               disabled={isUploading}
             >
               <Upload className="h-4 w-4 mr-2" />
-              {isUploading ? "Uploading..." : "Upload Image"}
+              {isUploading ? "Subiendo..." : "Subir Imagen"}
             </Button>
             {imageUrl && (
               <div className="relative">
                 <img
                   src={imageUrl}
-                  alt="Preview"
+                  alt="Vista previa"
                   className="h-12 w-12 rounded-lg object-cover"
                 />
                 <button
@@ -183,7 +183,7 @@ export default function StructureTypesPage() {
                       <div className="relative">
                         <img
                           src={editImageUrl}
-                          alt="Preview"
+                          alt="Vista previa"
                           className="h-8 w-8 rounded object-cover"
                         />
                         <button
@@ -208,14 +208,14 @@ export default function StructureTypesPage() {
                       }
                       disabled={updateType.isPending || isUploading}
                     >
-                      Save
+                      Guardar
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setEditingId(null)}
                     >
-                      Cancel
+                      Cancelar
                     </Button>
                   </div>
                 </div>
@@ -252,14 +252,14 @@ export default function StructureTypesPage() {
           ))}
           {!typesQuery.data?.length && (
             <div className="col-span-full text-center py-8 text-neutral-500 dark:text-neutral-400">
-              No structure types yet.
+              Aún no hay tipos de estructura.
             </div>
           )}
         </div>
       </section>
 
       <Button variant="outline" asChild>
-        <Link href="/admin/inventory/taxonomy">Back to taxonomy</Link>
+        <Link href="/admin/inventory/taxonomy">Volver a taxonomía</Link>
       </Button>
     </div>
   );

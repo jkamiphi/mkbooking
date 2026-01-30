@@ -1,8 +1,8 @@
 import { DashboardContent } from "./dashboard-content";
 
 export const metadata = {
-  title: "Admin Dashboard - MK Booking",
-  description: "Platform administration dashboard",
+  title: "Panel de Administración - MK Booking",
+  description: "Panel de administración de la plataforma",
 };
 
 export default function AdminDashboardPage() {
@@ -10,10 +10,10 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Dashboard
+          Panel
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Platform overview and quick stats
+          Resumen de la plataforma y estadísticas
         </p>
       </div>
       <DashboardContent />

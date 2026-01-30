@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
+const statusLabels: Record<(typeof statusOptions)[number], string> = {
+  ACTIVE: "ACTIVO",
+  INACTIVE: "INACTIVO",
+  MAINTENANCE: "MANTENIMIENTO",
+  RETIRED: "RETIRADO",
+};
 
 export function AssetsContent() {
   const [search, setSearch] = useState("");
@@ -31,7 +37,7 @@ export function AssetsContent() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by code or address"
+            placeholder="Buscar por código o dirección"
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <select
@@ -39,10 +45,10 @@ export function AssetsContent() {
             onChange={(event) => setStatus(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All status</option>
+            <option value="">Todos los estados</option>
             {statusOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {statusLabels[option]}
               </option>
             ))}
           </select>
@@ -51,7 +57,7 @@ export function AssetsContent() {
             onChange={(event) => setStructureTypeId(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All structure types</option>
+            <option value="">Todos los tipos de estructura</option>
             {structureTypesQuery.data?.map((type) => (
               <option key={type.id} value={type.id}>
                 {type.name}
@@ -63,7 +69,7 @@ export function AssetsContent() {
             onChange={(event) => setZoneId(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All zones</option>
+            <option value="">Todas las zonas</option>
             {zonesQuery.data?.map((zone) => (
               <option key={zone.id} value={zone.id}>
                 {zone.province.name} - {zone.name}
@@ -72,30 +78,30 @@ export function AssetsContent() {
           </select>
         </div>
         <Button asChild>
-          <Link href="/admin/inventory/assets/new">New Asset</Link>
+          <Link href="/admin/inventory/assets/new">Nuevo Activo</Link>
         </Button>
       </div>
 
       <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-          Asset List
+          Lista de Activos
         </h2>
         {assetsQuery.isLoading ? (
           <div className="text-sm text-neutral-500 dark:text-neutral-400">
-            Loading assets...
+            Cargando activos...
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                  <th className="py-2 pr-4">Code</th>
-                  <th className="py-2 pr-4">Structure</th>
-                  <th className="py-2 pr-4">Zone</th>
-                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4">Código</th>
+                  <th className="py-2 pr-4">Estructura</th>
+                  <th className="py-2 pr-4">Zona</th>
+                  <th className="py-2 pr-4">Estado</th>
                   <th className="py-2 pr-4">Digital</th>
-                  <th className="py-2 pr-4">Lit</th>
-                  <th className="py-2 pr-4">Faces</th>
+                  <th className="py-2 pr-4">Iluminado</th>
+                  <th className="py-2 pr-4">Caras</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,13 +120,13 @@ export function AssetsContent() {
                       {asset.zone.province.name} - {asset.zone.name}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                      {asset.status}
+                      {statusLabels[asset.status as (typeof statusOptions)[number]] ?? asset.status}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                      {asset.digital ? "Yes" : "No"}
+                      {asset.digital ? "Sí" : "No"}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                      {asset.illuminated ? "Yes" : "No"}
+                      {asset.illuminated ? "Sí" : "No"}
                     </td>
                     <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
                       {asset._count.faces}
@@ -133,7 +139,7 @@ export function AssetsContent() {
                       colSpan={7}
                       className="py-4 text-center text-neutral-500 dark:text-neutral-400"
                     >
-                      No assets found.
+                      No se encontraron activos.
                     </td>
                   </tr>
                 )}

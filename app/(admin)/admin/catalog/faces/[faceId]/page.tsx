@@ -1,8 +1,8 @@
 import { CatalogFaceDetail } from "./face-detail";
 
 export const metadata = {
-  title: "Catalog Face - Admin",
-  description: "Manage catalog face",
+  title: "Cara del Catálogo - Admin",
+  description: "Gestionar cara del catálogo",
 };
 
 export default async function CatalogFacePage({

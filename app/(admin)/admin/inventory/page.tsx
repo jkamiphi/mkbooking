@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "Inventory - Admin",
-  description: "Manage inventory assets and faces",
+  title: "Inventario - Admin",
+  description: "Gestionar activos y caras del inventario",
 };
 
 export default function InventoryPage() {
@@ -8,10 +8,10 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Inventory
+          Inventario
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Manage assets, faces, and inventory taxonomy
+          Gestionar activos, caras y taxonomía del inventario
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -20,10 +20,10 @@ export default function InventoryPage() {
           className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 hover:shadow-md transition-shadow"
         >
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
-            Assets
+            Activos
           </h2>
           <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-            View and manage structures.
+            Ver y gestionar estructuras.
           </p>
         </a>
         <a
@@ -31,10 +31,10 @@ export default function InventoryPage() {
           className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 hover:shadow-md transition-shadow"
         >
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
-            Faces
+            Caras
           </h2>
           <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-            Configure sellable faces.
+            Configurar caras vendibles.
           </p>
         </a>
         <a
@@ -42,10 +42,10 @@ export default function InventoryPage() {
           className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 hover:shadow-md transition-shadow"
         >
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
-            Taxonomy
+            Taxonomía
           </h2>
           <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-            Provinces, zones, and master data.
+            Provincias, zonas y datos maestros.
           </p>
         </a>
       </div>

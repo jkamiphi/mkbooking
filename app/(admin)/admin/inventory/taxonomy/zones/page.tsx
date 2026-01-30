@@ -85,10 +85,10 @@ export default function ZonesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Zones
+          Zonas
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Manage zones by province with images.
+          Gestionar zonas por provincia con imágenes.
         </p>
       </div>
 
@@ -111,7 +111,7 @@ export default function ZonesPage() {
               onChange={(event) => setProvinceId(event.target.value)}
               className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
-              <option value="">Select province</option>
+              <option value="">Seleccionar provincia</option>
               {provincesQuery.data?.map((province) => (
                 <option key={province.id} value={province.id}>
                   {province.name}
@@ -121,7 +121,7 @@ export default function ZonesPage() {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Zone name"
+              placeholder="Nombre de zona"
               className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
             <Button
@@ -130,7 +130,7 @@ export default function ZonesPage() {
                 !name.trim() || !provinceId || createZone.isPending || isUploading
               }
             >
-              {createZone.isPending ? "Saving..." : "Add Zone"}
+              {createZone.isPending ? "Guardando..." : "Agregar Zona"}
             </Button>
           </div>
 
@@ -149,13 +149,13 @@ export default function ZonesPage() {
               disabled={isUploading}
             >
               <Upload className="h-4 w-4 mr-2" />
-              {isUploading ? "Uploading..." : "Upload Image"}
+              {isUploading ? "Subiendo..." : "Subir Imagen"}
             </Button>
             {imageUrl && (
               <div className="relative">
                 <img
                   src={imageUrl}
-                  alt="Preview"
+                  alt="Vista previa"
                   className="h-12 w-12 rounded-lg object-cover"
                 />
                 <button
@@ -204,7 +204,7 @@ export default function ZonesPage() {
                       <div className="relative">
                         <img
                           src={editImageUrl}
-                          alt="Preview"
+                          alt="Vista previa"
                           className="h-8 w-8 rounded object-cover"
                         />
                         <button
@@ -229,14 +229,14 @@ export default function ZonesPage() {
                       }
                       disabled={updateZone.isPending || isUploading}
                     >
-                      Save
+                      Guardar
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setEditingId(null)}
                     >
-                      Cancel
+                      Cancelar
                     </Button>
                   </div>
                 </div>
@@ -278,14 +278,14 @@ export default function ZonesPage() {
           ))}
           {!zonesQuery.data?.length && (
             <div className="col-span-full text-center py-8 text-neutral-500 dark:text-neutral-400">
-              No zones yet.
+              Aún no hay zonas.
             </div>
           )}
         </div>
       </section>
 
       <Button variant="outline" asChild>
-        <Link href="/admin/inventory/taxonomy">Back to taxonomy</Link>
+        <Link href="/admin/inventory/taxonomy">Volver a taxonomía</Link>
       </Button>
     </div>
   );

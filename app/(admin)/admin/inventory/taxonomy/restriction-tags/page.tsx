@@ -22,10 +22,10 @@ export default function RestrictionTagsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Restriction Tags
+          Etiquetas de Restricción
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Manage normalized restriction tags.
+          Gestionar etiquetas de restricción normalizadas.
         </p>
       </div>
 
@@ -41,20 +41,20 @@ export default function RestrictionTagsPage() {
           <input
             value={code}
             onChange={(event) => setCode(event.target.value)}
-            placeholder="Code (NO_ALCOHOL)"
+            placeholder="Código (NO_ALCOHOL)"
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <input
             value={label}
             onChange={(event) => setLabel(event.target.value)}
-            placeholder="Label"
+            placeholder="Etiqueta"
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <Button
             type="submit"
             disabled={!code.trim() || !label.trim() || createTag.isPending}
           >
-            {createTag.isPending ? "Saving..." : "Add Tag"}
+            {createTag.isPending ? "Guardando..." : "Agregar Etiqueta"}
           </Button>
         </form>
 
@@ -62,8 +62,8 @@ export default function RestrictionTagsPage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Code</th>
-                <th className="py-2 pr-4">Label</th>
+                <th className="py-2 pr-4">Código</th>
+                <th className="py-2 pr-4">Etiqueta</th>
               </tr>
             </thead>
             <tbody>
@@ -86,7 +86,7 @@ export default function RestrictionTagsPage() {
                     colSpan={2}
                     className="py-4 text-center text-neutral-500 dark:text-neutral-400"
                   >
-                    No tags yet.
+                    Aún no hay etiquetas.
                   </td>
                 </tr>
               )}
@@ -96,7 +96,7 @@ export default function RestrictionTagsPage() {
       </section>
 
       <Button variant="outline" asChild>
-        <Link href="/admin/inventory/taxonomy">Back to taxonomy</Link>
+        <Link href="/admin/inventory/taxonomy">Volver a taxonomía</Link>
       </Button>
     </div>
   );

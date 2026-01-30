@@ -25,14 +25,14 @@ export function DashboardContent() {
 
   const statCards = [
     {
-      name: "Total Users",
+      name: "Total de Usuarios",
       value: stats?.totalUsers ?? 0,
       icon: Users,
       href: "/admin/users",
       color: "bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400",
     },
     {
-      name: "Active Users",
+      name: "Usuarios Activos",
       value: stats?.activeUsers ?? 0,
       icon: UserCheck,
       href: "/admin/users?isActive=true",
@@ -40,7 +40,7 @@ export function DashboardContent() {
         "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400",
     },
     {
-      name: "Staff Members",
+      name: "Personal",
       value: stats?.staffUsers ?? 0,
       icon: Building2,
       href: "/admin/users?systemRole=STAFF",
@@ -48,7 +48,7 @@ export function DashboardContent() {
         "bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400",
     },
     {
-      name: "New This Week",
+      name: "Nuevos Esta Semana",
       value: stats?.recentUsers ?? 0,
       icon: UserPlus,
       href: "/admin/users",
@@ -87,7 +87,7 @@ export function DashboardContent() {
       {/* Quick Actions */}
       <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-          Quick Actions
+          Acciones Rápidas
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link
@@ -97,10 +97,10 @@ export function DashboardContent() {
             <Users className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
             <div>
               <p className="font-medium text-neutral-900 dark:text-white">
-                Manage Users
+                Gestionar Usuarios
               </p>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                View and manage all users
+                Ver y gestionar todos los usuarios
               </p>
             </div>
           </Link>
@@ -111,10 +111,10 @@ export function DashboardContent() {
             <Building2 className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
             <div>
               <p className="font-medium text-neutral-900 dark:text-white">
-                Organizations
+                Organizaciones
               </p>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                View all organizations
+                Ver todas las organizaciones
               </p>
             </div>
           </Link>
@@ -125,10 +125,10 @@ export function DashboardContent() {
             <UserCheck className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
             <div>
               <p className="font-medium text-neutral-900 dark:text-white">
-                Inactive Users
+                Usuarios Inactivos
               </p>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {stats?.inactiveUsers ?? 0} users to review
+                {stats?.inactiveUsers ?? 0} usuarios por revisar
               </p>
             </div>
           </Link>
@@ -139,12 +139,12 @@ export function DashboardContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-            User Breakdown
+            Desglose de Usuarios
           </h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-neutral-600 dark:text-neutral-400">
-                Customers
+                Clientes
               </span>
               <span className="font-semibold text-neutral-900 dark:text-white">
                 {stats?.customerUsers ?? 0}
@@ -152,7 +152,7 @@ export function DashboardContent() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-neutral-600 dark:text-neutral-400">
-                Staff Members
+                Personal
               </span>
               <span className="font-semibold text-neutral-900 dark:text-white">
                 {stats?.staffUsers ?? 0}
@@ -160,7 +160,7 @@ export function DashboardContent() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-neutral-600 dark:text-neutral-400">
-                With Organizations
+                Con Organizaciones
               </span>
               <span className="font-semibold text-neutral-900 dark:text-white">
                 {stats?.customersWithOrgs ?? 0}
@@ -171,12 +171,12 @@ export function DashboardContent() {
 
         <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-            Account Status
+            Estado de Cuenta
           </h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-neutral-600 dark:text-neutral-400">
-                Active
+                Activo
               </span>
               <span className="font-semibold text-green-600 dark:text-green-400">
                 {stats?.activeUsers ?? 0}
@@ -184,7 +184,7 @@ export function DashboardContent() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-neutral-600 dark:text-neutral-400">
-                Inactive
+                Inactivo
               </span>
               <span className="font-semibold text-red-600 dark:text-red-400">
                 {stats?.inactiveUsers ?? 0}
@@ -192,7 +192,7 @@ export function DashboardContent() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-neutral-600 dark:text-neutral-400">
-                New (Last 7 days)
+                Nuevos (Últimos 7 días)
               </span>
               <span className="font-semibold text-blue-600 dark:text-blue-400">
                 {stats?.recentUsers ?? 0}

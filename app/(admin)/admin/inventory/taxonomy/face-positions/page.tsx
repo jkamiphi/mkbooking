@@ -20,10 +20,10 @@ export default function FacePositionsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Face Positions
+          Posiciones de Cara
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Manage face positions (A/B, Norte/Sur, etc.).
+          Gestionar posiciones de cara (A/B, Norte/Sur, etc.).
         </p>
       </div>
 
@@ -39,11 +39,11 @@ export default function FacePositionsPage() {
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Position name"
+            placeholder="Nombre de posición"
             className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <Button type="submit" disabled={!name.trim() || createPosition.isPending}>
-            {createPosition.isPending ? "Saving..." : "Add Position"}
+            {createPosition.isPending ? "Guardando..." : "Agregar Posición"}
           </Button>
         </form>
 
@@ -53,14 +53,14 @@ export default function FacePositionsPage() {
           ))}
           {!positionsQuery.data?.length && (
             <li className="text-neutral-500 dark:text-neutral-400">
-              No positions yet.
+              Aún no hay posiciones.
             </li>
           )}
         </ul>
       </section>
 
       <Button variant="outline" asChild>
-        <Link href="/admin/inventory/taxonomy">Back to taxonomy</Link>
+        <Link href="/admin/inventory/taxonomy">Volver a taxonomía</Link>
       </Button>
     </div>
   );

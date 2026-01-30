@@ -16,13 +16,13 @@ function formatRelativeTime(date: Date): string {
   if (diffDays > 30) {
     return date.toLocaleDateString();
   } else if (diffDays > 0) {
-    return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+    return `${diffDays} día${diffDays === 1 ? "" : "s"}`;
   } else if (diffHours > 0) {
-    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+    return `${diffHours} hora${diffHours === 1 ? "" : "s"}`;
   } else if (diffMins > 0) {
-    return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
+    return `${diffMins} minuto${diffMins === 1 ? "" : "s"}`;
   } else {
-    return "Just now";
+    return "Ahora mismo";
   }
 }
 
@@ -87,7 +87,7 @@ export function UserListTable({
     return (
       <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-8 text-center">
         <p className="text-neutral-600 dark:text-neutral-400">
-          No users found matching your criteria.
+          No se encontraron usuarios que coincidan con tu búsqueda.
         </p>
       </div>
     );
@@ -100,22 +100,22 @@ export function UserListTable({
           <thead className="bg-neutral-50 dark:bg-neutral-800">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                User
+                Usuario
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                System Role
+                Rol
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Organizations
+                Organizaciones
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Status
+                Estado
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Joined
+                Registrado
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Actions
+                Acciones
               </th>
             </tr>
           </thead>
@@ -172,7 +172,7 @@ export function UserListTable({
                       )}
                     </div>
                   ) : (
-                    <span className="text-neutral-400">None</span>
+                    <span className="text-neutral-400">Ninguna</span>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -189,7 +189,7 @@ export function UserListTable({
                     href={`/admin/users/${profile.userId}`}
                     className="text-blue-600 hover:text-blue-500"
                   >
-                    View
+                    Ver
                   </Link>
                 </td>
               </tr>
@@ -208,7 +208,7 @@ export function UserListTable({
               onClick={() => onPageChange(page - 1)}
               disabled={page === 0}
             >
-              Previous
+              Anterior
             </Button>
             <Button
               variant="outline"
@@ -216,18 +216,18 @@ export function UserListTable({
               onClick={() => onPageChange(page + 1)}
               disabled={page >= totalPages - 1}
             >
-              Next
+              Siguiente
             </Button>
           </div>
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-neutral-700 dark:text-neutral-300">
-                Showing{" "}
-                <span className="font-medium">{page * pageSize + 1}</span> to{" "}
+                Mostrando{" "}
+                <span className="font-medium">{page * pageSize + 1}</span> a{" "}
                 <span className="font-medium">
                   {Math.min((page + 1) * pageSize, total)}
                 </span>{" "}
-                of <span className="font-medium">{total}</span> results
+                de <span className="font-medium">{total}</span> resultados
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export function UserListTable({
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                Page {page + 1} of {totalPages}
+                Página {page + 1} de {totalPages}
               </span>
               <Button
                 variant="outline"
@@ -269,8 +269,8 @@ function RoleBadge({ role }: { role: SystemRole }) {
 
   const labels: Record<SystemRole, string> = {
     SUPERADMIN: "Superadmin",
-    STAFF: "Staff",
-    CUSTOMER: "Customer",
+    STAFF: "Personal",
+    CUSTOMER: "Cliente",
   };
 
   return (
@@ -296,11 +296,11 @@ function StatusBadges({
             : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400"
         }`}
       >
-        {isActive ? "Active" : "Inactive"}
+        {isActive ? "Activo" : "Inactivo"}
       </span>
       {isVerified && (
         <span className="px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400">
-          Verified
+          Verificado
         </span>
       )}
     </div>

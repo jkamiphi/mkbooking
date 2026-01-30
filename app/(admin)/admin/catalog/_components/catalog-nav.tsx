@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/admin/catalog", label: "Overview" },
-  { href: "/admin/catalog/faces", label: "Faces" },
-  { href: "/admin/catalog/pricing", label: "Pricing" },
-  { href: "/admin/catalog/holds", label: "Holds" },
+  { href: "/admin/catalog", label: "Resumen" },
+  { href: "/admin/catalog/faces", label: "Caras" },
+  { href: "/admin/catalog/pricing", label: "Precios" },
+  { href: "/admin/catalog/holds", label: "Reservas" },
 ];
 
 export function CatalogNav() {

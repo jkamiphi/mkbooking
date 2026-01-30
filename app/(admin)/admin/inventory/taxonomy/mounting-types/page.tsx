@@ -20,10 +20,10 @@ export default function MountingTypesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Mounting Types
+          Tipos de Montaje
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Manage mounting types (vinil, lona, backlit).
+          Gestionar tipos de montaje (vinil, lona, backlit).
         </p>
       </div>
 
@@ -39,11 +39,11 @@ export default function MountingTypesPage() {
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Mounting type name"
+            placeholder="Nombre del tipo de montaje"
             className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <Button type="submit" disabled={!name.trim() || createType.isPending}>
-            {createType.isPending ? "Saving..." : "Add Type"}
+            {createType.isPending ? "Guardando..." : "Agregar Tipo"}
           </Button>
         </form>
 
@@ -53,14 +53,14 @@ export default function MountingTypesPage() {
           ))}
           {!typesQuery.data?.length && (
             <li className="text-neutral-500 dark:text-neutral-400">
-              No mounting types yet.
+              Aún no hay tipos de montaje.
             </li>
           )}
         </ul>
       </section>
 
       <Button variant="outline" asChild>
-        <Link href="/admin/inventory/taxonomy">Back to taxonomy</Link>
+        <Link href="/admin/inventory/taxonomy">Volver a taxonomía</Link>
       </Button>
     </div>
   );

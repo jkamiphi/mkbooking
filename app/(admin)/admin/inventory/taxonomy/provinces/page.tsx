@@ -20,10 +20,10 @@ export default function ProvincesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Provinces
+          Provincias
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Manage provinces for inventory zoning.
+          Gestionar provincias para zonificación del inventario.
         </p>
       </div>
 
@@ -39,11 +39,11 @@ export default function ProvincesPage() {
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Province name"
+            placeholder="Nombre de provincia"
             className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <Button type="submit" disabled={!name.trim() || createProvince.isPending}>
-            {createProvince.isPending ? "Saving..." : "Add Province"}
+            {createProvince.isPending ? "Guardando..." : "Agregar Provincia"}
           </Button>
         </form>
 
@@ -51,7 +51,7 @@ export default function ProvincesPage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Province</th>
+                <th className="py-2 pr-4">Provincia</th>
               </tr>
             </thead>
             <tbody>
@@ -68,7 +68,7 @@ export default function ProvincesPage() {
               {!provincesQuery.data?.length && (
                 <tr>
                   <td className="py-4 text-center text-neutral-500 dark:text-neutral-400">
-                    No provinces yet.
+                    Aún no hay provincias.
                   </td>
                 </tr>
               )}
@@ -78,7 +78,7 @@ export default function ProvincesPage() {
       </section>
 
       <Button variant="outline" asChild>
-        <Link href="/admin/inventory/taxonomy">Back to taxonomy</Link>
+        <Link href="/admin/inventory/taxonomy">Volver a taxonomía</Link>
       </Button>
     </div>
   );

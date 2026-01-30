@@ -38,10 +38,10 @@ export default function HoldsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Holds
+          Reservas
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Holds lock faces for 24 hours.
+          Las reservas bloquean caras por 24 horas.
         </p>
       </div>
 
@@ -62,7 +62,7 @@ export default function HoldsPage() {
             onChange={(event) => setFaceId(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">Select face</option>
+            <option value="">Seleccionar cara</option>
             {facesQuery.data?.faces.map((face) => (
               <option key={face.id} value={face.id}>
                 {face.asset.code} - {face.code}
@@ -74,7 +74,7 @@ export default function HoldsPage() {
             onChange={(event) => setOrganizationId(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">Optional organization</option>
+            <option value="">Organización (opcional)</option>
             {orgsQuery.data?.organizations.map((org) => (
               <option key={org.id} value={org.id}>
                 {org.name}
@@ -82,14 +82,14 @@ export default function HoldsPage() {
             ))}
           </select>
           <Button type="submit" disabled={!faceId || createHold.isPending}>
-            {createHold.isPending ? "Saving..." : "Create Hold"}
+            {createHold.isPending ? "Guardando..." : "Crear Reserva"}
           </Button>
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All status</option>
+            <option value="">Todos los estados</option>
             {statusOptions.map((status) => (
               <option key={status} value={status}>
                 {status}
@@ -102,10 +102,10 @@ export default function HoldsPage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Face</th>
-                <th className="py-2 pr-4">Organization</th>
-                <th className="py-2 pr-4">Status</th>
-                <th className="py-2 pr-4">Expires</th>
+                <th className="py-2 pr-4">Cara</th>
+                <th className="py-2 pr-4">Organización</th>
+                <th className="py-2 pr-4">Estado</th>
+                <th className="py-2 pr-4">Expira</th>
                 <th className="py-2 pr-4"></th>
               </tr>
             </thead>
@@ -134,7 +134,7 @@ export default function HoldsPage() {
                         variant="outline"
                         onClick={() => releaseHold.mutate({ holdId: hold.id })}
                       >
-                        Release
+                        Liberar
                       </Button>
                     )}
                   </td>
@@ -143,7 +143,7 @@ export default function HoldsPage() {
               {!holdsQuery.data?.length && (
                 <tr>
                   <td className="py-4 text-center text-neutral-500 dark:text-neutral-400" colSpan={5}>
-                    No holds yet.
+                    Aún no hay reservas.
                   </td>
                 </tr>
               )}

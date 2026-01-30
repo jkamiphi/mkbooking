@@ -1,7 +1,7 @@
 import { OnboardingContent } from "./onboarding-content";
 
 export const metadata = {
-  title: "Complete Your Profile - MK Booking",
+  title: "Completa Tu Perfil - MK Booking",
 };
 
 export default function OnboardingPage() {

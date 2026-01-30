@@ -34,10 +34,10 @@ export default function PriceRulesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Price Rules
+          Reglas de Precio
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Define pricing by face, structure type, zone, and customer.
+          Definir precios por cara, tipo de estructura, zona y cliente.
         </p>
       </div>
 
@@ -64,7 +64,7 @@ export default function PriceRulesPage() {
             onChange={(event) => setFaceId(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All faces</option>
+            <option value="">Todas las caras</option>
             {facesQuery.data?.faces.map((face) => (
               <option key={face.id} value={face.id}>
                 {face.asset.code} - {face.code}
@@ -76,7 +76,7 @@ export default function PriceRulesPage() {
             onChange={(event) => setStructureTypeId(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All structure types</option>
+            <option value="">Todos los tipos de estructura</option>
             {structureTypesQuery.data?.map((type) => (
               <option key={type.id} value={type.id}>
                 {type.name}
@@ -88,7 +88,7 @@ export default function PriceRulesPage() {
             onChange={(event) => setZoneId(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All zones</option>
+            <option value="">Todas las zonas</option>
             {zonesQuery.data?.map((zone) => (
               <option key={zone.id} value={zone.id}>
                 {zone.province.name} - {zone.name}
@@ -100,7 +100,7 @@ export default function PriceRulesPage() {
             onChange={(event) => setOrganizationId(event.target.value)}
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
-            <option value="">All customers</option>
+            <option value="">Todos los clientes</option>
             {orgsQuery.data?.organizations.map((org) => (
               <option key={org.id} value={org.id}>
                 {org.name}
@@ -112,7 +112,7 @@ export default function PriceRulesPage() {
             step="0.01"
             value={price}
             onChange={(event) => setPrice(event.target.value)}
-            placeholder="Daily price"
+            placeholder="Precio diario"
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <input
@@ -128,7 +128,7 @@ export default function PriceRulesPage() {
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <Button type="submit" disabled={!price.trim() || createRule.isPending}>
-            {createRule.isPending ? "Saving..." : "Add Rule"}
+            {createRule.isPending ? "Guardando..." : "Agregar Regla"}
           </Button>
         </form>
 
@@ -136,11 +136,11 @@ export default function PriceRulesPage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Scope</th>
-                <th className="py-2 pr-4">Price</th>
-                <th className="py-2 pr-4">Start</th>
-                <th className="py-2 pr-4">End</th>
-                <th className="py-2 pr-4">Active</th>
+                <th className="py-2 pr-4">Alcance</th>
+                <th className="py-2 pr-4">Precio</th>
+                <th className="py-2 pr-4">Inicio</th>
+                <th className="py-2 pr-4">Fin</th>
+                <th className="py-2 pr-4">Activo</th>
               </tr>
             </thead>
             <tbody>
@@ -169,14 +169,14 @@ export default function PriceRulesPage() {
                     {rule.endDate ? rule.endDate.toLocaleDateString() : "-"}
                   </td>
                   <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                    {rule.isActive ? "Yes" : "No"}
+                    {rule.isActive ? "Sí" : "No"}
                   </td>
                 </tr>
               ))}
               {!rulesQuery.data?.length && (
                 <tr>
                   <td className="py-4 text-center text-neutral-500 dark:text-neutral-400" colSpan={5}>
-                    No price rules yet.
+                    Aún no hay reglas.
                   </td>
                 </tr>
               )}
@@ -186,7 +186,7 @@ export default function PriceRulesPage() {
       </section>
 
       <Button variant="outline" asChild>
-        <Link href="/admin/catalog/pricing">Back to pricing</Link>
+        <Link href="/admin/catalog/pricing">Volver a precios</Link>
       </Button>
     </div>
   );

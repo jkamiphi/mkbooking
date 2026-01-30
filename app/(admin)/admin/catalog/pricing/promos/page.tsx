@@ -25,10 +25,10 @@ export default function PromosPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Promos
+          Promociones
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Only one promo can be active at a time.
+          Solo una promoción puede estar activa a la vez.
         </p>
       </div>
 
@@ -49,7 +49,7 @@ export default function PromosPage() {
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Promo name"
+            placeholder="Nombre de la promoción"
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <select
@@ -70,14 +70,14 @@ export default function PromosPage() {
             step="0.01"
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            placeholder="Value"
+            placeholder="Valor"
             className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <Button
             type="submit"
             disabled={!name.trim() || !value.trim() || createPromo.isPending}
           >
-            {createPromo.isPending ? "Saving..." : "Create Promo"}
+            {createPromo.isPending ? "Guardando..." : "Crear Promoción"}
           </Button>
         </form>
 
@@ -85,10 +85,10 @@ export default function PromosPage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Name</th>
-                <th className="py-2 pr-4">Type</th>
-                <th className="py-2 pr-4">Value</th>
-                <th className="py-2 pr-4">Active</th>
+                <th className="py-2 pr-4">Nombre</th>
+                <th className="py-2 pr-4">Tipo</th>
+                <th className="py-2 pr-4">Valor</th>
+                <th className="py-2 pr-4">Activo</th>
               </tr>
             </thead>
             <tbody>
@@ -107,14 +107,14 @@ export default function PromosPage() {
                     {String(promo.value)}
                   </td>
                   <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                    {promo.isActive ? "Yes" : "No"}
+                    {promo.isActive ? "Sí" : "No"}
                   </td>
                 </tr>
               ))}
               {!promosQuery.data?.length && (
                 <tr>
                   <td className="py-4 text-center text-neutral-500 dark:text-neutral-400" colSpan={4}>
-                    No promos yet.
+                    Aún no hay promociones.
                   </td>
                 </tr>
               )}
@@ -124,7 +124,7 @@ export default function PromosPage() {
       </section>
 
       <Button variant="outline" asChild>
-        <Link href="/admin/catalog/pricing">Back to pricing</Link>
+        <Link href="/admin/catalog/pricing">Volver a precios</Link>
       </Button>
     </div>
   );

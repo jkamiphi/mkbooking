@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/admin/inventory", label: "Overview" },
-  { href: "/admin/inventory/assets", label: "Assets" },
-  { href: "/admin/inventory/faces", label: "Faces" },
-  { href: "/admin/inventory/taxonomy", label: "Taxonomy" },
+  { href: "/admin/inventory", label: "Resumen" },
+  { href: "/admin/inventory/assets", label: "Activos" },
+  { href: "/admin/inventory/faces", label: "Caras" },
+  { href: "/admin/inventory/taxonomy", label: "Taxonomía" },
 ];
 
 export function InventoryNav() {

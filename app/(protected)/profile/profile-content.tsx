@@ -11,7 +11,7 @@ export function ProfileContent() {
     onSuccess: () => {
       utils.userProfile.me.invalidate();
       setIsEditing(false);
-      setSuccessMessage("Profile updated successfully");
+      setSuccessMessage("Perfil actualizado correctamente");
       setTimeout(() => setSuccessMessage(""), 3000);
     },
   });
@@ -19,7 +19,7 @@ export function ProfileContent() {
   const updateNotifications = trpc.userProfile.updateNotifications.useMutation({
     onSuccess: () => {
       utils.userProfile.me.invalidate();
-      setSuccessMessage("Notification preferences updated");
+      setSuccessMessage("Preferencias de notificación actualizadas");
       setTimeout(() => setSuccessMessage(""), 3000);
     },
   });
@@ -65,7 +65,7 @@ export function ProfileContent() {
   if (error) {
     return (
       <div className="p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
-        Failed to load profile: {error.message}
+        Error al cargar el perfil: {error.message}
       </div>
     );
   }
@@ -73,7 +73,7 @@ export function ProfileContent() {
   if (!profile) {
     return (
       <div className="p-4 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-800 text-yellow-700 dark:text-yellow-400 rounded">
-        Profile not found
+        Perfil no encontrado
       </div>
     );
   }
@@ -89,12 +89,12 @@ export function ProfileContent() {
       {/* Account Info */}
       <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-          Account Information
+          Información de Cuenta
         </h2>
         <div className="space-y-3">
           <div>
             <span className="text-sm text-neutral-500 dark:text-neutral-400">
-              Email
+              Correo electrónico
             </span>
             <p className="text-neutral-900 dark:text-white">
               {profile.user?.email}
@@ -102,15 +102,15 @@ export function ProfileContent() {
           </div>
           <div>
             <span className="text-sm text-neutral-500 dark:text-neutral-400">
-              Display Name
+              Nombre
             </span>
             <p className="text-neutral-900 dark:text-white">
-              {profile.user?.name || "Not set"}
+              {profile.user?.name || "No establecido"}
             </p>
           </div>
           <div>
             <span className="text-sm text-neutral-500 dark:text-neutral-400">
-              Member Since
+              Miembro desde
             </span>
             <p className="text-neutral-900 dark:text-white">
               {new Date(profile.createdAt).toLocaleDateString()}
@@ -123,14 +123,14 @@ export function ProfileContent() {
       <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
-            Personal Information
+            Información Personal
           </h2>
           {!isEditing && (
             <button
               onClick={startEditing}
               className="text-sm text-blue-600 hover:text-blue-500 font-medium"
             >
-              Edit
+              Editar
             </button>
           )}
         </div>
@@ -140,7 +140,7 @@ export function ProfileContent() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  First Name
+                  Nombre
                 </label>
                 <input
                   type="text"
@@ -151,7 +151,7 @@ export function ProfileContent() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Last Name
+                  Apellido
                 </label>
                 <input
                   type="text"
@@ -163,7 +163,7 @@ export function ProfileContent() {
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Phone
+                Teléfono
               </label>
               <input
                 type="tel"
@@ -179,13 +179,13 @@ export function ProfileContent() {
                 disabled={updateProfile.isPending}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
               >
-                {updateProfile.isPending ? "Saving..." : "Save"}
+                {updateProfile.isPending ? "Guardando..." : "Guardar"}
               </button>
               <button
                 onClick={() => setIsEditing(false)}
                 className="px-4 py-2 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-medium rounded-md transition-colors"
               >
-                Cancel
+                Cancelar
               </button>
             </div>
           </div>
@@ -194,27 +194,27 @@ export function ProfileContent() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                  First Name
+                  Nombre
                 </span>
                 <p className="text-neutral-900 dark:text-white">
-                  {profile.firstName || "Not set"}
+                  {profile.firstName || "No establecido"}
                 </p>
               </div>
               <div>
                 <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Last Name
+                  Apellido
                 </span>
                 <p className="text-neutral-900 dark:text-white">
-                  {profile.lastName || "Not set"}
+                  {profile.lastName || "No establecido"}
                 </p>
               </div>
             </div>
             <div>
               <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                Phone
+                Teléfono
               </span>
               <p className="text-neutral-900 dark:text-white">
-                {profile.phone || "Not set"}
+                {profile.phone || "No establecido"}
               </p>
             </div>
           </div>
@@ -224,16 +224,16 @@ export function ProfileContent() {
       {/* Notification Preferences */}
       <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-          Notification Preferences
+          Preferencias de Notificación
         </h2>
         <div className="space-y-4">
           <label className="flex items-center justify-between">
             <div>
               <span className="text-neutral-900 dark:text-white font-medium">
-                Email Notifications
+                Notificaciones por Correo
               </span>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                Receive updates via email
+                Recibir actualizaciones por correo
               </p>
             </div>
             <input
@@ -249,10 +249,10 @@ export function ProfileContent() {
           <label className="flex items-center justify-between">
             <div>
               <span className="text-neutral-900 dark:text-white font-medium">
-                WhatsApp Notifications
+                Notificaciones por WhatsApp
               </span>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                Receive updates via WhatsApp
+                Recibir actualizaciones por WhatsApp
               </p>
             </div>
             <input
@@ -271,10 +271,10 @@ export function ProfileContent() {
           <label className="flex items-center justify-between">
             <div>
               <span className="text-neutral-900 dark:text-white font-medium">
-                SMS Notifications
+                Notificaciones por SMS
               </span>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                Receive updates via SMS
+                Recibir actualizaciones por SMS
               </p>
             </div>
             <input
@@ -294,7 +294,7 @@ export function ProfileContent() {
       {profile.organizationRoles && profile.organizationRoles.length > 0 && (
         <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-            Organizations
+            Organizaciones
           </h2>
           <div className="space-y-3">
             {profile.organizationRoles.map((membership) => (
@@ -337,18 +337,18 @@ export function ProfileContent() {
       {/* Locale Settings */}
       <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-          Regional Settings
+          Configuración Regional
         </h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <span className="text-sm text-neutral-500 dark:text-neutral-400">
-              Locale
+              Idioma
             </span>
             <p className="text-neutral-900 dark:text-white">{profile.locale}</p>
           </div>
           <div>
             <span className="text-sm text-neutral-500 dark:text-neutral-400">
-              Timezone
+              Zona horaria
             </span>
             <p className="text-neutral-900 dark:text-white">
               {profile.timezone}

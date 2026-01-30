@@ -1,11 +1,11 @@
 export const metadata = {
-  title: "Catalog Pricing - Admin",
-  description: "Manage catalog pricing",
+  title: "Precios del Catálogo - Admin",
+  description: "Gestionar precios del catálogo",
 };
 
 const items = [
-  { href: "/admin/catalog/pricing/rules", label: "Price Rules" },
-  { href: "/admin/catalog/pricing/promos", label: "Promos" },
+  { href: "/admin/catalog/pricing/rules", label: "Reglas de Precio" },
+  { href: "/admin/catalog/pricing/promos", label: "Promociones" },
 ];
 
 export default function PricingPage() {
@@ -13,10 +13,10 @@ export default function PricingPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Pricing
+          Precios
         </h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Global prices, promos, and special prices.
+          Precios globales, promociones y precios especiales.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

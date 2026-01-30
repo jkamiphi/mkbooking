@@ -42,7 +42,7 @@ function CustomerTypeSelector({ onSelect, selected }: CustomerTypeSelectorProps)
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-medium text-center text-neutral-700 dark:text-neutral-300">
-        How will you use MK Booking?
+        ¿Cómo usarás MK Booking?
       </h2>
       <div className="grid grid-cols-1 gap-4">
         <button
@@ -82,10 +82,10 @@ function CustomerTypeSelector({ onSelect, selected }: CustomerTypeSelectorProps)
             </div>
             <div>
               <h3 className="font-semibold text-neutral-900 dark:text-white">
-                Natural Person
+                Persona Natural
               </h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                For individuals advertising their own products or services. You&apos;ll use your personal ID (cedula).
+                Para individuos que anuncian sus propios productos o servicios. Usarás tu cédula personal.
               </p>
             </div>
           </div>
@@ -128,10 +128,10 @@ function CustomerTypeSelector({ onSelect, selected }: CustomerTypeSelectorProps)
             </div>
             <div>
               <h3 className="font-semibold text-neutral-900 dark:text-white">
-                Business / Company
+                Empresa / Negocio
               </h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                For companies, agencies, or organizations. You&apos;ll use your business tax ID (RUC).
+                Para empresas, agencias u organizaciones. Usarás tu RUC empresarial.
               </p>
             </div>
           </div>
@@ -175,12 +175,12 @@ export function RegisterForm() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Las contraseñas no coinciden");
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError("La contraseña debe tener al menos 8 caracteres");
       return;
     }
 
@@ -194,7 +194,7 @@ export function RegisterForm() {
       });
 
       if (result.error) {
-        setError(result.error.message || "Failed to create account");
+        setError(result.error.message || "Error al crear la cuenta");
         return;
       }
 
@@ -207,7 +207,7 @@ export function RegisterForm() {
       router.push("/onboarding");
       router.refresh();
     } catch {
-      setError("An unexpected error occurred");
+      setError("Ocurrió un error inesperado");
     } finally {
       setLoading(false);
     }
@@ -216,7 +216,7 @@ export function RegisterForm() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-center mb-2">Create Account</h1>
+        <h1 className="text-2xl font-bold text-center mb-2">Crear Cuenta</h1>
         <StepIndicator currentStep={step} totalSteps={totalSteps} />
 
         {error && (
@@ -237,7 +237,7 @@ export function RegisterForm() {
               disabled={!customerType}
               className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-neutral-300 dark:disabled:bg-neutral-700 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              Continue
+              Continuar
             </button>
           </div>
         )}
@@ -246,9 +246,9 @@ export function RegisterForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <p className="text-sm text-blue-700 dark:text-blue-400">
-                Registering as:{" "}
+                Registrándose como:{" "}
                 <span className="font-medium">
-                  {customerType === "natural" ? "Natural Person" : "Business / Company"}
+                  {customerType === "natural" ? "Persona Natural" : "Empresa / Negocio"}
                 </span>
               </p>
             </div>
@@ -258,7 +258,7 @@ export function RegisterForm() {
                 htmlFor="name"
                 className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
               >
-                {customerType === "natural" ? "Full Name" : "Contact Person Name"}
+                {customerType === "natural" ? "Nombre Completo" : "Nombre de Contacto"}
               </label>
               <input
                 id="name"
@@ -267,7 +267,7 @@ export function RegisterForm() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-                placeholder={customerType === "natural" ? "John Doe" : "Contact person's name"}
+                placeholder={customerType === "natural" ? "Juan Pérez" : "Nombre del contacto"}
               />
             </div>
 
@@ -276,7 +276,7 @@ export function RegisterForm() {
                 htmlFor="email"
                 className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
               >
-                Email
+                Correo electrónico
               </label>
               <input
                 id="email"
@@ -285,7 +285,7 @@ export function RegisterForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-                placeholder="you@example.com"
+                placeholder="correo@ejemplo.com"
               />
             </div>
 
@@ -294,7 +294,7 @@ export function RegisterForm() {
                 htmlFor="password"
                 className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
               >
-                Password
+                Contraseña
               </label>
               <input
                 id="password"
@@ -303,7 +303,7 @@ export function RegisterForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-                placeholder="Minimum 8 characters"
+                placeholder="Mínimo 8 caracteres"
               />
             </div>
 
@@ -312,7 +312,7 @@ export function RegisterForm() {
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
               >
-                Confirm Password
+                Confirmar Contraseña
               </label>
               <input
                 id="confirmPassword"
@@ -321,7 +321,7 @@ export function RegisterForm() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-                placeholder="Confirm your password"
+                placeholder="Confirma tu contraseña"
               />
             </div>
 
@@ -331,26 +331,26 @@ export function RegisterForm() {
                 onClick={handleBack}
                 className="flex-1 py-2 px-4 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-medium rounded-md transition-colors"
               >
-                Back
+                Volver
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
-                {loading ? "Creating account..." : "Create Account"}
+                {loading ? "Creando cuenta..." : "Crear Cuenta"}
               </button>
             </div>
           </form>
         )}
 
         <p className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400">
-          Already have an account?{" "}
+          ¿Ya tienes cuenta?{" "}
           <Link
             href="/login"
             className="text-blue-600 hover:text-blue-500 font-medium"
           >
-            Sign in
+            Iniciar sesión
           </Link>
         </p>
       </div>
