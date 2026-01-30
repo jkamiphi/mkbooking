@@ -5,7 +5,6 @@ import {
   ChevronRight,
   CircleDollarSign,
   Filter,
-  Heart,
   MapPin,
   Search,
   Sparkles,
@@ -47,6 +46,49 @@ function formatPrice(priceDaily: number, currency: string) {
   }
 }
 
+const structureTypeHints: Record<string, string> = {
+  "Mupi Giant": "Peatones · alta frecuencia",
+  "Pantalla Digital": "Impacto · rotación",
+  Bastidor: "Tráfico vehicular",
+  "Mini Unipolar": "Cobertura local",
+  Pared: "Gran formato",
+  Perimetral: "Eventos · perímetros",
+  Unipolar: "Alta visibilidad",
+  Valla: "Tránsito pesado",
+  Parada: "Flujo peatonal",
+};
+
+const zoneBadges: Record<string, string> = {
+  "Brisas del Golf": "Residencial",
+  "Costa Verde": "Premium",
+  "Avenida Central": "Comercial",
+  Boquete: "Turístico",
+  "Paso Canoa Frontera": "Frontera",
+  Santiago: "Tráfico alto",
+  "Isla Colón": "Turístico",
+  "Vía Roosevelt": "Conectividad",
+};
+
+function getCoverageLabel(total: number) {
+  if (total >= 80) return "Muy alta";
+  if (total >= 40) return "Alta";
+  if (total >= 15) return "Media";
+  return "Selectiva";
+}
+
+function getTrafficLabel(structureType: string) {
+  const key = structureType.toLowerCase();
+  if (
+    key.includes("digital") ||
+    key.includes("unipolar") ||
+    key.includes("valla")
+  ) {
+    return "Alto";
+  }
+  if (key.includes("mupi") || key.includes("parada")) return "Medio";
+  return "Moderado";
+}
+
 export default async function Home({
   searchParams,
 }: {
@@ -84,6 +126,32 @@ export default async function Home({
   );
   const selectedZone = zones.find((zone) => zone.id === zoneId);
   const showPrices = Boolean(session);
+  const coverageLabel = getCoverageLabel(catalog.total);
+  const isPanamaQuery =
+    (query ?? "").toLowerCase().includes("panam") ||
+    (selectedZone?.province.name ?? "").toLowerCase().includes("panam") ||
+    (selectedZone?.name ?? "").toLowerCase().includes("panam");
+  const showPromo = Boolean(catalog.promo && isPanamaQuery);
+
+  const structureCounts = catalog.faces.reduce<Record<string, number>>(
+    (acc, face) => {
+      const name = face.asset.structureType.name;
+      acc[name] = (acc[name] || 0) + 1;
+      return acc;
+    },
+    {},
+  );
+  const topStructureBreakdown = Object.entries(structureCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name, count]) => `${count} ${name.toLowerCase()}`);
+  const promoValueLabel = catalog.promo
+    ? catalog.promo.type === "PERCENT"
+      ? `${catalog.promo.value}%`
+      : catalog.promo.type === "FIXED"
+        ? `${catalog.promo.value}`
+        : `${catalog.promo.value}`
+    : null;
 
   const currentFilters = {
     q: query,
@@ -118,7 +186,7 @@ export default async function Home({
         style={{ animation: "drift 20s ease-in-out infinite" }}
       />
 
-      <header className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-6 pb-6 pt-6">
+      <header className="relative mx-auto flex w-full max-w-7xl items-start justify-between px-6 pb-6 pt-6">
         <Link href="/" className="flex items-center gap-2">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30">
             <Sparkles className="h-5 w-5" />
@@ -128,29 +196,17 @@ export default async function Home({
               MK Booking
             </p>
             <p className="text-lg font-semibold tracking-tight">Catálogo OOH</p>
+            <p className="mt-1 text-xs text-neutral-500">
+              Reserva espacios OOH por ubicación, tipo y fechas en minutos
+            </p>
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm font-medium text-neutral-600 lg:flex">
-          <span className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-neutral-800 shadow-sm">
-            <CircleDollarSign className="h-4 w-4 text-[#fcb814]" />
-            Precio diario
-          </span>
-          <span className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-neutral-500" />
-            Inventario global
-          </span>
-          <span className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-neutral-500" />
-            Caras seleccionadas
-          </span>
-        </nav>
-
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-2 text-xs">
           {session ? (
             <Link
               href="/profile"
-              className="rounded-full border border-neutral-200 bg-white/80 px-4 py-2 font-medium text-neutral-900 shadow-sm hover:bg-white"
+              className="rounded-full border border-neutral-200 bg-white/80 px-3 py-2 font-semibold text-neutral-900 shadow-sm hover:bg-white"
             >
               Mi Panel
             </Link>
@@ -158,13 +214,13 @@ export default async function Home({
             <>
               <Link
                 href="/login"
-                className="rounded-full border border-neutral-200 bg-white/80 px-4 py-2 font-medium text-neutral-900 shadow-sm hover:bg-white"
+                className="rounded-full border border-neutral-200 bg-white/80 px-3 py-2 font-semibold text-neutral-900 shadow-sm hover:bg-white"
               >
                 Iniciar sesión
               </Link>
               <Link
                 href="/register"
-                className="rounded-full bg-[#0359A8] px-4 py-2 font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
+                className="rounded-full bg-[#0359A8] px-3 py-2 font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
               >
                 Crear cuenta
               </Link>
@@ -176,86 +232,84 @@ export default async function Home({
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-12 pt-4">
         <form
           action="/"
-          className="mt-8 flex flex-col gap-3 rounded-3xl border border-white/60 bg-white/80 p-4 shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl md:flex-row md:items-center md:gap-2"
+          className="mt-8 grid gap-4 rounded-3xl border border-white/60 bg-white/85 p-5 shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl md:grid-cols-[1.6fr_1fr_0.8fr_auto] md:items-end"
         >
-          <div className="flex flex-1 items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3">
-            <Search className="h-4 w-4 text-neutral-500" />
-            <input
-              name="q"
-              defaultValue={query ?? ""}
-              placeholder="Buscar por código, dirección o punto de referencia"
-              className="w-full bg-transparent text-sm font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
-            />
+          <label className="flex flex-col gap-2 text-xs font-semibold text-neutral-600">
+            ¿Dónde quieres anunciarte?
+            <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3">
+              <Search className="h-4 w-4 text-neutral-500" />
+              <input
+                name="q"
+                defaultValue={query ?? ""}
+                placeholder="Ciudad de Panamá, Vía España, Albrook..."
+                className="w-full bg-transparent text-sm font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+              />
+            </div>
+          </label>
+
+          <label className="flex flex-col gap-2 text-xs font-semibold text-neutral-600">
+            ¿Qué tipo de estructura?
+            <select
+              name="type"
+              defaultValue={typeId ?? ""}
+              className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-900"
+            >
+              <option value="">Todas las estructuras</option>
+              {structureTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-2 text-xs font-semibold text-neutral-600">
+            ¿Cuántos espacios?
+            <select
+              className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-900"
+              defaultValue=""
+            >
+              <option value="">Indistinto</option>
+              <option value="1-2">1 a 2</option>
+              <option value="3-5">3 a 5</option>
+              <option value="6-10">6 a 10</option>
+              <option value="11+">11 o más</option>
+            </select>
+          </label>
+
+          <div className="flex flex-col gap-2">
+            <button
+              type="submit"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-[#0359A8] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
+            >
+              Buscar espacios
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <span className="hidden items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[11px] font-semibold text-neutral-500 md:flex">
+              <Calendar className="h-4 w-4" />
+              Rango de fechas
+            </span>
           </div>
 
-          {typeId && <input type="hidden" name="type" value={typeId} />}
           {zoneId && <input type="hidden" name="zone" value={zoneId} />}
-
-          <button
-            type="submit"
-            className="flex items-center justify-center gap-2 rounded-2xl bg-[#0359A8] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
-          >
-            Buscar
-            <ChevronRight className="h-4 w-4" />
-          </button>
-
-          <span className="hidden items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-xs font-semibold text-neutral-500 md:flex">
-            <Calendar className="h-4 w-4" />
-            Rango de fechas
-          </span>
         </form>
 
-        {catalog.promo ? (
+        {showPromo ? (
           <div
             className="mt-6 flex items-center gap-3 rounded-2xl border border-[#fcb814]/60 bg-[#fff6dd] px-4 py-3 text-sm text-[#0359A8]"
             style={{ animation: "rise 0.7s ease 0.1s forwards" }}
           >
             <Sparkles className="h-4 w-4" />
-            Promoción activa:{" "}
-            <span className="font-semibold">{catalog.promo.name}</span>
-            <span className="font-medium">
-              {catalog.promo.type === "PERCENT"
-                ? `${catalog.promo.value}% de descuento`
-                : catalog.promo.type === "FIXED"
-                  ? `${catalog.promo.value} de descuento`
-                  : `${catalog.promo.value}`}
+            <span className="font-semibold">
+              {promoValueLabel
+                ? `${promoValueLabel} de descuento en campañas por zona en Panamá`
+                : "Descuento activo en campañas por zona en Panamá"}
             </span>
           </div>
         ) : null}
       </section>
 
       <section className="mx-auto w-full max-w-7xl px-6 pb-16">
-        <div
-          className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-white/60 bg-white/70 px-5 py-4 shadow-md shadow-neutral-200/40"
-          style={{ animation: "rise 0.7s ease 0.15s forwards" }}
-        >
-          <div>
-            <p className="text-sm font-semibold text-neutral-900">
-              {catalog.total} caras disponibles para alquilar
-            </p>
-            <p className="text-xs text-neutral-500">
-              {selectedStructureType?.name ?? "Todos los tipos de estructura"} ·{" "}
-              {selectedZone?.name ?? "Todas las zonas"}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-neutral-600">
-            {selectedStructureType || selectedZone || query ? (
-              <Link
-                href="/"
-                className="rounded-full border border-neutral-200 bg-white px-3 py-1 hover:border-neutral-300"
-              >
-                Limpiar filtros
-              </Link>
-            ) : null}
-            <span className="rounded-full bg-[#0359A8] px-3 py-1 text-white">
-              Reserva 24h
-            </span>
-            <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">
-              Precio diario
-            </span>
-          </div>
-        </div>
-
         <div className="mt-8">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-neutral-900">
@@ -286,9 +340,16 @@ export default async function Home({
                         loading="lazy"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <span className="absolute bottom-2 left-3 right-3 text-sm font-semibold text-white">
-                        {type.name}
-                      </span>
+                      <div className="absolute bottom-2 left-3 right-3">
+                        <span className="text-sm font-semibold text-white block">
+                          {type.name}
+                        </span>
+                        {structureTypeHints[type.name] ? (
+                          <span className="text-xs text-white/80">
+                            {structureTypeHints[type.name]}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   ) : (
                     <div className="aspect-[4/3] w-full bg-gradient-to-br from-[#fcb814]/30 to-[#0359A8]/30 flex flex-col items-center justify-center p-4">
@@ -296,6 +357,11 @@ export default async function Home({
                       <span className="text-sm font-semibold text-neutral-800 text-center">
                         {type.name}
                       </span>
+                      {structureTypeHints[type.name] ? (
+                        <span className="text-xs text-neutral-600 text-center">
+                          {structureTypeHints[type.name]}
+                        </span>
+                      ) : null}
                     </div>
                   )}
                   {isActive && (
@@ -339,6 +405,11 @@ export default async function Home({
                         loading="lazy"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      {zoneBadges[zone.name] ? (
+                        <span className="absolute left-2 top-2 rounded-full bg-white/85 px-2 py-1 text-[10px] font-semibold text-neutral-800">
+                          {zoneBadges[zone.name]}
+                        </span>
+                      ) : null}
                       <div className="absolute bottom-2 left-3 right-3">
                         <span className="text-sm font-semibold text-white block">
                           {zone.name}
@@ -354,6 +425,11 @@ export default async function Home({
                       <span className="text-sm font-semibold text-neutral-800 text-center">
                         {zone.name}
                       </span>
+                      {zoneBadges[zone.name] ? (
+                        <span className="text-[10px] font-semibold text-neutral-600">
+                          {zoneBadges[zone.name]}
+                        </span>
+                      ) : null}
                       <span className="text-xs text-neutral-500">
                         {zone.province.name}
                       </span>
@@ -390,6 +466,9 @@ export default async function Home({
                       face.effectivePrice.currency ?? "USD",
                     )
                   : null;
+              const trafficLabel = getTrafficLabel(
+                face.asset.structureType.name,
+              );
 
               const sizeLabel = Number.isFinite(Number(face.width))
                 ? `${Number(face.width)} x ${Number(face.height)}`
@@ -423,14 +502,6 @@ export default async function Home({
                         </span>
                       ) : null}
                     </div>
-
-                    <button
-                      className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-neutral-700 shadow-md backdrop-blur"
-                      type="button"
-                      aria-label="Guardar"
-                    >
-                      <Heart className="h-4 w-4" />
-                    </button>
 
                     <div className="aspect-[4/3] overflow-hidden rounded-t-3xl bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-50">
                       {imageUrl ? (
@@ -467,6 +538,9 @@ export default async function Home({
                     <p className="text-xs text-neutral-500">
                       {face.asset.address}
                     </p>
+                    <p className="text-xs text-neutral-500">
+                      Tráfico estimado: {trafficLabel}
+                    </p>
 
                     {showPrices ? (
                       <div className="flex items-center justify-between pt-2">
@@ -489,6 +563,14 @@ export default async function Home({
                         <ChevronRight className="h-3 w-3" />
                       </Link>
                     )}
+
+                    <button
+                      type="button"
+                      className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-[#0359A8]/30 hover:bg-[#024a8c]"
+                    >
+                      Añadir a campaña
+                      <ChevronRight className="h-3 w-3" />
+                    </button>
                   </div>
                 </article>
               );
