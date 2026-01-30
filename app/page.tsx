@@ -1,18 +1,11 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import {
-  Calendar,
-  ChevronRight,
-  CircleDollarSign,
-  Filter,
-  MapPin,
-  Search,
-  Sparkles,
-} from "lucide-react";
+import { ChevronRight, CircleDollarSign, Filter, MapPin, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { listCatalogFaces } from "@/lib/services/catalog";
 import { listStructureTypes, listZones } from "@/lib/services/inventory";
 import { getUserProfileByUserId } from "@/lib/services/user-profile";
+import { HomeSearchBar } from "@/components/home/home-search";
 
 type SearchParams = {
   q?: string | string[];
@@ -229,85 +222,15 @@ export default async function Home({
         </div>
       </header>
 
-      <section className="relative mx-auto w-full max-w-7xl px-6 pb-12 pt-4">
-        <form
-          action="/"
-          className="mt-8 grid gap-4 rounded-3xl border border-white/60 bg-white/85 p-5 shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl md:grid-cols-[1.6fr_1fr_0.8fr_auto] md:items-end"
-        >
-          <label className="flex flex-col gap-2 text-xs font-semibold text-neutral-600">
-            ¿Dónde quieres anunciarte?
-            <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3">
-              <Search className="h-4 w-4 text-neutral-500" />
-              <input
-                name="q"
-                defaultValue={query ?? ""}
-                placeholder="Ciudad de Panamá, Vía España, Albrook..."
-                className="w-full bg-transparent text-sm font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
-              />
-            </div>
-          </label>
-
-          <label className="flex flex-col gap-2 text-xs font-semibold text-neutral-600">
-            ¿Qué tipo de estructura?
-            <select
-              name="type"
-              defaultValue={typeId ?? ""}
-              className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-900"
-            >
-              <option value="">Todas las estructuras</option>
-              {structureTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-2 text-xs font-semibold text-neutral-600">
-            ¿Cuántos espacios?
-            <select
-              className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-900"
-              defaultValue=""
-            >
-              <option value="">Indistinto</option>
-              <option value="1-2">1 a 2</option>
-              <option value="3-5">3 a 5</option>
-              <option value="6-10">6 a 10</option>
-              <option value="11+">11 o más</option>
-            </select>
-          </label>
-
-          <div className="flex flex-col gap-2">
-            <button
-              type="submit"
-              className="flex items-center justify-center gap-2 rounded-2xl bg-[#0359A8] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
-            >
-              Buscar espacios
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <span className="hidden items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[11px] font-semibold text-neutral-500 md:flex">
-              <Calendar className="h-4 w-4" />
-              Rango de fechas
-            </span>
-          </div>
-
-          {zoneId && <input type="hidden" name="zone" value={zoneId} />}
-        </form>
-
-        {showPromo ? (
-          <div
-            className="mt-6 flex items-center gap-3 rounded-2xl border border-[#fcb814]/60 bg-[#fff6dd] px-4 py-3 text-sm text-[#0359A8]"
-            style={{ animation: "rise 0.7s ease 0.1s forwards" }}
-          >
-            <Sparkles className="h-4 w-4" />
-            <span className="font-semibold">
-              {promoValueLabel
-                ? `${promoValueLabel} de descuento en campañas por zona en Panamá`
-                : "Descuento activo en campañas por zona en Panamá"}
-            </span>
-          </div>
-        ) : null}
-      </section>
+      <HomeSearchBar
+        query={query}
+        typeId={typeId}
+        zoneId={zoneId}
+        zones={zones}
+        structureTypes={structureTypes}
+        showPromo={showPromo}
+        promoValueLabel={promoValueLabel}
+      />
 
       <section className="mx-auto w-full max-w-7xl px-6 pb-16">
         <div className="mt-8">
