@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, ChevronRight, MapPin, Search, Users, X } from "lucide-react";
+import {
+  Boxes,
+  Calendar,
+  ChevronRight,
+  MapPin,
+  Search,
+  Users,
+  X,
+} from "lucide-react";
 
 type StructureTypeOption = {
   id: string;
@@ -92,6 +100,12 @@ export function HomeSearchBar({
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
+  const todayDate = useMemo(() => clampDate(new Date()), []);
+  const tomorrowDate = useMemo(() => {
+    const tomorrow = new Date(todayDate);
+    tomorrow.setDate(todayDate.getDate() + 1);
+    return tomorrow;
+  }, [todayDate]);
 
   useEffect(() => {
     setQueryValue(query ?? "");
@@ -199,7 +213,7 @@ export function HomeSearchBar({
   const segmentActive = "bg-white shadow-lg shadow-neutral-200/60";
 
   return (
-    <section className="relative mx-auto w-full max-w-7xl px-6 pb-12 pt-4">
+    <section className="relative mx-auto w-full max-w-min px-6 pb-12 pt-4">
       <form action="/" className="mt-8">
         <div ref={containerRef} className="relative">
           <div className="rounded-full border border-white/70 bg-white/90 shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl">
@@ -262,17 +276,18 @@ export function HomeSearchBar({
               <div className="hidden h-8 w-px bg-neutral-200 md:block" />
 
               <div className="flex flex-nowrap items-center justify-end gap-2 px-2">
+                Espacios
                 <button
                   type="button"
                   onClick={() => setActivePanel("quantity")}
-                  className={`flex items-center gap-2 rounded-full border px-4 py-3 text-xs font-semibold transition ${
+                  className={`flex items-center gap-2 rounded-full border px-4 py-3 text-xs min-w-[120px] font-semibold transition ${
                     activePanel === "quantity"
                       ? "border-neutral-900 bg-neutral-900 text-white"
                       : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300"
                   }`}
                   aria-label="Seleccionar cantidad"
                 >
-                  <Users className="h-4 w-4" />
+                  <Boxes className="h-4 w-4" />
                   <span className="hidden md:inline">
                     {quantityOptions.find(
                       (option) => option.value === selectedQuantity,
@@ -348,29 +363,27 @@ export function HomeSearchBar({
                     <button
                       type="button"
                       onClick={() => setQuickRange("today")}
-                      className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-sm font-semibold text-neutral-900 hover:border-neutral-300"
+                      className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-lg font-semibold text-neutral-900 hover:border-neutral-300 aspect-[7/3]"
                     >
                       Hoy
                       <span className="block text-xs font-normal text-neutral-500">
-                        {formatShortDate(new Date())}
+                        {formatShortDate(todayDate)}
                       </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setQuickRange("tomorrow")}
-                      className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-sm font-semibold text-neutral-900 hover:border-neutral-300"
+                      className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-lg font-semibold text-neutral-900 hover:border-neutral-300 aspect-[7/3]"
                     >
                       Mañana
                       <span className="block text-xs font-normal text-neutral-500">
-                        {formatShortDate(
-                          new Date(Date.now() + 24 * 60 * 60 * 1000),
-                        )}
+                        {formatShortDate(tomorrowDate)}
                       </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setQuickRange("weekend")}
-                      className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-sm font-semibold text-neutral-900 hover:border-neutral-300"
+                      className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-lg font-semibold text-neutral-900 hover:border-neutral-300 aspect-[7/3]"
                     >
                       Este fin de semana
                       <span className="block text-xs font-normal text-neutral-500">
@@ -392,9 +405,9 @@ export function HomeSearchBar({
                             ),
                           )
                         }
-                        className="rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600"
+                        className="rounded-full border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600 aspect-square"
                       >
-                        ◀
+                        ←
                       </button>
                       <span className="text-sm font-semibold text-neutral-900">
                         {getMonthLabel(visibleMonth)}
@@ -410,9 +423,9 @@ export function HomeSearchBar({
                             ),
                           )
                         }
-                        className="rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600"
+                        className="rounded-full border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600 aspect-square"
                       >
-                        ▶
+                        →
                       </button>
                     </div>
 
@@ -445,7 +458,7 @@ export function HomeSearchBar({
                             key={day.toISOString()}
                             type="button"
                             onClick={() => handleRangeSelect(day)}
-                            className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition ${
+                            className={`flex h-10 w-10 items-center justify-center rounded-full aspect-square font-semibold transition ${
                               isStart || isEnd
                                 ? "bg-neutral-900 text-white"
                                 : inRange
@@ -508,7 +521,7 @@ export function HomeSearchBar({
                             setSelectedQuantity(option.value);
                             setActivePanel(null);
                           }}
-                          className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                          className={`rounded-2xl border px-4 py-3 text-left aspect-[7/3] text-lg font-semibold transition ${
                             selected
                               ? "border-neutral-900 bg-neutral-900 text-white"
                               : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
