@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ChevronRight, CircleDollarSign, Filter, MapPin, Sparkles } from "lucide-react";
+import {
+  ChevronRight,
+  CircleDollarSign,
+  Filter,
+  MapPin,
+  Sparkles,
+} from "lucide-react";
 import { auth } from "@/lib/auth";
 import { listCatalogFaces } from "@/lib/services/catalog";
 import { listStructureTypes, listZones } from "@/lib/services/inventory";
 import { getUserProfileByUserId } from "@/lib/services/user-profile";
 import { HomeSearchBar } from "@/components/home/home-search";
+import { ScrollNavigation } from "@/components/home/scroll-navigation";
 
 type SearchParams = {
   q?: string | string[];
@@ -234,12 +241,14 @@ export default async function Home({
 
       <section className="mx-auto w-full max-w-7xl px-6 pb-16">
         <div className="mt-8">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-neutral-900">
-              Explorar tipos de estructura
-            </h2>
-          </div>
-          <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+          <ScrollNavigation
+            targetId="structure-types-scroll"
+            title="Explorar tipos de estructura"
+          />
+          <div
+            id="structure-types-scroll"
+            className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
+          >
             {structureTypes.slice(0, 12).map((type) => {
               const url = buildSearchUrl({ ...currentFilters, type: type.id });
               const isActive = type.id === typeId;
@@ -299,12 +308,11 @@ export default async function Home({
         </div>
 
         <div className="mt-10">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-neutral-900">
-              Explorar zonas
-            </h2>
-          </div>
-          <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+          <ScrollNavigation targetId="zones-scroll" title="Explorar zonas" />
+          <div
+            id="zones-scroll"
+            className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
+          >
             {zones.slice(0, 12).map((zone) => {
               const url = buildSearchUrl({ ...currentFilters, zone: zone.id });
               const isActive = zone.id === zoneId;
