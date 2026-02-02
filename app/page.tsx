@@ -25,13 +25,17 @@ function getParam(value?: string | string[]) {
   return value;
 }
 
-function buildSearchUrl(current: { q?: string; zone?: string; type?: string }) {
+function buildSearchUrl(options: {
+  searchTerm?: string;
+  type?: string;
+  zone?: string;
+}) {
   const params = new URLSearchParams();
-  if (current.q) params.set("q", current.q);
-  if (current.zone) params.set("zone", current.zone);
-  if (current.type) params.set("type", current.type);
-  const query = params.toString();
-  return query ? `/?${query}` : "/";
+  if (options.type) params.set("type", options.type);
+  if (options.zone) params.set("zone", options.zone);
+  const searchTerm = options.searchTerm || "all";
+  const queryString = params.toString();
+  return `/s/${encodeURIComponent(searchTerm)}${queryString ? `?${queryString}` : ""}`;
 }
 
 function formatPrice(priceDaily: number, currency: string) {
@@ -153,12 +157,6 @@ export default async function Home({
         : `${catalog.promo.value}`
     : null;
 
-  const currentFilters = {
-    q: query,
-    zone: zoneId,
-    type: typeId,
-  };
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,_#fffdf5_0%,_#ffffff_45%,_#f4f7ff_100%)] text-neutral-950">
       <style>{`
@@ -250,17 +248,15 @@ export default async function Home({
             className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
           >
             {structureTypes.slice(0, 12).map((type) => {
-              const url = buildSearchUrl({ ...currentFilters, type: type.id });
-              const isActive = type.id === typeId;
+              const url = buildSearchUrl({
+                searchTerm: "all",
+                type: type.id,
+              });
               return (
                 <Link
                   key={type.id}
                   href={url}
-                  className={`group relative flex-shrink-0 overflow-hidden rounded-2xl transition ${
-                    isActive
-                      ? "ring-2 ring-[#0359A8] ring-offset-2"
-                      : "hover:shadow-lg"
-                  }`}
+                  className="group relative flex-shrink-0 overflow-hidden rounded-2xl transition hover:shadow-lg"
                   style={{ width: 160 }}
                 >
                   {type.imageUrl ? (
@@ -296,11 +292,6 @@ export default async function Home({
                       ) : null}
                     </div>
                   )}
-                  {isActive && (
-                    <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-[#0359A8] flex items-center justify-center">
-                      <span className="h-2 w-2 rounded-full bg-white" />
-                    </div>
-                  )}
                 </Link>
               );
             })}
@@ -314,17 +305,15 @@ export default async function Home({
             className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
           >
             {zones.slice(0, 12).map((zone) => {
-              const url = buildSearchUrl({ ...currentFilters, zone: zone.id });
-              const isActive = zone.id === zoneId;
+              const url = buildSearchUrl({
+                searchTerm: "all",
+                zone: zone.id,
+              });
               return (
                 <Link
                   key={zone.id}
                   href={url}
-                  className={`group relative flex-shrink-0 overflow-hidden rounded-2xl transition ${
-                    isActive
-                      ? "ring-2 ring-[#0359A8] ring-offset-2"
-                      : "hover:shadow-lg"
-                  }`}
+                  className="group relative flex-shrink-0 overflow-hidden rounded-2xl transition hover:shadow-lg"
                   style={{ width: 160 }}
                 >
                   {zone.imageUrl ? (
@@ -364,11 +353,6 @@ export default async function Home({
                       <span className="text-xs text-neutral-500">
                         {zone.province.name}
                       </span>
-                    </div>
-                  )}
-                  {isActive && (
-                    <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-[#0359A8] flex items-center justify-center">
-                      <span className="h-2 w-2 rounded-full bg-white" />
                     </div>
                   )}
                 </Link>

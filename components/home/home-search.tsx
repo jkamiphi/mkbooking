@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Boxes,
   Calendar,
@@ -90,6 +91,7 @@ export function HomeSearchBar({
   showPromo,
   promoValueLabel,
 }: HomeSearchBarProps) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [activePanel, setActivePanel] = useState<PanelKey>(null);
   const [queryValue, setQueryValue] = useState(query ?? "");
@@ -106,6 +108,20 @@ export function HomeSearchBar({
     tomorrow.setDate(todayDate.getDate() + 1);
     return tomorrow;
   }, [todayDate]);
+
+  function handleSearch(event: React.FormEvent) {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    if (selectedTypeId) params.set("type", selectedTypeId);
+    if (selectedQuantity) params.set("qty", selectedQuantity);
+    if (dateRange.from) params.set("from", dateRange.from.toISOString().split("T")[0]);
+    if (dateRange.to) params.set("to", dateRange.to.toISOString().split("T")[0]);
+
+    const searchTerm = queryValue.trim() || "all";
+    const queryString = params.toString();
+    const url = `/s/${encodeURIComponent(searchTerm)}${queryString ? `?${queryString}` : ""}`;
+    router.push(url);
+  }
 
   useEffect(() => {
     setQueryValue(query ?? "");
@@ -214,7 +230,7 @@ export function HomeSearchBar({
 
   return (
     <section className="relative mx-auto w-full max-w-min px-6 pb-12 pt-4">
-      <form action="/" className="mt-8">
+      <form onSubmit={handleSearch} className="mt-8">
         <div ref={containerRef} className="relative">
           <div className="rounded-full border border-white/70 bg-white/90 shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl">
             <div className="flex flex-nowrap justify-center items-center gap-2 overflow-x-auto p-2 md:gap-0 md:overflow-visible">
@@ -230,7 +246,6 @@ export function HomeSearchBar({
                 <span className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
                   <Search className="h-4 w-4 text-neutral-400" />
                   <input
-                    name="q"
                     value={queryValue}
                     onChange={(event) => setQueryValue(event.target.value)}
                     onFocus={() => setActivePanel("destination")}
@@ -537,10 +552,6 @@ export function HomeSearchBar({
           ) : null}
         </div>
 
-        {selectedTypeId && (
-          <input type="hidden" name="type" value={selectedTypeId} />
-        )}
-        {zoneId && <input type="hidden" name="zone" value={zoneId} />}
       </form>
 
       {showPromo ? (

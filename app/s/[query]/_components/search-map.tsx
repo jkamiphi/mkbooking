@@ -1,0 +1,154 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import {
+  APIProvider,
+  Map,
+  AdvancedMarker,
+  InfoWindow,
+  useMap,
+} from "@vis.gl/react-google-maps";
+
+type Marker = {
+  id: string;
+  lat: number;
+  lng: number;
+  title: string;
+  price: string | null;
+  structureType: string;
+};
+
+type SearchMapProps = {
+  markers: Marker[];
+  center: { lat: number; lng: number };
+  showPrices: boolean;
+};
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "";
+
+function MarkerWithInfoWindow({
+  marker,
+  showPrices,
+  isSelected,
+  onSelect,
+}: {
+  marker: Marker;
+  showPrices: boolean;
+  isSelected: boolean;
+  onSelect: (id: string | null) => void;
+}) {
+  return (
+    <>
+      <AdvancedMarker
+        position={{ lat: marker.lat, lng: marker.lng }}
+        onClick={() => onSelect(isSelected ? null : marker.id)}
+      >
+        <div
+          className={`
+            flex cursor-pointer items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold
+            shadow-lg transition-all duration-200
+            ${
+              isSelected
+                ? "scale-110 bg-neutral-900 text-white"
+                : "bg-white text-neutral-900 hover:scale-105 hover:bg-neutral-50"
+            }
+          `}
+        >
+          {showPrices && marker.price ? (
+            <span>{marker.price}</span>
+          ) : (
+            <span className="h-2 w-2 rounded-full bg-[#0359A8]" />
+          )}
+        </div>
+      </AdvancedMarker>
+
+      {isSelected && (
+        <InfoWindow
+          position={{ lat: marker.lat, lng: marker.lng }}
+          onCloseClick={() => onSelect(null)}
+          pixelOffset={[0, -35]}
+        >
+          <div className="min-w-[200px] p-1">
+            <p className="text-sm font-semibold text-neutral-900">
+              {marker.title}
+            </p>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              {marker.structureType}
+            </p>
+            {showPrices && marker.price && (
+              <p className="mt-2 text-base font-semibold text-[#0359A8]">
+                {marker.price}
+                <span className="text-xs font-normal text-neutral-500">
+                  {" "}
+                  / día
+                </span>
+              </p>
+            )}
+            <button
+              type="button"
+              className="mt-3 w-full rounded-full bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#024a8c]"
+            >
+              Ver detalles
+            </button>
+          </div>
+        </InfoWindow>
+      )}
+    </>
+  );
+}
+
+function MapContent({
+  markers,
+  showPrices,
+}: {
+  markers: Marker[];
+  showPrices: boolean;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  return (
+    <>
+      {markers.map((marker) => (
+        <MarkerWithInfoWindow
+          key={marker.id}
+          marker={marker}
+          showPrices={showPrices}
+          isSelected={selectedId === marker.id}
+          onSelect={setSelectedId}
+        />
+      ))}
+    </>
+  );
+}
+
+export function SearchMap({ markers, center, showPrices }: SearchMapProps) {
+  if (!GOOGLE_MAPS_API_KEY) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-neutral-100">
+        <p className="text-sm text-neutral-500">
+          Configura la API key de Google Maps
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+      <Map
+        defaultCenter={center}
+        defaultZoom={markers.length > 0 ? 12 : 10}
+        mapId={GOOGLE_MAP_ID}
+        gestureHandling="greedy"
+        disableDefaultUI={false}
+        zoomControl={true}
+        mapTypeControl={false}
+        streetViewControl={false}
+        fullscreenControl={true}
+        className="h-full w-full"
+      >
+        <MapContent markers={markers} showPrices={showPrices} />
+      </Map>
+    </APIProvider>
+  );
+}
