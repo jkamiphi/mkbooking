@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, ChevronRight, MapPin, Search, X } from "lucide-react";
+import { Calendar, ChevronRight, MapPin, Search, Users, X } from "lucide-react";
 
 type StructureTypeOption = {
   id: string;
@@ -195,7 +195,7 @@ export function HomeSearchBar({
   }
 
   const segmentBase =
-    "flex flex-col rounded-3xl px-5 py-4 text-[11px] font-semibold text-neutral-500 transition";
+    "flex cursor-pointer flex-col rounded-3xl px-6 py-3 text-[11px] font-semibold text-neutral-500 transition";
   const segmentActive = "bg-white shadow-lg shadow-neutral-200/60";
 
   return (
@@ -203,9 +203,9 @@ export function HomeSearchBar({
       <form action="/" className="mt-8">
         <div ref={containerRef} className="relative">
           <div className="rounded-full border border-white/70 bg-white/90 shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl">
-            <div className="grid grid-cols-1 gap-2 p-2 md:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto] md:items-center md:gap-0">
+            <div className="flex flex-nowrap justify-center items-center gap-2 overflow-x-auto p-2 md:gap-0 md:overflow-visible">
               <div
-                className={`${segmentBase} md:rounded-none md:rounded-l-full ${
+                className={`${segmentBase} min-w-[260px] md:rounded-none md:rounded-l-full ${
                   activePanel === "destination" ? segmentActive : ""
                 }`}
                 role="button"
@@ -229,7 +229,7 @@ export function HomeSearchBar({
               <div className="hidden h-8 w-px bg-neutral-200 md:block" />
 
               <div
-                className={`${segmentBase} md:rounded-none ${
+                className={`${segmentBase} min-w-[180px] md:rounded-none ${
                   activePanel === "dates" ? segmentActive : ""
                 }`}
                 role="button"
@@ -246,7 +246,7 @@ export function HomeSearchBar({
               <div className="hidden h-8 w-px bg-neutral-200 md:block" />
 
               <div
-                className={`${segmentBase} md:rounded-none ${
+                className={`${segmentBase} min-w-[220px] md:rounded-none ${
                   activePanel === "type" ? segmentActive : ""
                 }`}
                 role="button"
@@ -261,22 +261,24 @@ export function HomeSearchBar({
 
               <div className="hidden h-8 w-px bg-neutral-200 md:block" />
 
-              <div
-                className={`${segmentBase} md:rounded-none ${
-                  activePanel === "quantity" ? segmentActive : ""
-                }`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setActivePanel("quantity")}
-              >
-                Cantidad
-                <span className="mt-1 text-sm font-medium text-neutral-900">
-                  {quantityOptions.find((option) => option.value === selectedQuantity)?.label ??
-                    "Indistinto"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-end px-2">
+              <div className="flex flex-nowrap items-center justify-end gap-2 px-2">
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("quantity")}
+                  className={`flex items-center gap-2 rounded-full border px-4 py-3 text-xs font-semibold transition ${
+                    activePanel === "quantity"
+                      ? "border-neutral-900 bg-neutral-900 text-white"
+                      : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300"
+                  }`}
+                  aria-label="Seleccionar cantidad"
+                >
+                  <Users className="h-4 w-4" />
+                  <span className="hidden md:inline">
+                    {quantityOptions.find(
+                      (option) => option.value === selectedQuantity,
+                    )?.label ?? "Indistinto"}
+                  </span>
+                </button>
                 <button
                   type="submit"
                   className="flex items-center gap-2 rounded-full bg-[#E91E63] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#E91E63]/30 hover:bg-[#d91857]"
@@ -289,7 +291,7 @@ export function HomeSearchBar({
           </div>
 
           {activePanel ? (
-            <div className="absolute left-1/2 top-full z-30 mt-4 w-full max-w-4xl -translate-x-1/2 rounded-3xl border border-neutral-200 bg-white p-6 shadow-2xl">
+            <div className="absolute left-1/2 top-full z-30 mt-4 w-full max-w-lg -translate-x-1/2 rounded-3xl border border-neutral-200 bg-white p-6 shadow-2xl md:max-w-2xl">
               {activePanel === "destination" ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -436,8 +438,7 @@ export function HomeSearchBar({
                           : undefined;
                         const isStart = from ? isSameDay(day, from) : false;
                         const isEnd = to ? isSameDay(day, to) : false;
-                        const inRange =
-                          from && to && day >= from && day <= to;
+                        const inRange = from && to && day >= from && day <= to;
 
                         return (
                           <button
