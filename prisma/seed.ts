@@ -20,52 +20,19 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+// Batch size para procesamiento en chunks y reducir uso de memoria
+const BATCH_SIZE = 50;
+
+// Reducido para ambiente de producción - ajusta según necesites
 const provinceZones = [
-  { name: "Aguadulce", zones: ["Aguadulce"] },
-  { name: "Altos de Panamá", zones: ["Altos de Panamá", "El Bosque"] },
-  { name: "Antón", zones: ["Antón", "Río Hato", "El Valle"] },
   {
-    name: "Arraiján",
-    zones: [
-      "Nuevo Arraiján",
-      "Nuevo Chorrillo",
-      "Vacamonte",
-      "Vista Alegre",
-      "Howard",
-      "Veracruz",
-    ],
+    name: "Panamá",
+    zones: ["Ciudad de Panamá", "Costa del Este", "Punta Pacifica"],
   },
-  { name: "Bocas del Toro", zones: ["Almirante", "Changuinola", "Isla Colón"] },
-  { name: "Brisas del Golf", zones: ["Brisas del Golf", "San Antonio"] },
-  { name: "Chepo", zones: ["Chepo", "Tortí"] },
-  {
-    name: "Colón",
-    zones: [
-      "Avenida Randolph",
-      "Avenida Central",
-      "Sabanitas",
-      "Cuatro Altos",
-      "Margarita",
-      "Vía Roosevelt",
-    ],
-  },
-  { name: "Darién", zones: ["Darién"] },
-  { name: "Natá", zones: ["Natá"] },
-  { name: "Herrera", zones: ["Chitré", "Divisa", "La Arena", "Ocú", "Parita"] },
-  {
-    name: "Chiriquí",
-    zones: ["Boquete", "Bugaba", "David", "Dolega", "Paso Canoa Frontera"],
-  },
-  {
-    name: "Los Santos",
-    zones: ["Guararé", "Las Tablas", "Los Santos", "Pedasí", "Tonosí"],
-  },
-  { name: "San Carlos", zones: ["San Carlos"] },
-  { name: "Pacora", zones: ["Pacora"] },
-  { name: "La Chorrera", zones: ["Costa Verde", "La Chorrera", "Montelimar"] },
-  { name: "Penonomé", zones: ["La Pintada", "Penonomé"] },
-  { name: "Capira", zones: ["Capira"] },
-  { name: "Veraguas", zones: ["Atalaya", "Santiago", "Soná"] },
+  { name: "Panamá Oeste", zones: ["Arraiján", "La Chorrera", "Costa Verde"] },
+  { name: "Colón", zones: ["Colón Centro", "Sabanitas"] },
+  { name: "Chiriquí", zones: ["David", "Boquete"] },
+  { name: "Veraguas", zones: ["Santiago"] },
 ];
 
 const structureTypes = [
@@ -203,29 +170,26 @@ async function upsertProvinces() {
 }
 
 async function upsertZones(provinceMap: Map<string, string>) {
+  const zonesToCreate = [];
+
   for (const province of provinceZones) {
     const provinceId = provinceMap.get(province.name);
     if (!provinceId) continue;
 
     for (const zoneName of province.zones) {
-      await prisma.zone.upsert({
-        where: {
-          provinceId_name: {
-            provinceId,
-            name: zoneName,
-          },
-        },
-        update: {
-          imageUrl: imageUrl("zone", `${province.name}-${zoneName}`),
-        },
-        create: {
-          name: zoneName,
-          provinceId,
-          imageUrl: imageUrl("zone", `${province.name}-${zoneName}`),
-        },
+      zonesToCreate.push({
+        name: zoneName,
+        provinceId,
+        imageUrl: imageUrl("zone", `${province.name}-${zoneName}`),
       });
     }
   }
+
+  // Batch insert
+  await prisma.zone.createMany({
+    data: zonesToCreate,
+    skipDuplicates: true,
+  });
 }
 
 async function upsertSimpleList(
@@ -291,17 +255,12 @@ function buildAssets({ zones, structureTypesList, roadTypesList }: any) {
 }
 
 async function upsertAssets(assets: any[]) {
-  for (const asset of assets) {
-    await prisma.asset.upsert({
-      where: { code: asset.code },
-      update: {
-        ...asset,
-        notes: asset.notes || null,
-      },
-      create: {
-        ...asset,
-        notes: asset.notes || null,
-      },
+  // Procesar en batches para reducir memoria
+  for (let i = 0; i < assets.length; i += BATCH_SIZE) {
+    const batch = assets.slice(i, i + BATCH_SIZE);
+    await prisma.asset.createMany({
+      data: batch,
+      skipDuplicates: true,
     });
   }
 }
@@ -338,25 +297,12 @@ function buildFaces({ assets, positions }: any) {
 }
 
 async function upsertFaces(faces: any[]) {
-  for (const face of faces) {
-    await prisma.assetFace.upsert({
-      where: {
-        assetId_code: {
-          assetId: face.assetId,
-          code: face.code,
-        },
-      },
-      update: {
-        positionId: face.positionId,
-        width: face.width,
-        height: face.height,
-        facing: face.facing,
-        visibilityNotes: face.visibilityNotes,
-        status: face.status,
-        restrictions: face.restrictions,
-        notes: face.notes,
-      },
-      create: face,
+  // Procesar en batches
+  for (let i = 0; i < faces.length; i += BATCH_SIZE) {
+    const batch = faces.slice(i, i + BATCH_SIZE);
+    await prisma.assetFace.createMany({
+      data: batch,
+      skipDuplicates: true,
     });
   }
 }
@@ -698,11 +644,17 @@ async function main() {
   const assetSeeds = buildAssets({ zones, structureTypesList, roadTypesList });
   await upsertAssets(assetSeeds);
 
+  // Solo cargar IDs necesarios, no relaciones completas
   const seededAssets = await prisma.asset.findMany({
     where: { code: { in: assetSeeds.map((asset: any) => asset.code) } },
-    include: {
-      structureType: true,
-      zone: { include: { province: true } },
+    select: {
+      id: true,
+      code: true,
+      digital: true,
+      structureType: { select: { id: true, name: true } },
+      zone: {
+        select: { id: true, name: true, province: { select: { name: true } } },
+      },
     },
     orderBy: { code: "asc" },
   });
