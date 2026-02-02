@@ -47,7 +47,7 @@ export function ProfileContent() {
 
   function handleNotificationChange(
     key: "emailNotifications" | "whatsappNotifications" | "smsNotifications",
-    value: boolean
+    value: boolean,
   ) {
     updateNotifications.mutate({ [key]: value });
   }
@@ -81,24 +81,20 @@ export function ProfileContent() {
   return (
     <div className="space-y-6">
       {successMessage && (
-        <div className="p-3 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-800 text-green-700 dark:text-green-400 rounded">
+        <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
           {successMessage}
         </div>
       )}
 
       {/* Account Info */}
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
+      <section className="rounded-3xl border border-neutral-200 bg-white/90 p-6 shadow-lg backdrop-blur-xl">
+        <h2 className="mb-4 text-lg font-semibold text-neutral-900">
           Información de Cuenta
         </h2>
         <div className="space-y-3">
           <div>
-            <span className="text-sm text-neutral-500 dark:text-neutral-400">
-              Correo electrónico
-            </span>
-            <p className="text-neutral-900 dark:text-white">
-              {profile.user?.email}
-            </p>
+            <span className="text-sm text-neutral-500">Correo electrónico</span>
+            <p className="text-neutral-900">{profile.user?.email}</p>
           </div>
           <div>
             <span className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -120,15 +116,15 @@ export function ProfileContent() {
       </section>
 
       {/* Personal Info */}
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
+      <section className="rounded-3xl border border-neutral-200 bg-white/90 p-6 shadow-lg backdrop-blur-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-neutral-900">
             Información Personal
           </h2>
           {!isEditing && (
             <button
               onClick={startEditing}
-              className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+              className="rounded-full bg-[#0359A8] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[#0359A8]/30 transition hover:bg-[#024a8f]"
             >
               Editar
             </button>
@@ -139,37 +135,37 @@ export function ProfileContent() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                <label className="mb-1 block text-sm font-medium text-neutral-700">
                   Nombre
                 </label>
                 <input
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm transition focus:border-[#0359A8] focus:outline-none focus:ring-2 focus:ring-[#0359A8]/20"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                <label className="mb-1 block text-sm font-medium text-neutral-700">
                   Apellido
                 </label>
                 <input
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm transition focus:border-[#0359A8] focus:outline-none focus:ring-2 focus:ring-[#0359A8]/20"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="mb-1 block text-sm font-medium text-neutral-700">
                 Teléfono
               </label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+                className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm transition focus:border-[#0359A8] focus:outline-none focus:ring-2 focus:ring-[#0359A8]/20"
                 placeholder="+507 6000-0000"
               />
             </div>
@@ -177,13 +173,13 @@ export function ProfileContent() {
               <button
                 onClick={handleSave}
                 disabled={updateProfile.isPending}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
+                className="rounded-full bg-[#0359A8] px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-[#0359A8]/30 transition hover:bg-[#024a8f] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {updateProfile.isPending ? "Guardando..." : "Guardar"}
               </button>
               <button
                 onClick={() => setIsEditing(false)}
-                className="px-4 py-2 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-medium rounded-md transition-colors"
+                className="rounded-full border border-neutral-200 bg-white px-6 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
               >
                 Cancelar
               </button>
@@ -193,27 +189,21 @@ export function ProfileContent() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Nombre
-                </span>
-                <p className="text-neutral-900 dark:text-white">
+                <span className="text-sm text-neutral-500">Nombre</span>
+                <p className="text-neutral-900">
                   {profile.firstName || "No establecido"}
                 </p>
               </div>
               <div>
-                <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Apellido
-                </span>
-                <p className="text-neutral-900 dark:text-white">
+                <span className="text-sm text-neutral-500">Apellido</span>
+                <p className="text-neutral-900">
                   {profile.lastName || "No establecido"}
                 </p>
               </div>
             </div>
             <div>
-              <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                Teléfono
-              </span>
-              <p className="text-neutral-900 dark:text-white">
+              <span className="text-sm text-neutral-500">Teléfono</span>
+              <p className="text-neutral-900">
                 {profile.phone || "No establecido"}
               </p>
             </div>
@@ -222,17 +212,17 @@ export function ProfileContent() {
       </section>
 
       {/* Notification Preferences */}
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
+      <section className="rounded-3xl border border-neutral-200 bg-white/90 p-6 shadow-lg backdrop-blur-xl">
+        <h2 className="mb-4 text-lg font-semibold text-neutral-900">
           Preferencias de Notificación
         </h2>
         <div className="space-y-4">
           <label className="flex items-center justify-between">
             <div>
-              <span className="text-neutral-900 dark:text-white font-medium">
+              <span className="font-medium text-neutral-900">
                 Notificaciones por Correo
               </span>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              <p className="text-sm text-neutral-500">
                 Recibir actualizaciones por correo
               </p>
             </div>
@@ -243,15 +233,15 @@ export function ProfileContent() {
                 handleNotificationChange("emailNotifications", e.target.checked)
               }
               disabled={updateNotifications.isPending}
-              className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700"
+              className="h-5 w-5 rounded border-neutral-300 text-[#0359A8] focus:ring-[#0359A8]"
             />
           </label>
           <label className="flex items-center justify-between">
             <div>
-              <span className="text-neutral-900 dark:text-white font-medium">
+              <span className="font-medium text-neutral-900">
                 Notificaciones por WhatsApp
               </span>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              <p className="text-sm text-neutral-500">
                 Recibir actualizaciones por WhatsApp
               </p>
             </div>
@@ -261,19 +251,19 @@ export function ProfileContent() {
               onChange={(e) =>
                 handleNotificationChange(
                   "whatsappNotifications",
-                  e.target.checked
+                  e.target.checked,
                 )
               }
               disabled={updateNotifications.isPending}
-              className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700"
+              className="h-5 w-5 rounded border-neutral-300 text-[#0359A8] focus:ring-[#0359A8]"
             />
           </label>
           <label className="flex items-center justify-between">
             <div>
-              <span className="text-neutral-900 dark:text-white font-medium">
+              <span className="font-medium text-neutral-900">
                 Notificaciones por SMS
               </span>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              <p className="text-sm text-neutral-500">
                 Recibir actualizaciones por SMS
               </p>
             </div>
@@ -284,7 +274,7 @@ export function ProfileContent() {
                 handleNotificationChange("smsNotifications", e.target.checked)
               }
               disabled={updateNotifications.isPending}
-              className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700"
+              className="h-5 w-5 rounded border-neutral-300 text-[#0359A8] focus:ring-[#0359A8]"
             />
           </label>
         </div>
@@ -292,40 +282,40 @@ export function ProfileContent() {
 
       {/* Organizations */}
       {profile.organizationRoles && profile.organizationRoles.length > 0 && (
-        <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
+        <section className="rounded-3xl border border-neutral-200 bg-white/90 p-6 shadow-lg backdrop-blur-xl">
+          <h2 className="mb-4 text-lg font-semibold text-neutral-900">
             Organizaciones
           </h2>
           <div className="space-y-3">
             {profile.organizationRoles.map((membership) => (
               <div
                 key={membership.id}
-                className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
+                className="flex items-center justify-between rounded-2xl border border-neutral-100 bg-neutral-50/50 p-4"
               >
                 <div className="flex items-center gap-3">
                   {membership.organization.logoUrl ? (
                     <img
                       src={membership.organization.logoUrl}
                       alt={membership.organization.name}
-                      className="w-10 h-10 rounded-full object-cover"
+                      className="h-10 w-10 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                      <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0359A8]/10">
+                      <span className="font-semibold text-[#0359A8]">
                         {membership.organization.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
                   )}
                   <div>
-                    <p className="font-medium text-neutral-900 dark:text-white">
+                    <p className="font-medium text-neutral-900">
                       {membership.organization.name}
                     </p>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    <p className="text-sm text-neutral-500">
                       {membership.organization.organizationType}
                     </p>
                   </div>
                 </div>
-                <span className="text-sm px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded">
+                <span className="rounded-full bg-[#0359A8]/10 px-3 py-1 text-sm font-medium text-[#0359A8]">
                   {membership.role}
                 </span>
               </div>
@@ -335,24 +325,18 @@ export function ProfileContent() {
       )}
 
       {/* Locale Settings */}
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
+      <section className="rounded-3xl border border-neutral-200 bg-white/90 p-6 shadow-lg backdrop-blur-xl">
+        <h2 className="mb-4 text-lg font-semibold text-neutral-900">
           Configuración Regional
         </h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <span className="text-sm text-neutral-500 dark:text-neutral-400">
-              Idioma
-            </span>
-            <p className="text-neutral-900 dark:text-white">{profile.locale}</p>
+            <span className="text-sm text-neutral-500">Idioma</span>
+            <p className="text-neutral-900">{profile.locale}</p>
           </div>
           <div>
-            <span className="text-sm text-neutral-500 dark:text-neutral-400">
-              Zona horaria
-            </span>
-            <p className="text-neutral-900 dark:text-white">
-              {profile.timezone}
-            </p>
+            <span className="text-sm text-neutral-500">Zona horaria</span>
+            <p className="text-neutral-900">{profile.timezone}</p>
           </div>
         </div>
       </section>
