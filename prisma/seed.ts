@@ -632,7 +632,7 @@ async function upsertFaceRestrictions(faces: any[], tags: any[]) {
           }
         : null;
     })
-    .filter(Boolean);
+    .filter((item): item is { faceId: string; tagId: string } => item !== null);
 
   if (restrictions.length === 0) return;
 
@@ -699,7 +699,7 @@ async function main() {
   await upsertAssets(assetSeeds);
 
   const seededAssets = await prisma.asset.findMany({
-    where: { code: { in: assetSeeds.map((asset) => asset.code) } },
+    where: { code: { in: assetSeeds.map((asset: any) => asset.code) } },
     include: {
       structureType: true,
       zone: { include: { province: true } },
@@ -712,7 +712,7 @@ async function main() {
   await upsertFaces(faceSeeds);
 
   const seededFaces = await prisma.assetFace.findMany({
-    where: { assetId: { in: seededAssets.map((asset) => asset.id) } },
+    where: { assetId: { in: seededAssets.map((asset: any) => asset.id) } },
     include: {
       asset: {
         include: {
