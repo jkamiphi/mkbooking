@@ -487,7 +487,7 @@ export function HomeSearchBar({
                           key={type.id}
                           type="button"
                           onClick={() => {
-                            setSelectedTypeId(type.id);
+                            setSelectedTypeId(selected ? "" : type.id);
                             setActivePanel(null);
                           }}
                           className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
