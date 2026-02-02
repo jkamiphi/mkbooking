@@ -275,25 +275,24 @@ export function HomeSearchBar({
 
               <div className="hidden h-8 w-px bg-neutral-200 md:block" />
 
-              <div className="flex flex-nowrap items-center justify-end gap-2 px-2">
+              <div
+                className={`${segmentBase} min-w-[180px] md:rounded-none md:rounded-r-full ${
+                  activePanel === "quantity" ? segmentActive : ""
+                }`}
+                role="button"
+                tabIndex={0}
+                onClick={() => setActivePanel("quantity")}
+              >
                 Espacios
-                <button
-                  type="button"
-                  onClick={() => setActivePanel("quantity")}
-                  className={`flex items-center gap-2 rounded-full border px-4 py-3 text-xs min-w-[120px] font-semibold transition ${
-                    activePanel === "quantity"
-                      ? "border-neutral-900 bg-neutral-900 text-white"
-                      : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300"
-                  }`}
-                  aria-label="Seleccionar cantidad"
-                >
-                  <Boxes className="h-4 w-4" />
-                  <span className="hidden md:inline">
-                    {quantityOptions.find(
-                      (option) => option.value === selectedQuantity,
-                    )?.label ?? "Indistinto"}
-                  </span>
-                </button>
+                <span className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-neutral-900">
+                  <Boxes className="h-4 w-4 text-neutral-400" />
+                  {quantityOptions.find(
+                    (option) => option.value === selectedQuantity,
+                  )?.label ?? "Indistinto"}
+                </span>
+              </div>
+
+              <div className="flex items-center px-2">
                 <button
                   type="submit"
                   className="flex items-center gap-2 rounded-full bg-[#E91E63] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#E91E63]/30 hover:bg-[#d91857]"
