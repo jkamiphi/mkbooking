@@ -29,6 +29,11 @@ services:
           type: web
           name: mkbooking
           envVarKey: RENDER_EXTERNAL_URL
+      - key: NEXT_PUBLIC_APP_URL
+        fromService:
+          type: web
+          name: mkbooking
+          envVarKey: RENDER_EXTERNAL_URL
       - key: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
         sync: false
       - key: NEXT_PUBLIC_GOOGLE_MAP_ID
