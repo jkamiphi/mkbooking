@@ -1,0 +1,42 @@
+# Render Blueprint
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Next.js Web Service
+  - type: web
+    name: mkbooking
+    runtime: node
+    region: oregon
+    plan: starter
+    buildCommand: |
+      corepack enable &&
+      pnpm install &&
+      pnpm prisma generate &&
+      pnpm prisma migrate deploy &&
+      pnpm build
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mkbooking-db
+          property: connectionString
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_GOOGLE_MAP_ID
+        sync: false
+    healthCheckPath: /
+
+databases:
+  # PostgreSQL Database
+  - name: mkbooking-db
+    region: oregon
+    plan: starter
+    databaseName: mkbooking_db
+    user: mkbooking_user
+    ipAllowList: []
