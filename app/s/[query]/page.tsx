@@ -1,16 +1,20 @@
 import Link from "next/link";
+import Image from "next/image";
 import { headers } from "next/headers";
 import {
   ArrowLeft,
   ChevronRight,
-  Filter,
   Grid3X3,
   List,
   MapPin,
-  SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
+import {
+  formatFaceDimensions,
+  formatPrice,
+  getTrafficLabel,
+} from "@/lib/formatters/catalog-face";
 import { listCatalogFaces } from "@/lib/services/catalog";
 import { listStructureTypes, listZones } from "@/lib/services/inventory";
 import { getUserProfileByUserId } from "@/lib/services/user-profile";
@@ -31,31 +35,6 @@ type PageProps = {
 function getParam(value?: string | string[]) {
   if (Array.isArray(value)) return value[0];
   return value;
-}
-
-function formatPrice(priceDaily: number, currency: string) {
-  try {
-    return new Intl.NumberFormat("es-PA", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(priceDaily);
-  } catch {
-    return `${priceDaily} ${currency}`;
-  }
-}
-
-function getTrafficLabel(structureType: string) {
-  const key = structureType.toLowerCase();
-  if (
-    key.includes("digital") ||
-    key.includes("unipolar") ||
-    key.includes("valla")
-  ) {
-    return "Alto";
-  }
-  if (key.includes("mupi") || key.includes("parada")) return "Medio";
-  return "Moderado";
 }
 
 export default async function SearchPage({ params, searchParams }: PageProps) {
@@ -205,7 +184,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                   {" "}
                   para{" "}
                   <span className="font-medium text-neutral-900">
-                    "{searchTerm}"
+                    &quot;{searchTerm}&quot;
                   </span>
                 </span>
               )}
@@ -258,14 +237,12 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                   const trafficLabel = getTrafficLabel(
                     face.asset.structureType.name
                   );
-                  const sizeLabel = Number.isFinite(Number(face.width))
-                    ? `${Number(face.width)} x ${Number(face.height)}`
-                    : null;
+                  const dimensions = formatFaceDimensions(face.width, face.height);
 
                   return (
                     <article
                       key={face.id}
-                      className="group cursor-pointer overflow-hidden rounded-2xl border border-neutral-200 bg-white transition-all hover:border-neutral-300 hover:shadow-lg"
+                      className="group cursor-pointer overflow-hidden rounded-2xl border border-neutral-200/90 bg-white transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-lg"
                       style={{
                         animation: "fadeInUp 0.4s ease forwards",
                         animationDelay: `${index * 30}ms`,
@@ -286,11 +263,13 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                           )}
                         </div>
 
-                        <div className="aspect-[4/3] overflow-hidden bg-gradient-to-br from-neutral-100 to-neutral-50">
+                        <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-neutral-100 to-neutral-50">
                           {imageUrl ? (
-                            <img
+                            <Image
                               src={imageUrl}
                               alt={title}
+                              fill
+                              sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                               loading="lazy"
                             />
@@ -309,18 +288,19 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                           <h3 className="line-clamp-1 text-sm font-semibold text-neutral-900">
                             {title}
                           </h3>
-                          {sizeLabel && (
-                            <span className="flex-shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600">
-                              {sizeLabel}
+                          {dimensions && (
+                            <span className="flex-shrink-0 rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
+                              {dimensions.label}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-neutral-500">{location}</p>
-                        <p className="text-xs text-neutral-400">
-                          Tráfico: {trafficLabel}
-                        </p>
+                        <div className="flex items-center justify-between text-xs text-neutral-400">
+                          <p>Tráfico: {trafficLabel}</p>
+                          {dimensions ? <p>{dimensions.areaLabel}</p> : null}
+                        </div>
 
-                        <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center justify-between border-t border-neutral-100 pt-2">
                           {showPrices ? (
                             <div>
                               <p className="text-base font-semibold text-neutral-900">
@@ -335,16 +315,18 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                               href="/login"
                               className="text-xs font-medium text-[#0359A8] hover:underline"
                             >
-                              Ver precio
+                              Inicia sesión para ver precio
                             </Link>
                           )}
-                          <button
-                            type="button"
-                            className="flex items-center gap-1 rounded-full bg-[#0359A8] px-3 py-1.5 text-[10px] font-semibold text-white shadow-sm transition hover:bg-[#024a8c]"
-                          >
-                            Añadir
-                            <ChevronRight className="h-3 w-3" />
-                          </button>
+                          {showPrices ? (
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 rounded-full bg-[#0359A8] px-3 py-1.5 text-[10px] font-semibold text-white shadow-sm transition hover:bg-[#024a8c]"
+                            >
+                              Añadir
+                              <ChevronRight className="h-3 w-3" />
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     </article>

@@ -1,77 +1,101 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Building2, CircleCheckBig, UserRound } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectNative } from "@/components/ui/select-native";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type CustomerType = "natural" | "business";
 
+const steps = ["Tipo de cuenta", "Datos", "Completar"] as const;
+
 interface StepIndicatorProps {
   currentStep: number;
-  labels: string[];
 }
 
-function StepIndicator({ currentStep, labels }: StepIndicatorProps) {
+function StepIndicator({ currentStep }: StepIndicatorProps) {
   return (
-    <div className="mb-8">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        {labels.map((label, index) => (
-          <div key={index} className="flex flex-col items-center flex-1">
+        {steps.map((label, index) => (
+          <div key={label} className="flex flex-col items-center gap-1">
             <div
               className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-                index < currentStep
-                  ? "bg-green-600 text-white"
-                  : index === currentStep
-                    ? "bg-blue-600 text-white"
-                    : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"
+                "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
+                index <= currentStep
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-muted text-muted-foreground"
               )}
             >
-              {index < currentStep ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              ) : (
-                index + 1
-              )}
+              {index + 1}
             </div>
-            <span
+            <p
               className={cn(
-                "mt-2 text-xs font-medium text-center",
-                index <= currentStep
-                  ? "text-neutral-900 dark:text-white"
-                  : "text-neutral-500 dark:text-neutral-400"
+                "text-xs font-medium",
+                index <= currentStep ? "text-foreground" : "text-muted-foreground"
               )}
             >
               {label}
-            </span>
+            </p>
           </div>
         ))}
       </div>
-      <div className="flex mt-4">
-        {labels.slice(0, -1).map((_, index) => (
-          <div
-            key={index}
-            className={cn(
-              "flex-1 h-1 mx-2 rounded-full transition-colors",
-              index < currentStep
-                ? "bg-green-600"
-                : "bg-neutral-200 dark:bg-neutral-700"
-            )}
-          />
-        ))}
+      <div className="h-1 rounded-full bg-muted">
+        <div
+          className="h-1 rounded-full bg-primary transition-all"
+          style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+        />
       </div>
     </div>
+  );
+}
+
+function AccountTypeCard({
+  title,
+  description,
+  icon,
+  selected,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "w-full rounded-lg border p-4 text-left transition-colors",
+        selected
+          ? "border-primary bg-primary/5"
+          : "border-border hover:border-primary/50 hover:bg-muted/40"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "rounded-md p-2",
+            selected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+          )}
+        >
+          {icon}
+        </div>
+        <div className="space-y-1">
+          <p className="font-semibold text-foreground">{title}</p>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -96,137 +120,91 @@ function NaturalPersonForm({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     onSubmit({
-      firstName,
-      lastName,
-      cedula,
-      phone: phone || undefined,
-      email: email || undefined,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      cedula: cedula.trim(),
+      phone: phone.trim() || undefined,
+      email: email.trim() || undefined,
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-neutral-900 dark:text-white">
-          Información Personal
-        </h3>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Por favor proporciona tus datos personales para completar tu registro.
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-foreground">Datos personales</p>
+        <p className="text-sm text-muted-foreground">
+          Completa esta información para activar tu cuenta como persona natural.
         </p>
       </div>
 
-      {error && (
-        <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
+      {error ? (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
           {error}
         </div>
-      )}
+      ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label
-            htmlFor="firstName"
-            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-          >
-            Nombre *
-          </label>
-          <input
-            id="firstName"
-            type="text"
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="onboard-natural-first-name">Nombre</Label>
+          <Input
+            id="onboard-natural-first-name"
             value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+            onChange={(event) => setFirstName(event.target.value)}
             placeholder="Juan"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="lastName"
-            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-          >
-            Apellido *
-          </label>
-          <input
-            id="lastName"
-            type="text"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="onboard-natural-last-name">Apellido</Label>
+          <Input
+            id="onboard-natural-last-name"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
             placeholder="Pérez"
+            required
           />
         </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="cedula"
-          className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-        >
-          Cédula *
-        </label>
-        <input
-          id="cedula"
-          type="text"
+      <div className="space-y-1.5">
+        <Label htmlFor="onboard-natural-cedula">Cédula</Label>
+        <Input
+          id="onboard-natural-cedula"
           value={cedula}
-          onChange={(e) => setCedula(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+          onChange={(event) => setCedula(event.target.value)}
           placeholder="8-123-4567"
+          required
         />
-        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          Tu número de identificación personal
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label
-            htmlFor="phone"
-            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-          >
-            Número de Teléfono
-          </label>
-          <input
-            id="phone"
-            type="tel"
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="onboard-natural-phone">Teléfono</Label>
+          <Input
+            id="onboard-natural-phone"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+            onChange={(event) => setPhone(event.target.value)}
             placeholder="+507 6000-0000"
           />
         </div>
-        <div>
-          <label
-            htmlFor="contactEmail"
-            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-          >
-            Correo de Contacto
-          </label>
-          <input
-            id="contactEmail"
+        <div className="space-y-1.5">
+          <Label htmlFor="onboard-natural-email">Correo de contacto</Label>
+          <Input
+            id="onboard-natural-email"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+            onChange={(event) => setEmail(event.target.value)}
             placeholder="contacto@ejemplo.com"
           />
-          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            Opcional: Un correo diferente para comunicaciones de negocio
-          </p>
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      >
-        {isLoading ? "Configurando tu cuenta..." : "Completar Registro"}
-      </button>
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? "Configurando cuenta..." : "Completar onboarding"}
+      </Button>
     </form>
   );
 }
@@ -256,185 +234,126 @@ function BusinessForm({
   const [email, setEmail] = useState("");
   const [industry, setIndustry] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     onSubmit({
-      legalName,
-      tradeName: tradeName || undefined,
-      taxId,
-      dvCode: dvCode || undefined,
-      phone: phone || undefined,
-      email: email || undefined,
+      legalName: legalName.trim(),
+      tradeName: tradeName.trim() || undefined,
+      taxId: taxId.trim(),
+      dvCode: dvCode.trim() || undefined,
+      phone: phone.trim() || undefined,
+      email: email.trim() || undefined,
       industry: industry || undefined,
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-neutral-900 dark:text-white">
-          Info de Negocio
-        </h3>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Por favor proporciona los datos de tu empresa para completar tu registro.
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-foreground">Datos de empresa</p>
+        <p className="text-sm text-muted-foreground">
+          Completa la información fiscal y de contacto de tu organización.
         </p>
       </div>
 
-      {error && (
-        <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
+      {error ? (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
           {error}
         </div>
-      )}
+      ) : null}
 
-      <div>
-        <label
-          htmlFor="legalName"
-          className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-        >
-          Razón Social *
-        </label>
-        <input
-          id="legalName"
-          type="text"
+      <div className="space-y-1.5">
+        <Label htmlFor="onboard-business-legal-name">Razón social</Label>
+        <Input
+          id="onboard-business-legal-name"
           value={legalName}
-          onChange={(e) => setLegalName(e.target.value)}
+          onChange={(event) => setLegalName(event.target.value)}
+          placeholder="Empresa Demo S.A."
           required
-          className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-          placeholder="Nombre Legal de la Empresa S.A."
         />
-        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          El nombre oficial registrado de tu empresa
-        </p>
       </div>
 
-      <div>
-        <label
-          htmlFor="tradeName"
-          className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-        >
-          Nombre Comercial
-        </label>
-        <input
-          id="tradeName"
-          type="text"
+      <div className="space-y-1.5">
+        <Label htmlFor="onboard-business-trade-name">Nombre comercial</Label>
+        <Input
+          id="onboard-business-trade-name"
           value={tradeName}
-          onChange={(e) => setTradeName(e.target.value)}
-          className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-          placeholder="Nombre de Marca"
+          onChange={(event) => setTradeName(event.target.value)}
+          placeholder="Marca Demo"
         />
-        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          El nombre con el que opera tu empresa (si es diferente al nombre legal)
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label
-            htmlFor="taxId"
-            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-          >
-            RUC *
-          </label>
-          <input
-            id="taxId"
-            type="text"
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="onboard-business-tax-id">RUC</Label>
+          <Input
+            id="onboard-business-tax-id"
             value={taxId}
-            onChange={(e) => setTaxId(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+            onChange={(event) => setTaxId(event.target.value)}
             placeholder="12345-1-123456"
+            required
           />
         </div>
-        <div>
-          <label
-            htmlFor="dvCode"
-            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-          >
-            DV
-          </label>
-          <input
-            id="dvCode"
-            type="text"
+        <div className="space-y-1.5">
+          <Label htmlFor="onboard-business-dv">DV</Label>
+          <Input
+            id="onboard-business-dv"
             value={dvCode}
-            onChange={(e) => setDvCode(e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+            onChange={(event) => setDvCode(event.target.value)}
             placeholder="12"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label
-            htmlFor="businessPhone"
-            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-          >
-            Teléfono de Negocio
-          </label>
-          <input
-            id="businessPhone"
-            type="tel"
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="onboard-business-phone">Teléfono</Label>
+          <Input
+            id="onboard-business-phone"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
-            placeholder="+507 000-0000"
+            onChange={(event) => setPhone(event.target.value)}
+            placeholder="+507 6000-0000"
           />
         </div>
-        <div>
-          <label
-            htmlFor="businessEmail"
-            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-          >
-            Correo de Negocio
-          </label>
-          <input
-            id="businessEmail"
+        <div className="space-y-1.5">
+          <Label htmlFor="onboard-business-email">Correo corporativo</Label>
+          <Input
+            id="onboard-business-email"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+            onChange={(event) => setEmail(event.target.value)}
             placeholder="info@empresa.com"
           />
         </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="industry"
-          className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1"
-        >
-          Industria
-        </label>
-        <select
-          id="industry"
+      <div className="space-y-1.5">
+        <Label htmlFor="onboard-business-industry">Industria</Label>
+        <SelectNative
+          id="onboard-business-industry"
           value={industry}
-          onChange={(e) => setIndustry(e.target.value)}
-          className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+          onChange={(event) => setIndustry(event.target.value)}
         >
           <option value="">Selecciona una industria</option>
           <option value="retail">Comercio</option>
-          <option value="food_beverage">Alimentos y Bebidas</option>
+          <option value="food_beverage">Alimentos y bebidas</option>
           <option value="healthcare">Salud</option>
           <option value="technology">Tecnología</option>
-          <option value="finance">Finanzas y Banca</option>
-          <option value="real_estate">Bienes Raíces</option>
+          <option value="finance">Finanzas y banca</option>
+          <option value="real_estate">Bienes raíces</option>
           <option value="automotive">Automotriz</option>
           <option value="education">Educación</option>
           <option value="entertainment">Entretenimiento</option>
-          <option value="travel">Viajes y Turismo</option>
-          <option value="professional_services">Servicios Profesionales</option>
+          <option value="travel">Viajes y turismo</option>
+          <option value="professional_services">Servicios profesionales</option>
           <option value="manufacturing">Manufactura</option>
           <option value="other">Otro</option>
-        </select>
+        </SelectNative>
       </div>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      >
-        {isLoading ? "Configurando tu cuenta..." : "Completar Registro"}
-      </button>
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? "Configurando empresa..." : "Completar onboarding"}
+      </Button>
     </form>
   );
 }
@@ -443,39 +362,26 @@ function SuccessStep() {
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       router.push("/profile");
-    }, 3000);
-    return () => clearTimeout(timer);
+    }, 2500);
+    return () => window.clearTimeout(timer);
   }, [router]);
 
   return (
-    <div className="text-center py-8">
-      <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          className="w-10 h-10 text-green-600"
-        >
-          <path
-            fillRule="evenodd"
-            d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z"
-            clipRule="evenodd"
-          />
-        </svg>
+    <div className="space-y-4 py-6 text-center">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+        <CircleCheckBig className="h-8 w-8" />
       </div>
-      <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-2">
-        ¡Registro Completado!
-      </h3>
-      <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-        Tu cuenta ha sido configurada exitosamente. Redirigiendo a tu perfil...
-      </p>
-      <div className="animate-pulse">
-        <div className="h-1 w-32 mx-auto bg-blue-200 dark:bg-blue-900 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-600 animate-[loading_3s_ease-in-out]" />
-        </div>
+      <div className="space-y-1">
+        <h3 className="text-xl font-semibold text-foreground">¡Registro completado!</h3>
+        <p className="text-sm text-muted-foreground">
+          Tu perfil está listo. Te redirigimos a tu panel.
+        </p>
       </div>
+      <Button variant="outline" onClick={() => router.push("/profile")}>
+        Ir ahora
+      </Button>
     </div>
   );
 }
@@ -491,8 +397,10 @@ function getInitialCustomerType(): CustomerType | null {
 
 export function OnboardingContent() {
   const router = useRouter();
-  const [customerType, setCustomerType] = useState<CustomerType | null>(getInitialCustomerType);
-  const [step, setStep] = useState(0);
+  const [customerType, setCustomerType] = useState<CustomerType | null>(
+    getInitialCustomerType
+  );
+  const [completed, setCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { data: organizations, isLoading: loadingOrgs } =
@@ -500,28 +408,31 @@ export function OnboardingContent() {
 
   const registerNaturalPerson = trpc.organization.registerNaturalPerson.useMutation({
     onSuccess: () => {
-      setStep(1);
+      setCompleted(true);
+      setError(null);
+      sessionStorage.removeItem("onboarding_customer_type");
     },
-    onError: (err) => {
-      setError(err.message);
+    onError: (mutationError) => {
+      setError(mutationError.message);
     },
   });
 
   const registerBusiness = trpc.organization.registerBusiness.useMutation({
     onSuccess: () => {
-      setStep(1);
+      setCompleted(true);
+      setError(null);
+      sessionStorage.removeItem("onboarding_customer_type");
     },
-    onError: (err) => {
-      setError(err.message);
+    onError: (mutationError) => {
+      setError(mutationError.message);
     },
   });
 
-  // Check if user already has an organization
   useEffect(() => {
     if (!loadingOrgs && organizations && organizations.length > 0) {
       router.push("/profile");
     }
-  }, [organizations, loadingOrgs, router]);
+  }, [loadingOrgs, organizations, router]);
 
   function handleNaturalPersonSubmit(data: {
     firstName: string;
@@ -554,147 +465,127 @@ export function OnboardingContent() {
     }
   }
 
+  const currentStep = completed ? 2 : customerType ? 1 : 0;
+
   if (loadingOrgs) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-md p-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3 mx-auto" />
-            <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-2/3 mx-auto" />
-            <div className="h-32 bg-neutral-200 dark:bg-neutral-800 rounded" />
-          </div>
-        </div>
+      <div className="mx-auto w-full max-w-4xl">
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            <Skeleton className="h-7 w-52" />
+            <Skeleton className="h-4 w-72" />
+            <Skeleton className="h-48 w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const stepLabels =
-    customerType === "natural"
-      ? ["Info Personal", "Completar"]
-      : customerType === "business"
-        ? ["Info de Negocio", "Completar"]
-        : ["Tipo de Cuenta", "Detalles", "Completar"];
-
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-center mb-2 text-neutral-900 dark:text-white">
-          Completa Tu Registro
-        </h1>
-        <p className="text-center text-neutral-600 dark:text-neutral-400 mb-6">
-          Solo unos detalles más para comenzar
-        </p>
+    <div className="mx-auto w-full max-w-4xl">
+      <Card className="overflow-hidden border-border/70 shadow-lg">
+        <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+          <div>
+            <CardHeader className="space-y-3">
+              <CardTitle className="text-2xl">Completa tu registro</CardTitle>
+              <CardDescription>
+                Último paso para activar tu perfil comercial en MK Booking.
+              </CardDescription>
+              <StepIndicator currentStep={currentStep} />
+            </CardHeader>
 
-        <StepIndicator
-          currentStep={step}
-          labels={stepLabels}
-        />
-
-        {step === 0 && !customerType && (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-center text-neutral-900 dark:text-white">
-                ¿Qué tipo de cuenta necesitas?
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 gap-4">
-              <button
-                type="button"
-                onClick={() => handleCustomerTypeSelect("natural")}
-                className="p-6 rounded-lg border-2 border-neutral-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-800 text-left transition-all"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-6 h-6 text-neutral-600 dark:text-neutral-400"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-neutral-900 dark:text-white">
-                      Persona Natural
-                    </h3>
-                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                      Para individuos que anuncian sus propios productos o servicios
+            <CardContent className="space-y-4">
+              {!customerType && !completed ? (
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Selecciona el tipo de perfil
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Podrás ajustarlo más adelante si cambia tu operación.
                     </p>
                   </div>
-                </div>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => handleCustomerTypeSelect("business")}
-                className="p-6 rounded-lg border-2 border-neutral-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-800 text-left transition-all"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-6 h-6 text-neutral-600 dark:text-neutral-400"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-neutral-900 dark:text-white">
-                      Empresa / Negocio
-                    </h3>
-                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                      Para empresas, agencias u organizaciones
-                    </p>
+                  <div className="grid gap-3">
+                    <AccountTypeCard
+                      title="Persona natural"
+                      description="Perfil para anunciantes individuales."
+                      icon={<UserRound className="h-5 w-5" />}
+                      selected={customerType === "natural"}
+                      onClick={() => handleCustomerTypeSelect("natural")}
+                    />
+                    <AccountTypeCard
+                      title="Empresa / negocio"
+                      description="Perfil para empresas, agencias y organizaciones."
+                      icon={<Building2 className="h-5 w-5" />}
+                      selected={customerType === "business"}
+                      onClick={() => handleCustomerTypeSelect("business")}
+                    />
                   </div>
                 </div>
-              </button>
-            </div>
+              ) : null}
+
+              {customerType === "natural" && !completed ? (
+                <NaturalPersonForm
+                  onSubmit={handleNaturalPersonSubmit}
+                  isLoading={registerNaturalPerson.isPending}
+                  error={error}
+                />
+              ) : null}
+
+              {customerType === "business" && !completed ? (
+                <BusinessForm
+                  onSubmit={handleBusinessSubmit}
+                  isLoading={registerBusiness.isPending}
+                  error={error}
+                />
+              ) : null}
+
+              {completed ? <SuccessStep /> : null}
+
+              {customerType && !completed ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCustomerType(null)}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Cambiar tipo de cuenta
+                </Button>
+              ) : null}
+            </CardContent>
           </div>
-        )}
 
-        {step === 0 && customerType === "natural" && (
-          <NaturalPersonForm
-            onSubmit={handleNaturalPersonSubmit}
-            isLoading={registerNaturalPerson.isPending}
-            error={error}
-          />
-        )}
-
-        {step === 0 && customerType === "business" && (
-          <BusinessForm
-            onSubmit={handleBusinessSubmit}
-            isLoading={registerBusiness.isPending}
-            error={error}
-          />
-        )}
-
-        {step === 1 && <SuccessStep />}
-
-        {step === 0 && customerType && (
-          <button
-            type="button"
-            onClick={() => setCustomerType(null)}
-            className="mt-4 text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-          >
-            &larr; Cambiar tipo de cuenta
-          </button>
-        )}
-      </div>
+          <aside className="hidden border-l bg-muted/30 p-6 lg:block">
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Checklist
+              </h2>
+              <div className="space-y-3">
+                <div className="flex gap-2 text-sm">
+                  <CircleCheckBig className="mt-0.5 h-4 w-4 text-emerald-600" />
+                  <p className="text-muted-foreground">
+                    Datos de identificación y contacto.
+                  </p>
+                </div>
+                <div className="flex gap-2 text-sm">
+                  <CircleCheckBig className="mt-0.5 h-4 w-4 text-emerald-600" />
+                  <p className="text-muted-foreground">
+                    Configuración base de tu perfil comercial.
+                  </p>
+                </div>
+                <div className="flex gap-2 text-sm">
+                  <CircleCheckBig className="mt-0.5 h-4 w-4 text-emerald-600" />
+                  <p className="text-muted-foreground">
+                    Acceso inmediato a tu área de cliente.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </Card>
     </div>
   );
 }

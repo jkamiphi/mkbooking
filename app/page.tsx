@@ -1,13 +1,13 @@
 import Link from "next/link";
+import Image from "next/image";
 import { headers } from "next/headers";
-import {
-  ChevronRight,
-  CircleDollarSign,
-  Filter,
-  MapPin,
-  Sparkles,
-} from "lucide-react";
+import { ChevronRight, MapPin, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth";
+import {
+  formatFaceDimensions,
+  formatPrice,
+  getTrafficLabel,
+} from "@/lib/formatters/catalog-face";
 import { listCatalogFaces } from "@/lib/services/catalog";
 import { listStructureTypes, listZones } from "@/lib/services/inventory";
 import { getUserProfileByUserId } from "@/lib/services/user-profile";
@@ -38,18 +38,6 @@ function buildSearchUrl(options: {
   return `/s/${encodeURIComponent(searchTerm)}${queryString ? `?${queryString}` : ""}`;
 }
 
-function formatPrice(priceDaily: number, currency: string) {
-  try {
-    return new Intl.NumberFormat("es-PA", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(priceDaily);
-  } catch {
-    return `${priceDaily} ${currency}`;
-  }
-}
-
 const structureTypeHints: Record<string, string> = {
   "Mupi Giant": "Peatones · alta frecuencia",
   "Pantalla Digital": "Impacto · rotación",
@@ -72,26 +60,6 @@ const zoneBadges: Record<string, string> = {
   "Isla Colón": "Turístico",
   "Vía Roosevelt": "Conectividad",
 };
-
-function getCoverageLabel(total: number) {
-  if (total >= 80) return "Muy alta";
-  if (total >= 40) return "Alta";
-  if (total >= 15) return "Media";
-  return "Selectiva";
-}
-
-function getTrafficLabel(structureType: string) {
-  const key = structureType.toLowerCase();
-  if (
-    key.includes("digital") ||
-    key.includes("unipolar") ||
-    key.includes("valla")
-  ) {
-    return "Alto";
-  }
-  if (key.includes("mupi") || key.includes("parada")) return "Medio";
-  return "Moderado";
-}
 
 export default async function Home({
   searchParams,
@@ -125,30 +93,14 @@ export default async function Home({
     listZones(),
   ]);
 
-  const selectedStructureType = structureTypes.find(
-    (type) => type.id === typeId,
-  );
   const selectedZone = zones.find((zone) => zone.id === zoneId);
   const showPrices = Boolean(session);
-  const coverageLabel = getCoverageLabel(catalog.total);
   const isPanamaQuery =
     (query ?? "").toLowerCase().includes("panam") ||
     (selectedZone?.province.name ?? "").toLowerCase().includes("panam") ||
     (selectedZone?.name ?? "").toLowerCase().includes("panam");
   const showPromo = Boolean(catalog.promo && isPanamaQuery);
 
-  const structureCounts = catalog.faces.reduce<Record<string, number>>(
-    (acc, face) => {
-      const name = face.asset.structureType.name;
-      acc[name] = (acc[name] || 0) + 1;
-      return acc;
-    },
-    {},
-  );
-  const topStructureBreakdown = Object.entries(structureCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([name, count]) => `${count} ${name.toLowerCase()}`);
   const promoValueLabel = catalog.promo
     ? catalog.promo.type === "PERCENT"
       ? `${catalog.promo.value}%`
@@ -261,9 +213,11 @@ export default async function Home({
                 >
                   {type.imageUrl ? (
                     <div className="relative aspect-[4/3] w-full overflow-hidden">
-                      <img
+                      <Image
                         src={type.imageUrl}
                         alt={type.name}
+                        fill
+                        sizes="160px"
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                         loading="lazy"
                       />
@@ -318,9 +272,11 @@ export default async function Home({
                 >
                   {zone.imageUrl ? (
                     <div className="relative aspect-[4/3] w-full overflow-hidden">
-                      <img
+                      <Image
                         src={zone.imageUrl}
                         alt={zone.name}
+                        fill
+                        sizes="160px"
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                         loading="lazy"
                       />
@@ -384,15 +340,12 @@ export default async function Home({
               const trafficLabel = getTrafficLabel(
                 face.asset.structureType.name,
               );
-
-              const sizeLabel = Number.isFinite(Number(face.width))
-                ? `${Number(face.width)} x ${Number(face.height)}`
-                : null;
+              const dimensions = formatFaceDimensions(face.width, face.height);
 
               return (
                 <article
                   key={face.id}
-                  className="group relative overflow-hidden rounded-3xl border border-white/70 bg-white shadow-lg shadow-neutral-200/50 transition hover:-translate-y-1 hover:shadow-xl"
+                  className="group relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-sm transition hover:-translate-y-1 hover:border-neutral-300 hover:shadow-lg"
                   style={{
                     animation: "rise 0.6s ease forwards",
                     animationDelay: `${index * 60}ms`,
@@ -418,14 +371,15 @@ export default async function Home({
                       ) : null}
                     </div>
 
-                    <div className="aspect-[4/3] overflow-hidden rounded-t-3xl bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-50">
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-50">
                       {imageUrl ? (
-                        <img
+                        <Image
                           src={imageUrl}
                           alt={title}
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                           className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                           loading="lazy"
-                          decoding="async"
                         />
                       ) : (
                         <div className="flex h-full w-full flex-col items-start justify-end gap-3 bg-[linear-gradient(140deg,_#fef3c7,_#fde68a_40%,_#fca5a5)] p-6 text-neutral-900">
@@ -439,53 +393,56 @@ export default async function Home({
                   </div>
 
                   <div className="space-y-2 px-5 pb-5 pt-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-base font-semibold text-neutral-900">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="line-clamp-1 text-base font-semibold text-neutral-900">
                         {title}
                       </h3>
-                      {sizeLabel ? (
-                        <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-600">
-                          {sizeLabel}
+                      {dimensions ? (
+                        <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-medium text-neutral-600">
+                          {dimensions.label}
                         </span>
                       ) : null}
                     </div>
                     <p className="text-sm text-neutral-500">{location}</p>
-                    <p className="text-xs text-neutral-500">
+                    <p className="line-clamp-1 text-xs text-neutral-500">
                       {face.asset.address}
                     </p>
-                    <p className="text-xs text-neutral-500">
-                      Tráfico estimado: {trafficLabel}
-                    </p>
+                    <div className="flex items-center justify-between text-xs text-neutral-500">
+                      <p>Tráfico estimado: {trafficLabel}</p>
+                      {dimensions ? <p>{dimensions.areaLabel}</p> : null}
+                    </div>
 
                     {showPrices ? (
-                      <div className="flex items-center justify-between pt-2">
-                        <div>
-                          <p className="text-lg font-semibold text-neutral-900">
-                            {priceLabel ?? "Precio a consultar"}
-                          </p>
-                          <p className="text-xs text-neutral-500">por día</p>
+                      <>
+                        <div className="flex items-center justify-between border-t border-neutral-100 pt-3">
+                          <div>
+                            <p className="text-lg font-semibold text-neutral-900">
+                              {priceLabel ?? "Precio a consultar"}
+                            </p>
+                            <p className="text-xs text-neutral-500">por día</p>
+                          </div>
+                          <span className="rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600">
+                            Reserva 24h
+                          </span>
                         </div>
-                        <span className="rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600">
-                          Reserva 24h
-                        </span>
-                      </div>
+
+                        <button
+                          type="button"
+                          className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-[#0359A8]/20 transition hover:bg-[#024a8c]"
+                        >
+                          Añadir a campaña
+                          <ChevronRight className="h-3 w-3" />
+                        </button>
+                      </>
                     ) : (
                       <Link
                         href="/login"
-                        className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 hover:border-neutral-300"
+                        className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
                       >
                         Inicia sesión para ver precios
                         <ChevronRight className="h-3 w-3" />
                       </Link>
                     )}
-
-                    <button
-                      type="button"
-                      className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-[#0359A8]/30 hover:bg-[#024a8c]"
-                    >
-                      Añadir a campaña
-                      <ChevronRight className="h-3 w-3" />
-                    </button>
                   </div>
                 </article>
               );

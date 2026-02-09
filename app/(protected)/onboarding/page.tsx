@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function OnboardingPage() {
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 py-12 px-4">
+    <div className="min-h-screen bg-[linear-gradient(180deg,theme(colors.blue.50)_0%,theme(colors.slate.50)_40%,theme(colors.white)_100%)] px-4 py-12 dark:bg-neutral-950">
       <OnboardingContent />
     </div>
   );
