@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc/client";
 import { UserListTable } from "./_components/user-list-table";
 import { UserFilters } from "./_components/user-filters";
 import { UserStats } from "./_components/user-stats";
+import { CreateUserModal } from "./_components/create-user-modal";
 import type { SystemRole } from "@prisma/client";
 
 export function UsersContent() {
@@ -43,6 +44,10 @@ export function UsersContent() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <CreateUserModal onCreated={() => setPage(0)} />
+      </div>
+
       <UserStats stats={stats} isLoading={statsLoading} />
 
       <UserFilters filters={filters} onFiltersChange={handleFiltersChange} />

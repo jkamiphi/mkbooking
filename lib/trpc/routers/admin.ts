@@ -5,6 +5,9 @@ import {
   adminGetUserDetail,
   adminGetStats,
   adminSearchUsers,
+  ADMIN_USER_ERRORS,
+  createAdminUser,
+  createAdminUserSchema,
   updateSystemRole,
   adminListUsersSchema,
   updateSystemRoleSchema,
@@ -53,6 +56,29 @@ export const adminRouter = router({
     )
     .query(async ({ input }) => {
       return adminSearchUsers(input.query, input.take);
+    }),
+
+  // Create user (superadmin only)
+  createUser: superAdminProcedure
+    .input(createAdminUserSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await createAdminUser(input, ctx.user.id);
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === ADMIN_USER_ERRORS.EMAIL_ALREADY_EXISTS
+        ) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Ya existe un usuario con este correo",
+          });
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo crear el usuario",
+        });
+      }
     }),
 
   // Update user's system role (superadmin only)

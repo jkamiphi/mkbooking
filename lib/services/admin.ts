@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import type { SystemRole, Prisma } from "@prisma/client";
+import { hashPassword } from "better-auth/crypto";
+import crypto from "crypto";
 import { z } from "zod";
 
 // ============================================================================
@@ -13,13 +15,13 @@ export const updateSystemRoleSchema = z.object({
   systemRole: systemRoleSchema,
 });
 
-export const createStaffUserSchema = z.object({
+export const createAdminUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  name: z.string(),
+  name: z.string().min(1),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
-  systemRole: z.enum(["SUPERADMIN", "STAFF"]),
+  systemRole: systemRoleSchema,
 });
 
 export const adminListUsersSchema = z.object({
@@ -33,8 +35,11 @@ export const adminListUsersSchema = z.object({
 });
 
 export type UpdateSystemRoleInput = z.infer<typeof updateSystemRoleSchema>;
-export type CreateStaffUserInput = z.infer<typeof createStaffUserSchema>;
+export type CreateAdminUserInput = z.infer<typeof createAdminUserSchema>;
 export type AdminListUsersInput = z.infer<typeof adminListUsersSchema>;
+export const ADMIN_USER_ERRORS = {
+  EMAIL_ALREADY_EXISTS: "ADMIN_USER_EMAIL_ALREADY_EXISTS",
+} as const;
 
 // ============================================================================
 // Authorization Functions
@@ -97,6 +102,84 @@ export async function updateSystemRole(
         },
       },
     },
+  });
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function normalizeOptional(value?: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+export async function createAdminUser(input: CreateAdminUserInput, createdBy: string) {
+  const email = normalizeEmail(input.email);
+  const name = input.name.trim();
+  const firstName = normalizeOptional(input.firstName);
+  const lastName = normalizeOptional(input.lastName);
+
+  const existingUser = await db.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+
+  if (existingUser) {
+    throw new Error(ADMIN_USER_ERRORS.EMAIL_ALREADY_EXISTS);
+  }
+
+  const passwordHash = await hashPassword(input.password);
+  const now = new Date();
+
+  return db.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email,
+        name,
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+
+    await tx.account.create({
+      data: {
+        id: crypto.randomUUID(),
+        accountId: user.id,
+        providerId: "credential",
+        userId: user.id,
+        password: passwordHash,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+
+    return tx.userProfile.create({
+      data: {
+        userId: user.id,
+        systemRole: input.systemRole,
+        firstName,
+        lastName,
+        isVerified: true,
+        createdBy,
+        updatedBy: createdBy,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+      },
+    });
   });
 }
 

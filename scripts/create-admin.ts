@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 import crypto from "crypto";
+import { hashPassword } from "better-auth/crypto";
 
 const { Pool } = pg;
 
@@ -22,13 +23,50 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-// Función para hashear password (compatible con Better Auth)
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password).digest("hex");
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+async function upsertCredentialAccount(
+  userId: string,
+  password: string
+): Promise<void> {
+  const passwordHash = await hashPassword(password);
+  const credentialAccount = await prisma.account.findFirst({
+    where: {
+      userId,
+      providerId: "credential",
+    },
+  });
+
+  if (credentialAccount) {
+    await prisma.account.update({
+      where: { id: credentialAccount.id },
+      data: {
+        password: passwordHash,
+        updatedAt: new Date(),
+      },
+    });
+    return;
+  }
+
+  await prisma.account.create({
+    data: {
+      id: crypto.randomUUID(),
+      accountId: userId,
+      providerId: "credential",
+      userId,
+      password: passwordHash,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  });
 }
 
 async function createSuperAdmin() {
-  const email = process.env.ADMIN_EMAIL || "admin@mkbooking.com";
+  const email = normalizeEmail(
+    process.env.ADMIN_EMAIL || "admin@mkbooking.com"
+  );
   const password = process.env.ADMIN_PASSWORD || "Admin123!";
   const name = process.env.ADMIN_NAME || "Super Admin";
 
@@ -43,18 +81,8 @@ async function createSuperAdmin() {
     let userId: string;
 
     if (existingUser) {
-      console.log("User already exists, updating to SUPERADMIN...");
+      console.log("User already exists, updating credentials and role...");
       userId = existingUser.id;
-
-      // Actualizar profile a SUPERADMIN
-      await prisma.userProfile.upsert({
-        where: { userId },
-        update: { systemRole: "SUPERADMIN" },
-        create: {
-          userId,
-          systemRole: "SUPERADMIN",
-        },
-      });
     } else {
       // Crear nuevo usuario
       const newUser = await prisma.user.create({
@@ -69,31 +97,20 @@ async function createSuperAdmin() {
       });
 
       userId = newUser.id;
-
-      // Crear cuenta con password
-      await prisma.account.create({
-        data: {
-          id: crypto.randomUUID(),
-          accountId: userId,
-          providerId: "credential",
-          userId,
-          password: hashPassword(password),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-
-      // Crear perfil SUPERADMIN
-      await prisma.userProfile.create({
-        data: {
-          userId,
-          systemRole: "SUPERADMIN",
-        },
-      });
-
-      console.log("✅ Superadmin user created successfully!");
     }
 
+    await upsertCredentialAccount(userId, password);
+
+    await prisma.userProfile.upsert({
+      where: { userId },
+      update: { systemRole: "SUPERADMIN" },
+      create: {
+        userId,
+        systemRole: "SUPERADMIN",
+      },
+    });
+
+    console.log("✅ Superadmin user is ready.");
     console.log("\n📧 Email:", email);
     console.log("🔑 Password:", password);
     console.log("👤 User ID:", userId);
