@@ -2,11 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, Shield, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, Menu, Shield, X } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { signOut } from "@/lib/auth-client";
 import type { SystemRole } from "@prisma/client";
 import {
   getAdminNavigationByRole,
@@ -22,14 +32,47 @@ interface AdminHeaderProps {
   systemRole: SystemRole;
 }
 
+function getUserInitials(name: string, email: string) {
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    return email.charAt(0).toUpperCase();
+  }
+  const initials = trimmedName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+  return initials || email.charAt(0).toUpperCase();
+}
+
 export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const navigation = useMemo(
     () => getAdminNavigationByRole(systemRole),
     [systemRole]
   );
+  const userInitials = useMemo(
+    () => getUserInitials(user.name, user.email),
+    [user.email, user.name]
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await signOut();
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Sign out error:", error);
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   useEffect(() => {
     if (!mobileMenuOpen) {
@@ -68,26 +111,68 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
             </Link>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Link
-              href="/profile"
-              className="hidden md:inline-flex text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+          <div className="hidden md:flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+              aria-label="Notificaciones"
             >
-              Ver como cliente
-            </Link>
+              <Bell className="h-4 w-4" />
+            </Button>
 
-            <div className="hidden sm:flex flex-col items-end leading-tight">
-              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                {user.name}
-              </span>
-              <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                {user.email}
-              </span>
-            </div>
-
-            <div className="hidden sm:block">
-              <SignOutButton />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="rounded-full p-0 hover:bg-transparent"
+                  aria-label="Abrir menú de usuario"
+                >
+                  <Avatar className="h-8 w-8 border border-neutral-200 dark:border-neutral-700">
+                    <AvatarFallback className="bg-neutral-100 text-xs font-semibold text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-64 border-neutral-200 dark:border-neutral-800"
+              >
+                <DropdownMenuLabel className="pb-1">
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                    {user.name}
+                  </p>
+                  <p className="text-xs font-normal text-neutral-500 dark:text-neutral-400">
+                    {user.email}
+                  </p>
+                </DropdownMenuLabel>
+                <DropdownMenuLabel className="pt-0">
+                  <div className="inline-flex items-center gap-2 rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-2 py-1 text-xs text-neutral-700 dark:text-neutral-300">
+                    <Shield className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                    {getSystemRoleLabel(systemRole)}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">Ver como cliente</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    if (!signingOut) {
+                      void handleSignOut();
+                    }
+                  }}
+                  className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+                >
+                  {signingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
