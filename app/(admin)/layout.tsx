@@ -36,9 +36,11 @@ export default async function AdminLayout({
         user={session.user}
         systemRole={profile.systemRole as SystemRole}
       />
-      <div className="flex">
+      <div className="flex min-h-[calc(100dvh-4rem)]">
         <AdminSidebar systemRole={profile.systemRole as SystemRole} />
-        <main className="flex-1 p-6 lg:p-8">{children}</main>
+        <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          {children}
+        </main>
       </div>
     </div>
   );
