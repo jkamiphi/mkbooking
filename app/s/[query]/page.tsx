@@ -289,7 +289,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                             {title}
                           </h3>
                           {dimensions && (
-                            <span className="flex-shrink-0 rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
+                            <span className="flex-shrink-0 whitespace-nowrap rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
                               {dimensions.label}
                             </span>
                           )}

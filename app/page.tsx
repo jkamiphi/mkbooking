@@ -398,7 +398,7 @@ export default async function Home({
                         {title}
                       </h3>
                       {dimensions ? (
-                        <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-medium text-neutral-600">
+                        <span className="shrink-0 whitespace-nowrap rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-medium text-neutral-600">
                           {dimensions.label}
                         </span>
                       ) : null}
