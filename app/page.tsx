@@ -100,6 +100,27 @@ export default async function Home({
     (selectedZone?.province.name ?? "").toLowerCase().includes("panam") ||
     (selectedZone?.name ?? "").toLowerCase().includes("panam");
   const showPromo = Boolean(catalog.promo && isPanamaQuery);
+  const topZones = Object.entries(
+    catalog.faces.reduce<Record<string, number>>((acc, face) => {
+      const zoneName = face.asset.zone.name;
+      acc[zoneName] = (acc[zoneName] || 0) + 1;
+      return acc;
+    }, {}),
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  const featuredFaceImage =
+    catalog.faces.find((face) => face.catalogFace?.primaryImageUrl)?.catalogFace
+      ?.primaryImageUrl || null;
+  const secondaryFaceImage =
+    catalog.faces.find(
+      (face) =>
+        face.catalogFace?.primaryImageUrl &&
+        face.catalogFace.primaryImageUrl !== featuredFaceImage,
+    )?.catalogFace?.primaryImageUrl || null;
+  const featuredZoneImage = zones[0]?.imageUrl || null;
+  const heroImage = featuredFaceImage || featuredZoneImage;
+  const sideImage = secondaryFaceImage || featuredZoneImage;
 
   const promoValueLabel = catalog.promo
     ? catalog.promo.type === "PERCENT"
@@ -450,6 +471,53 @@ export default async function Home({
           )}
         </div>
       </section>
+
+      <footer className="mt-16 border-t border-neutral-200/80 bg-white/70">
+        <div className="mx-auto w-full max-w-7xl px-6 py-10">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.28em] text-neutral-500">
+                MK Booking
+              </p>
+              <p className="mt-2 max-w-md text-sm text-neutral-600">
+                Marketplace OOH en Panamá para descubrir, reservar y operar
+                campañas con una experiencia simple.
+              </p>
+            </div>
+
+            <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-neutral-600">
+              <Link href="/s/all" className="hover:text-neutral-900">
+                Catálogo
+              </Link>
+              {showPrices ? (
+                <Link href="/profile" className="hover:text-neutral-900">
+                  Mi panel
+                </Link>
+              ) : (
+                <Link href="/login" className="hover:text-neutral-900">
+                  Iniciar sesión
+                </Link>
+              )}
+              {!showPrices ? (
+                <Link href="/register" className="hover:text-neutral-900">
+                  Crear cuenta
+                </Link>
+              ) : null}
+              <a
+                href="mailto:hola@mkbooking.com"
+                className="hover:text-neutral-900"
+              >
+                Contacto
+              </a>
+            </nav>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-2 border-t border-neutral-200/80 pt-4 text-xs text-neutral-500 md:flex-row md:items-center md:justify-between">
+            <p>© {new Date().getFullYear()} MK Booking.</p>
+            <p>hola@mkbooking.com · +507 6000-0000 · Panamá</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
