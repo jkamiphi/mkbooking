@@ -1,5 +1,6 @@
 import { AdminLinkCards } from "@/components/admin/link-cards";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+import { InventoryOverview } from "./_components/inventory-overview";
 
 export const metadata = {
   title: "Inventario - Admin",
@@ -32,6 +33,7 @@ export default function InventoryPage() {
           },
         ]}
       />
+      <InventoryOverview />
     </AdminPageShell>
   );
 }

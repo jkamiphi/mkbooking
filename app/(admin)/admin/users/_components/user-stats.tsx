@@ -33,21 +33,21 @@ export function UserStats({ stats, isLoading }: UserStatsProps) {
 
   const statItems = [
     {
-      name: "Total Users",
+      name: "Total usuarios",
       value: stats?.totalUsers ?? 0,
       icon: Users,
       color: "text-blue-600 dark:text-blue-400",
       bgColor: "bg-blue-100 dark:bg-blue-900/50",
     },
     {
-      name: "Active",
+      name: "Activos",
       value: stats?.activeUsers ?? 0,
       icon: UserCheck,
       color: "text-green-600 dark:text-green-400",
       bgColor: "bg-green-100 dark:bg-green-900/50",
     },
     {
-      name: "Inactive",
+      name: "Inactivos",
       value: stats?.inactiveUsers ?? 0,
       icon: UserX,
       color: "text-red-600 dark:text-red-400",

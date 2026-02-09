@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, Search, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, RotateCcw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -70,9 +77,9 @@ export function OrganizationsContent() {
   const [legalEntityType, setLegalEntityType] =
     useState<LegalEntityTypeFilter>("ALL");
   const [status, setStatus] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
-  const [verified, setVerified] = useState<
-    "ALL" | "VERIFIED" | "NOT_VERIFIED"
-  >("ALL");
+  const [verified, setVerified] = useState<"ALL" | "VERIFIED" | "NOT_VERIFIED">(
+    "ALL",
+  );
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -92,15 +99,11 @@ export function OrganizationsContent() {
       legalEntityType: legalEntityType === "ALL" ? undefined : legalEntityType,
       isActive: status === "ALL" ? undefined : status === "ACTIVE",
       isVerified:
-        verified === "ALL"
-          ? undefined
-          : verified === "VERIFIED"
-            ? true
-            : false,
+        verified === "ALL" ? undefined : verified === "VERIFIED" ? true : false,
       skip: page * pageSize,
       take: pageSize,
     },
-    { enabled: !isSearchMode }
+    { enabled: !isSearchMode },
   );
 
   const searchQuery = trpc.organization.search.useQuery(
@@ -108,7 +111,7 @@ export function OrganizationsContent() {
       query: debouncedSearch,
       take: 100,
     },
-    { enabled: isSearchMode }
+    { enabled: isSearchMode },
   );
 
   const rows = useMemo(() => {
@@ -119,8 +122,19 @@ export function OrganizationsContent() {
   }, [isSearchMode, listQuery.data?.organizations, searchQuery.data]);
 
   const total = isSearchMode ? rows.length : (listQuery.data?.total ?? 0);
-  const totalPages = isSearchMode ? 1 : Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = isSearchMode
+    ? 1
+    : Math.max(1, Math.ceil(total / pageSize));
   const isLoading = isSearchMode ? searchQuery.isLoading : listQuery.isLoading;
+  const queryError = isSearchMode ? searchQuery.error : listQuery.error;
+
+  const rangeLabel = useMemo(() => {
+    if (total === 0) return "0 resultados";
+    if (isSearchMode) return `Mostrando 1-${rows.length} de ${rows.length}`;
+    const start = page * pageSize + 1;
+    const end = Math.min((page + 1) * pageSize, total);
+    return `Mostrando ${start}-${end} de ${total}`;
+  }, [isSearchMode, page, rows.length, total]);
 
   function clearFilters() {
     setSearchInput("");
@@ -140,87 +154,112 @@ export function OrganizationsContent() {
     verified !== "ALL";
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm text-muted-foreground">
-          <BadgeCheck className="h-4 w-4" />
-          {isSearchMode
-            ? `${rows.length} resultados de búsqueda`
-            : `${total} organizaciones registradas`}
-        </div>
-        <OrganizationFormDialog mode="create" />
-      </div>
-
+    <div className="space-y-6">
       <Card>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle>Filtros de organizaciones</CardTitle>
+            <CardDescription>
+              Busca y segmenta por tipo, entidad legal, estado y verificación.
+            </CardDescription>
+          </div>
+          <div className="w-full sm:w-auto">
+            <OrganizationFormDialog mode="create" />
+          </div>
+        </CardHeader>
         <CardContent className="space-y-4 pt-6">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-6">
-            <div className="relative lg:col-span-2">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Buscar por nombre, razón social, RUC o cédula"
-                className="pl-9"
-              />
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="organizations-search">Buscar</Label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="organizations-search"
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="Nombre, razón social, RUC o cédula"
+                  className="pl-9"
+                />
+              </div>
             </div>
 
-            <SelectNative
-              value={organizationType}
-              onChange={(event) =>
-                setOrganizationType(event.target.value as OrganizationTypeFilter)
-              }
-            >
-              {organizationTypeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </SelectNative>
+            <div className="space-y-1.5">
+              <Label htmlFor="organizations-type">Tipo</Label>
+              <SelectNative
+                id="organizations-type"
+                value={organizationType}
+                onChange={(event) =>
+                  setOrganizationType(
+                    event.target.value as OrganizationTypeFilter,
+                  )
+                }
+              >
+                {organizationTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectNative>
+            </div>
 
-            <SelectNative
-              value={legalEntityType}
-              onChange={(event) =>
-                setLegalEntityType(event.target.value as LegalEntityTypeFilter)
-              }
-            >
-              {legalEntityTypeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </SelectNative>
+            <div className="space-y-1.5">
+              <Label htmlFor="organizations-legal">Entidad legal</Label>
+              <SelectNative
+                id="organizations-legal"
+                value={legalEntityType}
+                onChange={(event) =>
+                  setLegalEntityType(
+                    event.target.value as LegalEntityTypeFilter,
+                  )
+                }
+              >
+                {legalEntityTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectNative>
+            </div>
 
-            <SelectNative
-              value={status}
-              onChange={(event) =>
-                setStatus(event.target.value as "ALL" | "ACTIVE" | "INACTIVE")
-              }
-            >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </SelectNative>
+            <div className="space-y-1.5">
+              <Label htmlFor="organizations-status">Estado</Label>
+              <SelectNative
+                id="organizations-status"
+                value={status}
+                onChange={(event) =>
+                  setStatus(event.target.value as "ALL" | "ACTIVE" | "INACTIVE")
+                }
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectNative>
+            </div>
 
-            <SelectNative
-              value={verified}
-              onChange={(event) =>
-                setVerified(
-                  event.target.value as "ALL" | "VERIFIED" | "NOT_VERIFIED"
-                )
-              }
-            >
-              {verifiedOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </SelectNative>
+            <div className="space-y-1.5">
+              <Label htmlFor="organizations-verified">Verificación</Label>
+              <SelectNative
+                id="organizations-verified"
+                value={verified}
+                onChange={(event) =>
+                  setVerified(
+                    event.target.value as "ALL" | "VERIFIED" | "NOT_VERIFIED",
+                  )
+                }
+              >
+                {verifiedOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectNative>
+            </div>
           </div>
 
           {hasFilters ? (
-            <div className="flex justify-end">
+            <div className="flex justify-end border-t pt-4">
               <Button variant="outline" size="sm" onClick={clearFilters}>
                 <X className="mr-2 h-4 w-4" />
                 Limpiar filtros
@@ -231,7 +270,35 @@ export function OrganizationsContent() {
       </Card>
 
       <Card className="overflow-hidden">
-        <CardContent className="p-0">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Lista de organizaciones</CardTitle>
+          <p className="text-sm text-muted-foreground">{rangeLabel}</p>
+        </CardHeader>
+        <CardContent className="space-y-4 p-0 px-6 pb-6">
+          {queryError ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="space-y-2">
+                  <p>No se pudo cargar el listado de organizaciones.</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      void (isSearchMode
+                        ? searchQuery.refetch()
+                        : listQuery.refetch())
+                    }
+                    className="border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/40"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reintentar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow>
@@ -257,7 +324,10 @@ export function OrganizationsContent() {
 
               {!isLoading && rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="py-8 text-center text-muted-foreground"
+                  >
                     No se encontraron organizaciones con los criterios actuales.
                   </TableCell>
                 </TableRow>
@@ -268,7 +338,9 @@ export function OrganizationsContent() {
                     <TableRow key={organization.id}>
                       <TableCell className="px-6">
                         <div className="space-y-0.5">
-                          <p className="font-medium text-foreground">{organization.name}</p>
+                          <p className="font-medium text-foreground">
+                            {organization.name}
+                          </p>
                           {organization.legalName ? (
                             <p className="text-xs text-muted-foreground">
                               {organization.legalName}
@@ -296,16 +368,28 @@ export function OrganizationsContent() {
                       </TableCell>
                       <TableCell className="px-6">
                         <div className="flex gap-1">
-                          <Badge variant={organization.isActive ? "success" : "destructive"}>
+                          <Badge
+                            variant={
+                              organization.isActive ? "success" : "destructive"
+                            }
+                          >
                             {organization.isActive ? "Activa" : "Inactiva"}
                           </Badge>
-                          <Badge variant={organization.isVerified ? "info" : "secondary"}>
-                            {organization.isVerified ? "Verificada" : "No verificada"}
+                          <Badge
+                            variant={
+                              organization.isVerified ? "info" : "secondary"
+                            }
+                          >
+                            {organization.isVerified
+                              ? "Verificada"
+                              : "No verificada"}
                           </Badge>
                         </div>
                       </TableCell>
                       <TableCell className="px-6 text-muted-foreground">
-                        {new Date(organization.createdAt).toLocaleDateString("es-PA")}
+                        {new Date(organization.createdAt).toLocaleDateString(
+                          "es-PA",
+                        )}
                       </TableCell>
                       <TableCell className="px-6 text-right">
                         <OrganizationFormDialog

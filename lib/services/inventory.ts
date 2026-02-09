@@ -345,6 +345,18 @@ export async function listAssets(options?: {
   };
 }
 
+export async function getAssetById(id: string) {
+  return db.asset.findUnique({
+    where: { id },
+    include: {
+      structureType: true,
+      zone: { include: { province: true } },
+      roadType: true,
+      _count: { select: { faces: true } },
+    },
+  });
+}
+
 export async function createAsset(input: CreateAssetInput) {
   return db.asset.create({
     data: {
@@ -360,16 +372,35 @@ export async function createAsset(input: CreateAssetInput) {
 
 export async function updateAsset(input: UpdateAssetInput) {
   const { id, ...data } = input;
+  const updateData: Prisma.AssetUncheckedUpdateInput = {
+    ...data,
+  };
+
+  if ("roadTypeId" in data) {
+    updateData.roadTypeId = data.roadTypeId ? data.roadTypeId : null;
+  }
+  if ("landmark" in data) {
+    updateData.landmark = data.landmark ? data.landmark : null;
+  }
+  if ("notes" in data) {
+    updateData.notes = data.notes ? data.notes : null;
+  }
+  if ("installedDate" in data) {
+    updateData.installedDate = data.installedDate ?? null;
+  }
+  if ("retiredDate" in data) {
+    updateData.retiredDate = data.retiredDate ?? null;
+  }
+  if ("latitude" in data) {
+    updateData.latitude = data.latitude ?? null;
+  }
+  if ("longitude" in data) {
+    updateData.longitude = data.longitude ?? null;
+  }
+
   return db.asset.update({
     where: { id },
-    data: {
-      ...data,
-      roadTypeId: data.roadTypeId || null,
-      landmark: data.landmark || null,
-      notes: data.notes || null,
-      installedDate: data.installedDate || null,
-      retiredDate: data.retiredDate || null,
-    },
+    data: updateData,
   });
 }
 
@@ -409,6 +440,16 @@ export async function listAssetFaces(options?: {
   };
 }
 
+export async function getAssetFaceById(id: string) {
+  return db.assetFace.findUnique({
+    where: { id },
+    include: {
+      asset: { select: { id: true, code: true } },
+      position: true,
+    },
+  });
+}
+
 export async function createAssetFace(input: CreateAssetFaceInput) {
   return db.assetFace.create({
     data: {
@@ -423,15 +464,26 @@ export async function createAssetFace(input: CreateAssetFaceInput) {
 
 export async function updateAssetFace(input: UpdateAssetFaceInput) {
   const { id, ...data } = input;
+  const updateData: Prisma.AssetFaceUncheckedUpdateInput = {
+    ...data,
+  };
+
+  if ("positionId" in data) {
+    updateData.positionId = data.positionId ? data.positionId : null;
+  }
+  if ("visibilityNotes" in data) {
+    updateData.visibilityNotes = data.visibilityNotes ? data.visibilityNotes : null;
+  }
+  if ("restrictions" in data) {
+    updateData.restrictions = data.restrictions ? data.restrictions : null;
+  }
+  if ("notes" in data) {
+    updateData.notes = data.notes ? data.notes : null;
+  }
+
   return db.assetFace.update({
     where: { id },
-    data: {
-      ...data,
-      positionId: data.positionId || null,
-      visibilityNotes: data.visibilityNotes || null,
-      restrictions: data.restrictions || null,
-      notes: data.notes || null,
-    },
+    data: updateData,
   });
 }
 

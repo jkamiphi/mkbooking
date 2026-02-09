@@ -29,7 +29,7 @@ export function UsersContent() {
 
   const { data: stats, isLoading: statsLoading } = trpc.admin.stats.useQuery();
 
-  const { data: users, isLoading: usersLoading } = trpc.admin.listUsers.useQuery(
+  const usersQuery = trpc.admin.listUsers.useQuery(
     {
       ...filters,
       skip: page * pageSize,
@@ -44,18 +44,21 @@ export function UsersContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <CreateUserModal onCreated={() => setPage(0)} />
-      </div>
-
       <UserStats stats={stats} isLoading={statsLoading} />
 
-      <UserFilters filters={filters} onFiltersChange={handleFiltersChange} />
+      <UserFilters
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        actions={<CreateUserModal onCreated={() => setPage(0)} />}
+      />
 
       <UserListTable
-        users={users?.profiles ?? []}
-        total={users?.total ?? 0}
-        isLoading={usersLoading}
+        users={usersQuery.data?.profiles ?? []}
+        total={usersQuery.data?.total ?? 0}
+        isLoading={usersQuery.isLoading}
+        isFetching={usersQuery.isFetching}
+        error={usersQuery.error?.message}
+        onRetry={() => void usersQuery.refetch()}
         page={page}
         pageSize={pageSize}
         onPageChange={setPage}

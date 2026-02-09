@@ -130,10 +130,11 @@ export function NewFaceForm() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="mb-1.5 block">Ancho</Label>
+              <Label className="mb-1.5 block">Ancho (m)</Label>
               <Input
                 type="number"
                 step="0.01"
+                placeholder="Ej. 12.50"
                 value={form.width}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, width: event.target.value }))
@@ -141,10 +142,11 @@ export function NewFaceForm() {
               />
             </div>
             <div>
-              <Label className="mb-1.5 block">Alto</Label>
+              <Label className="mb-1.5 block">Alto (m)</Label>
               <Input
                 type="number"
                 step="0.01"
+                placeholder="Ej. 3.00"
                 value={form.height}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, height: event.target.value }))

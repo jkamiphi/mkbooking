@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Loader2,
   MoreHorizontal,
+  Pencil,
   RotateCcw,
   Search,
   X,
@@ -392,6 +393,13 @@ export function AssetsContent() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
                               <DropdownMenuLabel>{asset.code}</DropdownMenuLabel>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/admin/inventory/assets/${asset.id}/edit`}>
+                                  <Pencil className="h-4 w-4" />
+                                  Editar activo
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onSelect={(event) => {
                                   event.preventDefault();

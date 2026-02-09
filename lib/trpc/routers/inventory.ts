@@ -19,7 +19,9 @@ import {
   updateStructureTypeSchema,
   updateZoneSchema,
   listAssets,
+  getAssetById,
   listAssetFaces,
+  getAssetFaceById,
   listFacePositions,
   listMountingTypes,
   listProvinces,
@@ -154,6 +156,15 @@ export const inventoryRouter = router({
       .query(async ({ input }) => {
         return listAssets(input);
       }),
+    get: adminProcedure
+      .input(
+        z.object({
+          id: z.string().min(1),
+        })
+      )
+      .query(async ({ input }) => {
+        return getAssetById(input.id);
+      }),
     create: adminProcedure.input(createAssetSchema).mutation(async ({ input }) => {
       return createAsset(input);
     }),
@@ -176,6 +187,15 @@ export const inventoryRouter = router({
       )
       .query(async ({ input }) => {
         return listAssetFaces(input);
+      }),
+    get: adminProcedure
+      .input(
+        z.object({
+          id: z.string().min(1),
+        })
+      )
+      .query(async ({ input }) => {
+        return getAssetFaceById(input.id);
       }),
     create: adminProcedure
       .input(createAssetFaceSchema)
