@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,12 +29,14 @@ type FaceFacing = (typeof facingOptions)[number];
 
 export function NewFaceForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedAssetId = searchParams.get("assetId")?.trim() ?? "";
   const utils = trpc.useUtils();
   const assetsQuery = trpc.inventory.assets.list.useQuery({ take: 100 });
   const positionsQuery = trpc.inventory.facePositions.list.useQuery();
 
   const [form, setForm] = useState({
-    assetId: "",
+    assetId: preselectedAssetId,
     code: "",
     positionId: "",
     width: "",
