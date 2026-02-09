@@ -1,8 +1,9 @@
 import { UserDetailContent } from "./user-detail-content";
+import { AdminPageShell } from "@/components/admin/page-shell";
 
 export const metadata = {
-  title: "User Details - Admin",
-  description: "View and manage user details",
+  title: "Detalle de Usuario - Admin",
+  description: "Ver y gestionar detalles de un usuario",
 };
 
 interface UserDetailPageProps {
@@ -15,8 +16,8 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { userId } = await params;
 
   return (
-    <div className="space-y-6">
+    <AdminPageShell>
       <UserDetailContent userId={userId} />
-    </div>
+    </AdminPageShell>
   );
 }

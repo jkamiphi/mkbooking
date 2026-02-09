@@ -1,4 +1,5 @@
 import { FacesContent } from "./faces-content";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
 export const metadata = {
   title: "Caras de Inventario - Admin",
@@ -7,16 +8,12 @@ export const metadata = {
 
 export default function FacesPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Caras
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Gestionar caras vendibles.
-        </p>
-      </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Caras"
+        description="Superficies vendibles y atributos de comercialización."
+      />
       <FacesContent />
-    </div>
+    </AdminPageShell>
   );
 }

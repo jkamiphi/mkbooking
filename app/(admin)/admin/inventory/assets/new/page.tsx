@@ -1,4 +1,5 @@
 import { NewAssetForm } from "./new-asset-form";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
 export const metadata = {
   title: "Nuevo Activo - Admin",
@@ -7,16 +8,12 @@ export const metadata = {
 
 export default function NewAssetPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Nuevo Activo
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Crear una nueva estructura de inventario.
-        </p>
-      </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Nuevo activo"
+        description="Registrar una nueva estructura en el inventario."
+      />
       <NewAssetForm />
-    </div>
+    </AdminPageShell>
   );
 }

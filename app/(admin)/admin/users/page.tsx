@@ -1,4 +1,5 @@
 import { UsersContent } from "./users-content";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
 export const metadata = {
   title: "Gestión de Usuarios - Admin",
@@ -7,16 +8,12 @@ export const metadata = {
 
 export default function UsersPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Gestión de Usuarios
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Ver y gestionar todos los usuarios de la plataforma
-        </p>
-      </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Gestión de usuarios"
+        description="Administrar acceso, estado y roles de todas las cuentas."
+      />
       <UsersContent />
-    </div>
+    </AdminPageShell>
   );
 }

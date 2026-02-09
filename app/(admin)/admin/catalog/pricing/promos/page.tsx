@@ -4,6 +4,18 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { SelectNative } from "@/components/ui/select-native";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const promoTypes = ["PERCENT", "FIXED"] as const;
 
@@ -22,17 +34,13 @@ export default function PromosPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Promociones
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Solo una promoción puede estar activa a la vez.
-        </p>
-      </div>
-
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 space-y-4">
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Promociones"
+        description="Solo una promoción puede estar activa a la vez."
+      />
+      <Card>
+        <CardContent className="space-y-4 pt-6">
         <form
           className="grid grid-cols-1 md:grid-cols-4 gap-3"
           onSubmit={(event) => {
@@ -46,32 +54,29 @@ export default function PromosPage() {
             });
           }}
         >
-          <input
+          <Input
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Nombre de la promoción"
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
-          <select
+          <SelectNative
             value={type}
             onChange={(event) =>
               setType(event.target.value as (typeof promoTypes)[number])
             }
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             {promoTypes.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
             ))}
-          </select>
-          <input
+          </SelectNative>
+          <Input
             type="number"
             step="0.01"
             value={value}
             onChange={(event) => setValue(event.target.value)}
             placeholder="Valor"
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <Button
             type="submit"
@@ -81,51 +86,43 @@ export default function PromosPage() {
           </Button>
         </form>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Nombre</th>
-                <th className="py-2 pr-4">Tipo</th>
-                <th className="py-2 pr-4">Valor</th>
-                <th className="py-2 pr-4">Activo</th>
-              </tr>
-            </thead>
-            <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead>Activo</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
               {promosQuery.data?.map((promo) => (
-                <tr
+                <TableRow
                   key={promo.id}
-                  className="border-b border-neutral-100 dark:border-neutral-800"
                 >
-                  <td className="py-2 pr-4 text-neutral-900 dark:text-white">
-                    {promo.name}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                    {promo.type}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                    {String(promo.value)}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  <TableCell>{promo.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{promo.type}</TableCell>
+                  <TableCell className="text-muted-foreground">{String(promo.value)}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {promo.isActive ? "Sí" : "No"}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {!promosQuery.data?.length && (
-                <tr>
-                  <td className="py-4 text-center text-neutral-500 dark:text-neutral-400" colSpan={4}>
+                <TableRow>
+                  <TableCell className="py-4 text-center text-muted-foreground" colSpan={4}>
                     Aún no hay promociones.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+          </TableBody>
+        </Table>
+        </CardContent>
+      </Card>
 
       <Button variant="outline" asChild>
         <Link href="/admin/catalog/pricing">Volver a precios</Link>
       </Button>
-    </div>
+    </AdminPageShell>
   );
 }

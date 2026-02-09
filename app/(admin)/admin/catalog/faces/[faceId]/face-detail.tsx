@@ -1,35 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
 
+type CatalogFaceQueryData = NonNullable<
+  ReturnType<typeof trpc.catalog.faces.get.useQuery>["data"]
+>;
+
 export function CatalogFaceDetail({ faceId }: { faceId: string }) {
-  const utils = trpc.useUtils();
   const faceQuery = trpc.catalog.faces.get.useQuery({ faceId });
 
+  if (faceQuery.isLoading) {
+    return <div className="text-sm text-muted-foreground">Cargando cara...</div>;
+  }
+
+  if (!faceQuery.data) {
+    return <div className="text-sm text-red-500">Cara no encontrada.</div>;
+  }
+
+  return <CatalogFaceDetailContent faceId={faceId} data={faceQuery.data} />;
+}
+
+function CatalogFaceDetailContent({
+  faceId,
+  data,
+}: {
+  faceId: string;
+  data: CatalogFaceQueryData;
+}) {
+  const utils = trpc.useUtils();
   const [form, setForm] = useState({
-    title: "",
-    summary: "",
-    highlight: "",
-    primaryImageUrl: "",
-    isPublished: false,
+    title: data.title ?? "",
+    summary: data.summary ?? "",
+    highlight: data.highlight ?? "",
+    primaryImageUrl: data.primaryImageUrl ?? "",
+    isPublished: data.isPublished ?? false,
   });
   const [price, setPrice] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-
-  useEffect(() => {
-    if (!faceQuery.data) return;
-    setForm({
-      title: faceQuery.data.title ?? "",
-      summary: faceQuery.data.summary ?? "",
-      highlight: faceQuery.data.highlight ?? "",
-      primaryImageUrl: faceQuery.data.primaryImageUrl ?? "",
-      isPublished: faceQuery.data.isPublished ?? false,
-    });
-  }, [faceQuery.data]);
 
   const upsertFace = trpc.catalog.faces.upsert.useMutation({
     onSuccess: () => {
@@ -49,229 +74,187 @@ export function CatalogFaceDetail({ faceId }: { faceId: string }) {
     },
   });
 
-  if (faceQuery.isLoading) {
-    return (
-      <div className="text-sm text-neutral-500 dark:text-neutral-400">
-        Cargando cara...
-      </div>
-    );
-  }
-
-  if (!faceQuery.data) {
-    return (
-      <div className="text-sm text-red-500">Cara no encontrada.</div>
-    );
-  }
-
-  const face = faceQuery.data.face;
+  const face = data.face;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          {face.asset.code} - Cara {face.code}
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          {face.asset.zone.province.name} - {face.asset.zone.name}
-        </p>
-      </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        title={`${face.asset.code} - Cara ${face.code}`}
+        description={`${face.asset.zone.province.name} - ${face.asset.zone.name}`}
+      />
 
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
-          Detalles del Catálogo
-        </h2>
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            upsertFace.mutate({
-              faceId,
-              title: form.title.trim() || undefined,
-              summary: form.summary.trim() || undefined,
-              highlight: form.highlight.trim() || undefined,
-              primaryImageUrl: form.primaryImageUrl.trim() || undefined,
-              isPublished: form.isPublished,
-            });
-          }}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Título
-              </label>
-              <input
-                value={form.title}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, title: event.target.value }))
-                }
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Resumen
-              </label>
-              <textarea
-                value={form.summary}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, summary: event.target.value }))
-                }
-                rows={3}
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Destacado
-              </label>
-              <input
-                value={form.highlight}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, highlight: event.target.value }))
-                }
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                URL de Imagen Principal
-              </label>
-              <input
-                value={form.primaryImageUrl}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    primaryImageUrl: event.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
-              <input
-                type="checkbox"
-                checked={form.isPublished}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    isPublished: event.target.checked,
-                  }))
-                }
-              />
-              Publicado
-            </label>
-          </div>
-          <Button type="submit" disabled={upsertFace.isPending}>
-            {upsertFace.isPending ? "Guardando..." : "Guardar Detalles del Catálogo"}
-          </Button>
-        </form>
-      </section>
-
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
-          Reglas de Precio de Cara
-        </h2>
-        <form
-          className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!price.trim()) return;
-            createRule.mutate({
-              faceId,
-              priceDaily: Number(price),
-              startDate: startDate ? new Date(startDate) : undefined,
-              endDate: endDate ? new Date(endDate) : undefined,
-              isActive: true,
-            });
-          }}
-        >
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Precio Diario (USD)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={price}
-              onChange={(event) => setPrice(event.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Fecha de Inicio
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Fecha de Fin
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
-            />
-          </div>
-          <Button
-            type="submit"
-            disabled={!price.trim() || createRule.isPending}
+      <Card>
+        <CardHeader>
+          <CardTitle>Detalles del catálogo</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              upsertFace.mutate({
+                faceId,
+                title: form.title.trim() || undefined,
+                summary: form.summary.trim() || undefined,
+                highlight: form.highlight.trim() || undefined,
+                primaryImageUrl: form.primaryImageUrl.trim() || undefined,
+                isPublished: form.isPublished,
+              });
+            }}
           >
-            {createRule.isPending ? "Guardando..." : "Agregar Regla"}
-          </Button>
-        </form>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <Label className="mb-1.5 block">Título</Label>
+                <Input
+                  value={form.title}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="mb-1.5 block">Resumen</Label>
+                <Textarea
+                  value={form.summary}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, summary: event.target.value }))
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="mb-1.5 block">Destacado</Label>
+                <Input
+                  value={form.highlight}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, highlight: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="mb-1.5 block">URL de Imagen Principal</Label>
+                <Input
+                  value={form.primaryImageUrl}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      primaryImageUrl: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <Label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.isPublished}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      isPublished: Boolean(checked),
+                    }))
+                  }
+                />
+                Publicado
+              </Label>
+            </div>
+            <Button type="submit" disabled={upsertFace.isPending}>
+              {upsertFace.isPending
+                ? "Guardando..."
+                : "Guardar Detalles del Catálogo"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Precio</th>
-                <th className="py-2 pr-4">Inicio</th>
-                <th className="py-2 pr-4">Fin</th>
-                <th className="py-2 pr-4">Activo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {faceQuery.data.priceRules.map((rule) => (
-                <tr
-                  key={rule.id}
-                  className="border-b border-neutral-100 dark:border-neutral-800"
-                >
-                  <td className="py-2 pr-4 text-neutral-900 dark:text-white">
+      <Card>
+        <CardHeader>
+          <CardTitle>Reglas de precio de cara</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form
+            className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!price.trim()) return;
+              createRule.mutate({
+                faceId,
+                priceDaily: Number(price),
+                startDate: startDate ? new Date(startDate) : undefined,
+                endDate: endDate ? new Date(endDate) : undefined,
+                isActive: true,
+              });
+            }}
+          >
+            <div>
+              <Label className="mb-1.5 block">Precio Diario (USD)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Fecha de Inicio</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Fecha de Fin</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+              />
+            </div>
+            <Button type="submit" disabled={!price.trim() || createRule.isPending}>
+              {createRule.isPending ? "Guardando..." : "Agregar Regla"}
+            </Button>
+          </form>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Precio</TableHead>
+                <TableHead>Inicio</TableHead>
+                <TableHead>Fin</TableHead>
+                <TableHead>Activo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.priceRules.map((rule) => (
+                <TableRow key={rule.id}>
+                  <TableCell>
                     {rule.currency} {String(rule.priceDaily)}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {rule.startDate.toLocaleDateString()}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {rule.endDate ? rule.endDate.toLocaleDateString() : "-"}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {rule.isActive ? "Sí" : "No"}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-              {!faceQuery.data.priceRules.length && (
-                <tr>
-                  <td className="py-4 text-center text-neutral-500 dark:text-neutral-400" colSpan={4}>
+              {!data.priceRules.length && (
+                <TableRow>
+                  <TableCell className="py-4 text-center text-muted-foreground" colSpan={4}>
                     Aún no hay reglas de precio.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Button variant="outline" asChild>
         <Link href="/admin/catalog/faces">Volver a caras</Link>
       </Button>
-    </div>
+    </AdminPageShell>
   );
 }

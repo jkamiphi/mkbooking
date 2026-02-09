@@ -1,4 +1,5 @@
 import { DashboardContent } from "./dashboard-content";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
 export const metadata = {
   title: "Panel de Administración - MK Booking",
@@ -7,16 +8,12 @@ export const metadata = {
 
 export default function AdminDashboardPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Panel
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Resumen de la plataforma y estadísticas
-        </p>
-      </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Panel"
+        description="Resumen operativo y métricas clave de la plataforma."
+      />
       <DashboardContent />
-    </div>
+    </AdminPageShell>
   );
 }

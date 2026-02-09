@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function MountingTypesPage() {
   const [name, setName] = useState("");
@@ -17,17 +21,13 @@ export default function MountingTypesPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Tipos de Montaje
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Gestionar tipos de montaje (vinil, lona, backlit).
-        </p>
-      </div>
-
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 space-y-4">
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Tipos de montaje"
+        description="Gestionar tipos de montaje (vinil, lona, backlit)."
+      />
+      <Card>
+        <CardContent className="space-y-4 pt-6">
         <form
           className="flex flex-col md:flex-row gap-3"
           onSubmit={(event) => {
@@ -36,32 +36,44 @@ export default function MountingTypesPage() {
             createType.mutate({ name: name.trim() });
           }}
         >
-          <input
+          <Input
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Nombre del tipo de montaje"
-            className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
+            className="flex-1"
           />
           <Button type="submit" disabled={!name.trim() || createType.isPending}>
             {createType.isPending ? "Guardando..." : "Agregar Tipo"}
           </Button>
         </form>
 
-        <ul className="text-sm text-neutral-700 dark:text-neutral-300 space-y-2">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
           {typesQuery.data?.map((type) => (
-            <li key={type.id}>{type.name}</li>
+            <TableRow key={type.id}>
+              <TableCell>{type.name}</TableCell>
+            </TableRow>
           ))}
           {!typesQuery.data?.length && (
-            <li className="text-neutral-500 dark:text-neutral-400">
-              Aún no hay tipos de montaje.
-            </li>
+            <TableRow>
+              <TableCell className="text-muted-foreground">
+                Aún no hay tipos de montaje.
+              </TableCell>
+            </TableRow>
           )}
-        </ul>
-      </section>
+          </TableBody>
+        </Table>
+        </CardContent>
+      </Card>
 
       <Button variant="outline" asChild>
         <Link href="/admin/inventory/taxonomy">Volver a taxonomía</Link>
       </Button>
-    </div>
+    </AdminPageShell>
   );
 }

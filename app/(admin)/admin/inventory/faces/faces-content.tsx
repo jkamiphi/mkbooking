@@ -4,6 +4,16 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SelectNative } from "@/components/ui/select-native";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
 const statusLabels: Record<(typeof statusOptions)[number], string> = {
@@ -32,10 +42,9 @@ export function FacesContent() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
-          <select
+          <SelectNative
             value={assetId}
             onChange={(event) => setAssetId(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todos los activos</option>
             {assetsQuery.data?.assets.map((asset) => (
@@ -43,11 +52,10 @@ export function FacesContent() {
                 {asset.code}
               </option>
             ))}
-          </select>
-          <select
+          </SelectNative>
+          <SelectNative
             value={status}
             onChange={(event) => setStatus(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todos los estados</option>
             {statusOptions.map((option) => (
@@ -55,75 +63,74 @@ export function FacesContent() {
                 {statusLabels[option]}
               </option>
             ))}
-          </select>
+          </SelectNative>
         </div>
         <Button asChild>
           <Link href="/admin/inventory/faces/new">Nueva Cara</Link>
         </Button>
       </div>
 
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-          Lista de Caras
-        </h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de caras</CardTitle>
+        </CardHeader>
+        <CardContent>
         {facesQuery.isLoading ? (
-          <div className="text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="text-sm text-muted-foreground">
             Cargando caras...
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                  <th className="py-2 pr-4">Activo</th>
-                  <th className="py-2 pr-4">Cara</th>
-                  <th className="py-2 pr-4">Posición</th>
-                  <th className="py-2 pr-4">Tamaño</th>
-                  <th className="py-2 pr-4">Orientación</th>
-                  <th className="py-2 pr-4">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Activo</TableHead>
+                <TableHead>Cara</TableHead>
+                <TableHead>Posición</TableHead>
+                <TableHead>Tamaño</TableHead>
+                <TableHead>Orientación</TableHead>
+                <TableHead>Estado</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
                 {facesQuery.data?.faces.map((face) => (
-                  <tr
+                  <TableRow
                     key={face.id}
-                    className="border-b border-neutral-100 dark:border-neutral-800"
                   >
-                    <td className="py-2 pr-4 font-medium text-neutral-900 dark:text-white">
+                    <TableCell className="font-medium">
                       {face.asset.code}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {face.code}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {face.position?.name ?? "-"}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {String(face.width)} x {String(face.height)}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {facingLabels[face.facing] ?? face.facing}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {statusLabels[face.status as (typeof statusOptions)[number]] ?? face.status}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
                 {!facesQuery.data?.faces.length && (
-                  <tr>
-                    <td
+                  <TableRow>
+                    <TableCell
                       colSpan={6}
-                      className="py-4 text-center text-neutral-500 dark:text-neutral-400"
+                      className="py-4 text-center text-muted-foreground"
                     >
                       No se encontraron caras.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
-          </div>
+            </TableBody>
+          </Table>
         )}
-      </section>
+        </CardContent>
+      </Card>
     </div>
   );
 }

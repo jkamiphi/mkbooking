@@ -4,6 +4,17 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { SelectNative } from "@/components/ui/select-native";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
 const statusLabels: Record<(typeof statusOptions)[number], string> = {
@@ -34,16 +45,14 @@ export function AssetsContent() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
-          <input
+          <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar por código o dirección"
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
-          <select
+          <SelectNative
             value={status}
             onChange={(event) => setStatus(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todos los estados</option>
             {statusOptions.map((option) => (
@@ -51,11 +60,10 @@ export function AssetsContent() {
                 {statusLabels[option]}
               </option>
             ))}
-          </select>
-          <select
+          </SelectNative>
+          <SelectNative
             value={structureTypeId}
             onChange={(event) => setStructureTypeId(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todos los tipos de estructura</option>
             {structureTypesQuery.data?.map((type) => (
@@ -63,11 +71,10 @@ export function AssetsContent() {
                 {type.name}
               </option>
             ))}
-          </select>
-          <select
+          </SelectNative>
+          <SelectNative
             value={zoneId}
             onChange={(event) => setZoneId(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todas las zonas</option>
             {zonesQuery.data?.map((zone) => (
@@ -75,79 +82,78 @@ export function AssetsContent() {
                 {zone.province.name} - {zone.name}
               </option>
             ))}
-          </select>
+          </SelectNative>
         </div>
         <Button asChild>
           <Link href="/admin/inventory/assets/new">Nuevo Activo</Link>
         </Button>
       </div>
 
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">
-          Lista de Activos
-        </h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de activos</CardTitle>
+        </CardHeader>
+        <CardContent>
         {assetsQuery.isLoading ? (
-          <div className="text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="text-sm text-muted-foreground">
             Cargando activos...
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                  <th className="py-2 pr-4">Código</th>
-                  <th className="py-2 pr-4">Estructura</th>
-                  <th className="py-2 pr-4">Zona</th>
-                  <th className="py-2 pr-4">Estado</th>
-                  <th className="py-2 pr-4">Digital</th>
-                  <th className="py-2 pr-4">Iluminado</th>
-                  <th className="py-2 pr-4">Caras</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Código</TableHead>
+                <TableHead>Estructura</TableHead>
+                <TableHead>Zona</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Digital</TableHead>
+                <TableHead>Iluminado</TableHead>
+                <TableHead>Caras</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
                 {assetsQuery.data?.assets.map((asset) => (
-                  <tr
+                  <TableRow
                     key={asset.id}
-                    className="border-b border-neutral-100 dark:border-neutral-800"
                   >
-                    <td className="py-2 pr-4 font-medium text-neutral-900 dark:text-white">
+                    <TableCell className="font-medium">
                       {asset.code}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {asset.structureType.name}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {asset.zone.province.name} - {asset.zone.name}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {statusLabels[asset.status as (typeof statusOptions)[number]] ?? asset.status}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {asset.digital ? "Sí" : "No"}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {asset.illuminated ? "Sí" : "No"}
-                    </td>
-                    <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {asset._count.faces}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
                 {!assetsQuery.data?.assets.length && (
-                  <tr>
-                    <td
+                  <TableRow>
+                    <TableCell
                       colSpan={7}
-                      className="py-4 text-center text-neutral-500 dark:text-neutral-400"
+                      className="py-4 text-center text-muted-foreground"
                     >
                       No se encontraron activos.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
-          </div>
+            </TableBody>
+          </Table>
         )}
-      </section>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -4,6 +4,18 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { SelectNative } from "@/components/ui/select-native";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function PriceRulesPage() {
   const [faceId, setFaceId] = useState("");
@@ -31,17 +43,13 @@ export default function PriceRulesPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Reglas de Precio
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Definir precios por cara, tipo de estructura, zona y cliente.
-        </p>
-      </div>
-
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 space-y-4">
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Reglas de precio"
+        description="Definir precios por cara, tipo de estructura, zona y cliente."
+      />
+      <Card>
+        <CardContent className="space-y-4 pt-6">
         <form
           className="grid grid-cols-1 md:grid-cols-4 gap-3"
           onSubmit={(event) => {
@@ -59,10 +67,9 @@ export default function PriceRulesPage() {
             });
           }}
         >
-          <select
+          <SelectNative
             value={faceId}
             onChange={(event) => setFaceId(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todas las caras</option>
             {facesQuery.data?.faces.map((face) => (
@@ -70,11 +77,10 @@ export default function PriceRulesPage() {
                 {face.asset.code} - {face.code}
               </option>
             ))}
-          </select>
-          <select
+          </SelectNative>
+          <SelectNative
             value={structureTypeId}
             onChange={(event) => setStructureTypeId(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todos los tipos de estructura</option>
             {structureTypesQuery.data?.map((type) => (
@@ -82,11 +88,10 @@ export default function PriceRulesPage() {
                 {type.name}
               </option>
             ))}
-          </select>
-          <select
+          </SelectNative>
+          <SelectNative
             value={zoneId}
             onChange={(event) => setZoneId(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todas las zonas</option>
             {zonesQuery.data?.map((zone) => (
@@ -94,11 +99,10 @@ export default function PriceRulesPage() {
                 {zone.province.name} - {zone.name}
               </option>
             ))}
-          </select>
-          <select
+          </SelectNative>
+          <SelectNative
             value={organizationId}
             onChange={(event) => setOrganizationId(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todos los clientes</option>
             {orgsQuery.data?.organizations.map((org) => (
@@ -106,50 +110,45 @@ export default function PriceRulesPage() {
                 {org.name}
               </option>
             ))}
-          </select>
-          <input
+          </SelectNative>
+          <Input
             type="number"
             step="0.01"
             value={price}
             onChange={(event) => setPrice(event.target.value)}
             placeholder="Precio diario"
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
-          <input
+          <Input
             type="date"
             value={startDate}
             onChange={(event) => setStartDate(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
-          <input
+          <Input
             type="date"
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <Button type="submit" disabled={!price.trim() || createRule.isPending}>
             {createRule.isPending ? "Guardando..." : "Agregar Regla"}
           </Button>
         </form>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Alcance</th>
-                <th className="py-2 pr-4">Precio</th>
-                <th className="py-2 pr-4">Inicio</th>
-                <th className="py-2 pr-4">Fin</th>
-                <th className="py-2 pr-4">Activo</th>
-              </tr>
-            </thead>
-            <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Alcance</TableHead>
+              <TableHead>Precio</TableHead>
+              <TableHead>Inicio</TableHead>
+              <TableHead>Fin</TableHead>
+              <TableHead>Activo</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
               {rulesQuery.data?.map((rule) => (
-                <tr
+                <TableRow
                   key={rule.id}
-                  className="border-b border-neutral-100 dark:border-neutral-800"
                 >
-                  <td className="py-2 pr-4 text-neutral-900 dark:text-white">
+                  <TableCell>
                     {rule.face?.face
                       ? `${rule.face.face.asset.code} - ${rule.face.face.code}`
                       : rule.zone
@@ -158,36 +157,36 @@ export default function PriceRulesPage() {
                       ? rule.structureType.name
                       : "Global"}
                     {rule.organization ? ` · ${rule.organization.name}` : ""}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {rule.currency} {String(rule.priceDaily)}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {rule.startDate.toLocaleDateString()}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {rule.endDate ? rule.endDate.toLocaleDateString() : "-"}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {rule.isActive ? "Sí" : "No"}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {!rulesQuery.data?.length && (
-                <tr>
-                  <td className="py-4 text-center text-neutral-500 dark:text-neutral-400" colSpan={5}>
+                <TableRow>
+                  <TableCell className="py-4 text-center text-muted-foreground" colSpan={5}>
                     Aún no hay reglas.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+          </TableBody>
+        </Table>
+        </CardContent>
+      </Card>
 
       <Button variant="outline" asChild>
         <Link href="/admin/catalog/pricing">Volver a precios</Link>
       </Button>
-    </div>
+    </AdminPageShell>
   );
 }

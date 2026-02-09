@@ -3,6 +3,18 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { SystemRole, OrganizationType, LegalEntityType } from "@prisma/client";
 
 function formatRelativeTime(date: Date): string {
@@ -70,95 +82,72 @@ export function UserListTable({
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-neutral-900 rounded-lg shadow">
-        <div className="animate-pulse p-6 space-y-4">
+      <Card>
+        <CardContent className="space-y-4 pt-6">
           {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="h-12 bg-neutral-200 dark:bg-neutral-800 rounded"
-            />
+            <Skeleton key={i} className="h-12 w-full" />
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (users.length === 0) {
     return (
-      <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-8 text-center">
-        <p className="text-neutral-600 dark:text-neutral-400">
+      <Card>
+        <CardContent className="py-8 text-center">
+          <p className="text-muted-foreground">
           No se encontraron usuarios que coincidan con tu búsqueda.
-        </p>
-      </div>
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-lg shadow overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-800">
-          <thead className="bg-neutral-50 dark:bg-neutral-800">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Usuario
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Rol
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Organizaciones
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Estado
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Registrado
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-neutral-900 divide-y divide-neutral-200 dark:divide-neutral-800">
+    <Card className="overflow-hidden">
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader className="bg-muted/40">
+            <TableRow>
+              <TableHead className="px-6">Usuario</TableHead>
+              <TableHead className="px-6">Rol</TableHead>
+              <TableHead className="px-6">Organizaciones</TableHead>
+              <TableHead className="px-6">Estado</TableHead>
+              <TableHead className="px-6">Registrado</TableHead>
+              <TableHead className="px-6 text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.map((profile) => (
-              <tr
+              <TableRow
                 key={profile.id}
-                className="hover:bg-neutral-50 dark:hover:bg-neutral-800"
               >
-                <td className="px-6 py-4 whitespace-nowrap">
+                <TableCell className="px-6">
                   <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      {profile.user.image ? (
-                        <img
-                          className="h-10 w-10 rounded-full"
-                          src={profile.user.image}
-                          alt=""
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                          <span className="text-blue-600 dark:text-blue-400 font-medium">
-                            {profile.user.name?.charAt(0)?.toUpperCase() ||
-                              profile.user.email.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={profile.user.image ?? undefined} />
+                      <AvatarFallback>
+                        {profile.user.name?.charAt(0)?.toUpperCase() ||
+                          profile.user.email.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-neutral-900 dark:text-white">
+                      <div className="text-sm font-medium text-foreground">
                         {profile.firstName && profile.lastName
                           ? `${profile.firstName} ${profile.lastName}`
                           : profile.user.name}
                       </div>
-                      <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                      <div className="text-sm text-muted-foreground">
                         {profile.user.email}
                       </div>
                     </div>
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-6">
                   <RoleBadge role={profile.systemRole} />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500 dark:text-neutral-400">
+                </TableCell>
+                <TableCell className="px-6 text-sm text-muted-foreground">
                   {profile.organizationRoles.length > 0 ? (
                     <div>
                       <span className="font-medium">
@@ -174,33 +163,33 @@ export function UserListTable({
                   ) : (
                     <span className="text-neutral-400">Ninguna</span>
                   )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-6">
                   <StatusBadges
                     isActive={profile.isActive}
                     isVerified={profile.isVerified}
                   />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500 dark:text-neutral-400">
+                </TableCell>
+                <TableCell className="px-6 text-sm text-muted-foreground">
                   {formatRelativeTime(new Date(profile.createdAt))}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                </TableCell>
+                <TableCell className="px-6 text-right text-sm font-medium">
                   <Link
                     href={`/admin/users/${profile.userId}`}
                     className="text-blue-600 hover:text-blue-500"
                   >
                     Ver
                   </Link>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </CardContent>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="bg-white dark:bg-neutral-900 px-4 py-3 flex items-center justify-between border-t border-neutral-200 dark:border-neutral-800 sm:px-6">
+        <div className="bg-card px-4 py-3 flex items-center justify-between border-t sm:px-6">
           <div className="flex-1 flex justify-between sm:hidden">
             <Button
               variant="outline"
@@ -254,17 +243,18 @@ export function UserListTable({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
 function RoleBadge({ role }: { role: SystemRole }) {
-  const styles: Record<SystemRole, string> = {
-    SUPERADMIN:
-      "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400",
-    STAFF: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400",
-    CUSTOMER:
-      "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400",
+  const variants: Record<
+    SystemRole,
+    "destructive" | "info" | "secondary"
+  > = {
+    SUPERADMIN: "destructive",
+    STAFF: "info",
+    CUSTOMER: "secondary",
   };
 
   const labels: Record<SystemRole, string> = {
@@ -274,9 +264,9 @@ function RoleBadge({ role }: { role: SystemRole }) {
   };
 
   return (
-    <span className={`px-2 py-1 text-xs font-medium rounded ${styles[role]}`}>
+    <Badge variant={variants[role]}>
       {labels[role]}
-    </span>
+    </Badge>
   );
 }
 
@@ -289,19 +279,13 @@ function StatusBadges({
 }) {
   return (
     <div className="flex gap-1">
-      <span
-        className={`px-2 py-0.5 text-xs font-medium rounded ${
-          isActive
-            ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
-            : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400"
-        }`}
-      >
+      <Badge variant={isActive ? "success" : "destructive"}>
         {isActive ? "Activo" : "Inactivo"}
-      </span>
+      </Badge>
       {isVerified && (
-        <span className="px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400">
+        <Badge variant="info">
           Verificado
-        </span>
+        </Badge>
       )}
     </div>
   );

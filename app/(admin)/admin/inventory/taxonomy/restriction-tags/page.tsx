@@ -4,6 +4,17 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function RestrictionTagsPage() {
   const [code, setCode] = useState("");
@@ -19,17 +30,13 @@ export default function RestrictionTagsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Etiquetas de Restricción
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Gestionar etiquetas de restricción normalizadas.
-        </p>
-      </div>
-
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 space-y-4">
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Etiquetas de restricción"
+        description="Gestionar etiquetas de restricción normalizadas."
+      />
+      <Card>
+        <CardContent className="space-y-4 pt-6">
         <form
           className="grid grid-cols-1 md:grid-cols-3 gap-3"
           onSubmit={(event) => {
@@ -38,17 +45,15 @@ export default function RestrictionTagsPage() {
             createTag.mutate({ code: code.trim(), label: label.trim() });
           }}
         >
-          <input
+          <Input
             value={code}
             onChange={(event) => setCode(event.target.value)}
             placeholder="Código (NO_ALCOHOL)"
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
-          <input
+          <Input
             value={label}
             onChange={(event) => setLabel(event.target.value)}
             placeholder="Etiqueta"
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           />
           <Button
             type="submit"
@@ -58,46 +63,37 @@ export default function RestrictionTagsPage() {
           </Button>
         </form>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Código</th>
-                <th className="py-2 pr-4">Etiqueta</th>
-              </tr>
-            </thead>
-            <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Código</TableHead>
+              <TableHead>Etiqueta</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
               {tagsQuery.data?.map((tag) => (
-                <tr
+                <TableRow
                   key={tag.id}
-                  className="border-b border-neutral-100 dark:border-neutral-800"
                 >
-                  <td className="py-2 pr-4 text-neutral-900 dark:text-white">
-                    {tag.code}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
-                    {tag.label}
-                  </td>
-                </tr>
+                  <TableCell>{tag.code}</TableCell>
+                  <TableCell>{tag.label}</TableCell>
+                </TableRow>
               ))}
               {!tagsQuery.data?.length && (
-                <tr>
-                  <td
-                    colSpan={2}
-                    className="py-4 text-center text-neutral-500 dark:text-neutral-400"
-                  >
+                <TableRow>
+                  <TableCell colSpan={2} className="py-4 text-center text-muted-foreground">
                     Aún no hay etiquetas.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+          </TableBody>
+        </Table>
+        </CardContent>
+      </Card>
 
       <Button variant="outline" asChild>
         <Link href="/admin/inventory/taxonomy">Volver a taxonomía</Link>
       </Button>
-    </div>
+    </AdminPageShell>
   );
 }

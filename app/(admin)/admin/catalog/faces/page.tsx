@@ -1,4 +1,5 @@
 import { CatalogFacesContent } from "./faces-content";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
 export const metadata = {
   title: "Caras del Catálogo - Admin",
@@ -7,16 +8,12 @@ export const metadata = {
 
 export default function CatalogFacesPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Caras del Catálogo
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Publicar caras y gestionar datos del catálogo.
-        </p>
-      </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Caras del catálogo"
+        description="Publicación y contenido comercial de cada cara vendible."
+      />
       <CatalogFacesContent />
-    </div>
+    </AdminPageShell>
   );
 }

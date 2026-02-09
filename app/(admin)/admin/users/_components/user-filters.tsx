@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import type { SystemRole } from "@prisma/client";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { SelectNative } from "@/components/ui/select-native";
 
 interface UserFiltersProps {
   filters: {
@@ -55,39 +58,40 @@ export function UserFilters({ filters, onFiltersChange }: UserFiltersProps) {
     (filters.search && filters.search.length > 0);
 
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-4">
+    <Card>
+      <CardContent className="pt-4">
       <div className="flex flex-col md:flex-row gap-4">
         {/* Search */}
         <div className="flex-1">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-            <input
+            <Input
               type="text"
               placeholder="Search by name or email..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+              className="pl-10"
             />
           </div>
         </div>
 
         {/* Role Filter */}
         <div>
-          <select
+          <SelectNative
             value={filters.systemRole ?? "ALL"}
             onChange={(e) => handleRoleChange(e.target.value)}
-            className="w-full md:w-40 px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+            className="md:w-40"
           >
             <option value="ALL">All Roles</option>
             <option value="CUSTOMER">Customers</option>
             <option value="STAFF">Staff</option>
             <option value="SUPERADMIN">Superadmin</option>
-          </select>
+          </SelectNative>
         </div>
 
         {/* Status Filter */}
         <div>
-          <select
+          <SelectNative
             value={
               filters.isActive === true
                 ? "ACTIVE"
@@ -96,12 +100,12 @@ export function UserFilters({ filters, onFiltersChange }: UserFiltersProps) {
                   : "ALL"
             }
             onChange={(e) => handleStatusChange(e.target.value)}
-            className="w-full md:w-40 px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-neutral-800 dark:text-white"
+            className="md:w-40"
           >
             <option value="ALL">All Status</option>
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>
-          </select>
+          </SelectNative>
         </div>
 
         {/* Clear Filters */}
@@ -112,6 +116,7 @@ export function UserFilters({ filters, onFiltersChange }: UserFiltersProps) {
           </Button>
         )}
       </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -3,6 +3,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+import { Card, CardContent } from "@/components/ui/card";
+import { SelectNative } from "@/components/ui/select-native";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const statusOptions = ["ACTIVE", "EXPIRED", "RELEASED", "CONVERTED"] as const;
 
@@ -35,17 +46,13 @@ export default function HoldsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Reservas
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Las reservas bloquean caras por 24 horas.
-        </p>
-      </div>
-
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 space-y-4">
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Reservas"
+        description="Las reservas bloquean caras por 24 horas."
+      />
+      <Card>
+        <CardContent className="space-y-4 pt-6">
         <form
           className="grid grid-cols-1 md:grid-cols-4 gap-3"
           onSubmit={(event) => {
@@ -57,10 +64,9 @@ export default function HoldsPage() {
             });
           }}
         >
-          <select
+          <SelectNative
             value={faceId}
             onChange={(event) => setFaceId(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Seleccionar cara</option>
             {facesQuery.data?.faces.map((face) => (
@@ -68,11 +74,10 @@ export default function HoldsPage() {
                 {face.asset.code} - {face.code}
               </option>
             ))}
-          </select>
-          <select
+          </SelectNative>
+          <SelectNative
             value={organizationId}
             onChange={(event) => setOrganizationId(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Organización (opcional)</option>
             {orgsQuery.data?.organizations.map((org) => (
@@ -80,14 +85,13 @@ export default function HoldsPage() {
                 {org.name}
               </option>
             ))}
-          </select>
+          </SelectNative>
           <Button type="submit" disabled={!faceId || createHold.isPending}>
             {createHold.isPending ? "Guardando..." : "Crear Reserva"}
           </Button>
-          <select
+          <SelectNative
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
           >
             <option value="">Todos los estados</option>
             {statusOptions.map((status) => (
@@ -95,39 +99,37 @@ export default function HoldsPage() {
                 {status}
               </option>
             ))}
-          </select>
+          </SelectNative>
         </form>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Cara</th>
-                <th className="py-2 pr-4">Organización</th>
-                <th className="py-2 pr-4">Estado</th>
-                <th className="py-2 pr-4">Expira</th>
-                <th className="py-2 pr-4"></th>
-              </tr>
-            </thead>
-            <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cara</TableHead>
+              <TableHead>Organización</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Expira</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
               {holdsQuery.data?.map((hold) => (
-                <tr
+                <TableRow
                   key={hold.id}
-                  className="border-b border-neutral-100 dark:border-neutral-800"
                 >
-                  <td className="py-2 pr-4 text-neutral-900 dark:text-white">
+                  <TableCell>
                     {hold.face.face.asset.code} - {hold.face.face.code}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {hold.organization?.name ?? "-"}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {hold.status}
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {hold.expiresAt.toLocaleString()}
-                  </td>
-                  <td className="py-2 pr-4 text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     {hold.status === "ACTIVE" && (
                       <Button
                         size="sm"
@@ -137,20 +139,20 @@ export default function HoldsPage() {
                         Liberar
                       </Button>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {!holdsQuery.data?.length && (
-                <tr>
-                  <td className="py-4 text-center text-neutral-500 dark:text-neutral-400" colSpan={5}>
+                <TableRow>
+                  <TableCell className="py-4 text-center text-muted-foreground" colSpan={5}>
                     Aún no hay reservas.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+          </TableBody>
+        </Table>
+        </CardContent>
+      </Card>
+    </AdminPageShell>
   );
 }

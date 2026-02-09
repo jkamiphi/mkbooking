@@ -1,6 +1,8 @@
 "use client";
 
 import { Users, UserCheck, UserX, Shield } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface UserStatsProps {
   stats?: {
@@ -18,13 +20,12 @@ export function UserStats({ stats, isLoading }: UserStatsProps) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div
-            key={i}
-            className="bg-white dark:bg-neutral-900 rounded-lg shadow p-4 animate-pulse"
-          >
-            <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/2 mb-2" />
-            <div className="h-6 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" />
-          </div>
+          <Card key={i}>
+            <CardContent className="space-y-2 pt-4">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-6 w-1/3" />
+            </CardContent>
+          </Card>
         ))}
       </div>
     );
@@ -64,24 +65,19 @@ export function UserStats({ stats, isLoading }: UserStatsProps) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {statItems.map((stat) => (
-        <div
-          key={stat.name}
-          className="bg-white dark:bg-neutral-900 rounded-lg shadow p-4"
-        >
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
+        <Card key={stat.name}>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">{stat.name}</p>
+                <p className="text-xl font-bold text-foreground">{stat.value}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {stat.name}
-              </p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-white">
-                {stat.value}
-              </p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );

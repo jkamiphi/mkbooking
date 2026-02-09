@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectNative } from "@/components/ui/select-native";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
@@ -55,7 +60,8 @@ export function NewFaceForm() {
     form.height.trim();
 
   return (
-    <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
+    <Card>
+      <CardContent className="pt-6">
       <form
         className="space-y-4"
         onSubmit={(event) => {
@@ -77,15 +83,12 @@ export function NewFaceForm() {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Activo
-            </label>
-            <select
+            <Label className="mb-1.5 block">Activo</Label>
+            <SelectNative
               value={form.assetId}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, assetId: event.target.value }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
               <option value="">Seleccionar</option>
               {assetsQuery.data?.assets.map((asset) => (
@@ -93,25 +96,20 @@ export function NewFaceForm() {
                   {asset.code}
                 </option>
               ))}
-            </select>
+            </SelectNative>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Código
-            </label>
-            <input
+            <Label className="mb-1.5 block">Código</Label>
+            <Input
               value={form.code}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, code: event.target.value }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Posición
-            </label>
-            <select
+            <Label className="mb-1.5 block">Posición</Label>
+            <SelectNative
               value={form.positionId}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -119,7 +117,6 @@ export function NewFaceForm() {
                   positionId: event.target.value,
                 }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
               <option value="">Seleccionar</option>
               {positionsQuery.data?.map((pos) => (
@@ -127,43 +124,35 @@ export function NewFaceForm() {
                   {pos.name}
                 </option>
               ))}
-            </select>
+            </SelectNative>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Ancho
-              </label>
-              <input
+              <Label className="mb-1.5 block">Ancho</Label>
+              <Input
                 type="number"
                 step="0.01"
                 value={form.width}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, width: event.target.value }))
                 }
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                Alto
-              </label>
-              <input
+              <Label className="mb-1.5 block">Alto</Label>
+              <Input
                 type="number"
                 step="0.01"
                 value={form.height}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, height: event.target.value }))
                 }
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Orientación
-            </label>
-            <select
+            <Label className="mb-1.5 block">Orientación</Label>
+            <SelectNative
               value={form.facing}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -171,20 +160,17 @@ export function NewFaceForm() {
                   facing: event.target.value as FaceFacing,
                 }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
               {facingOptions.map((option) => (
                 <option key={option} value={option}>
                   {facingLabels[option]}
                 </option>
               ))}
-            </select>
+            </SelectNative>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Estado
-            </label>
-            <select
+            <Label className="mb-1.5 block">Estado</Label>
+            <SelectNative
               value={form.status}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -192,20 +178,17 @@ export function NewFaceForm() {
                   status: event.target.value as FaceStatus,
                 }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
                   {statusLabels[option]}
                 </option>
               ))}
-            </select>
+            </SelectNative>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Notas de Visibilidad
-            </label>
-            <textarea
+            <Label className="mb-1.5 block">Notas de Visibilidad</Label>
+            <Textarea
               value={form.visibilityNotes}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -214,14 +197,11 @@ export function NewFaceForm() {
                 }))
               }
               rows={2}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Restricciones
-            </label>
-            <textarea
+            <Label className="mb-1.5 block">Restricciones</Label>
+            <Textarea
               value={form.restrictions}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -230,20 +210,16 @@ export function NewFaceForm() {
                 }))
               }
               rows={2}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Notas
-            </label>
-            <textarea
+            <Label className="mb-1.5 block">Notas</Label>
+            <Textarea
               value={form.notes}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, notes: event.target.value }))
               }
               rows={2}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
         </div>
@@ -257,6 +233,7 @@ export function NewFaceForm() {
           </Button>
         </div>
       </form>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

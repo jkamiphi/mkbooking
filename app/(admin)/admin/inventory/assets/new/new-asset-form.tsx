@@ -4,6 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectNative } from "@/components/ui/select-native";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
@@ -66,7 +72,8 @@ export function NewAssetForm() {
     form.address.trim();
 
   return (
-    <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6">
+    <Card>
+      <CardContent className="pt-6">
       <form
         className="space-y-4"
         onSubmit={(event) => {
@@ -110,22 +117,17 @@ export function NewAssetForm() {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Código
-            </label>
-            <input
+            <Label className="mb-1.5 block">Código</Label>
+            <Input
               value={form.code}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, code: event.target.value }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Tipo de Estructura
-            </label>
-            <select
+            <Label className="mb-1.5 block">Tipo de Estructura</Label>
+            <SelectNative
               value={form.structureTypeId}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -133,7 +135,6 @@ export function NewAssetForm() {
                   structureTypeId: event.target.value,
                 }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
               <option value="">Seleccionar</option>
               {structureTypesQuery.data?.map((type) => (
@@ -141,18 +142,15 @@ export function NewAssetForm() {
                   {type.name}
                 </option>
               ))}
-            </select>
+            </SelectNative>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Zona
-            </label>
-            <select
+            <Label className="mb-1.5 block">Zona</Label>
+            <SelectNative
               value={form.zoneId}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, zoneId: event.target.value }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
               <option value="">Seleccionar</option>
               {zonesQuery.data?.map((zone) => (
@@ -160,18 +158,15 @@ export function NewAssetForm() {
                   {zone.province.name} - {zone.name}
                 </option>
               ))}
-            </select>
+            </SelectNative>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Tipo de Vía (opcional)
-            </label>
-            <select
+            <Label className="mb-1.5 block">Tipo de Vía (opcional)</Label>
+            <SelectNative
               value={form.roadTypeId}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, roadTypeId: event.target.value }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
               <option value="">Seleccionar</option>
               {roadTypesQuery.data?.map((road) => (
@@ -179,37 +174,29 @@ export function NewAssetForm() {
                   {road.name}
                 </option>
               ))}
-            </select>
+            </SelectNative>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Dirección
-            </label>
-            <input
+            <Label className="mb-1.5 block">Dirección</Label>
+            <Input
               value={form.address}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, address: event.target.value }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Punto de Referencia (opcional)
-            </label>
-            <input
+            <Label className="mb-1.5 block">Punto de Referencia (opcional)</Label>
+            <Input
               value={form.landmark}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, landmark: event.target.value }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Latitud (-90 a 90)
-            </label>
-            <input
+            <Label className="mb-1.5 block">Latitud (-90 a 90)</Label>
+            <Input
               type="number"
               step="0.000001"
               min="-90"
@@ -219,14 +206,11 @@ export function NewAssetForm() {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, latitude: event.target.value }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Longitud (-180 a 180)
-            </label>
-            <input
+            <Label className="mb-1.5 block">Longitud (-180 a 180)</Label>
+            <Input
               type="number"
               step="0.000001"
               min="-180"
@@ -236,14 +220,11 @@ export function NewAssetForm() {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, longitude: event.target.value }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Estado
-            </label>
-            <select
+            <Label className="mb-1.5 block">Estado</Label>
+            <SelectNative
               value={form.status}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -251,68 +232,61 @@ export function NewAssetForm() {
                   status: event.target.value as AssetStatus,
                 }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
                   {statusLabels[option]}
                 </option>
               ))}
-            </select>
+            </SelectNative>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
-              <input
-                type="checkbox"
+            <Label className="flex items-center gap-2 text-sm">
+              <Checkbox
                 checked={form.illuminated}
-                onChange={(event) =>
+                onCheckedChange={(checked) =>
                   setForm((prev) => ({
                     ...prev,
-                    illuminated: event.target.checked,
+                    illuminated: Boolean(checked),
                   }))
                 }
               />
               Iluminado
-            </label>
-            <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
-              <input
-                type="checkbox"
+            </Label>
+            <Label className="flex items-center gap-2 text-sm">
+              <Checkbox
                 checked={form.digital}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, digital: event.target.checked }))
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, digital: Boolean(checked) }))
                 }
               />
               Digital
-            </label>
-            <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
-              <input
-                type="checkbox"
+            </Label>
+            <Label className="flex items-center gap-2 text-sm">
+              <Checkbox
                 checked={form.powered}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, powered: event.target.checked }))
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, powered: Boolean(checked) }))
                 }
               />
               Con Energía
-            </label>
-            <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
-              <input
-                type="checkbox"
+            </Label>
+            <Label className="flex items-center gap-2 text-sm">
+              <Checkbox
                 checked={form.hasPrintService}
-                onChange={(event) =>
+                onCheckedChange={(checked) =>
                   setForm((prev) => ({
                     ...prev,
-                    hasPrintService: event.target.checked,
+                    hasPrintService: Boolean(checked),
                   }))
                 }
               />
               Servicio de Impresión
-            </label>
+            </Label>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Fecha de Instalación
-            </label>
-            <input
+            <Label className="mb-1.5 block">Fecha de Instalación</Label>
+            <Input
               type="date"
               value={form.installedDate}
               onChange={(event) =>
@@ -321,14 +295,11 @@ export function NewAssetForm() {
                   installedDate: event.target.value,
                 }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Fecha de Retiro
-            </label>
-            <input
+            <Label className="mb-1.5 block">Fecha de Retiro</Label>
+            <Input
               type="date"
               value={form.retiredDate}
               onChange={(event) =>
@@ -337,20 +308,16 @@ export function NewAssetForm() {
                   retiredDate: event.target.value,
                 }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Notas
-            </label>
-            <textarea
+            <Label className="mb-1.5 block">Notas</Label>
+            <Textarea
               value={form.notes}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, notes: event.target.value }))
               }
               rows={3}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
           </div>
         </div>
@@ -370,6 +337,7 @@ export function NewAssetForm() {
           </Button>
         </div>
       </form>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

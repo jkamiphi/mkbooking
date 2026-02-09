@@ -1,4 +1,5 @@
 import { AssetsContent } from "./assets-content";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
 export const metadata = {
   title: "Activos de Inventario - Admin",
@@ -7,16 +8,12 @@ export const metadata = {
 
 export default function AssetsPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Activos
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Estructuras y ubicaciones del inventario.
-        </p>
-      </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Activos"
+        description="Estructuras físicas, ubicación y estado operativo."
+      />
       <AssetsContent />
-    </div>
+    </AdminPageShell>
   );
 }

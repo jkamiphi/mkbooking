@@ -1,3 +1,6 @@
+import { AdminLinkCards } from "@/components/admin/link-cards";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+
 export const metadata = {
   title: "Catálogo - Admin",
   description: "Gestionar catálogo y precios",
@@ -23,31 +26,12 @@ const cards = [
 
 export default function CatalogPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Catálogo
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Publicar caras, precios, promociones y reservas.
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {cards.map((card) => (
-          <a
-            key={card.href}
-            href={card.href}
-            className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 hover:shadow-md transition-shadow"
-          >
-            <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
-              {card.title}
-            </h2>
-            <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              {card.description}
-            </p>
-          </a>
-        ))}
-      </div>
-    </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Catálogo"
+        description="Publicar caras, definir precios y controlar reservas."
+      />
+      <AdminLinkCards items={cards} />
+    </AdminPageShell>
   );
 }

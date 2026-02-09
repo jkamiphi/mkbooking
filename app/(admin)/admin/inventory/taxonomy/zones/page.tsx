@@ -5,6 +5,10 @@ import { useState, useRef } from "react";
 import { ImagePlus, Pencil, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { SelectNative } from "@/components/ui/select-native";
 
 export default function ZonesPage() {
   const [name, setName] = useState("");
@@ -82,17 +86,13 @@ export default function ZonesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-          Zonas
-        </h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Gestionar zonas por provincia con imágenes.
-        </p>
-      </div>
-
-      <section className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 space-y-4">
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Zonas"
+        description="Gestionar zonas por provincia con imágenes."
+      />
+      <Card>
+        <CardContent className="space-y-4 pt-6">
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -106,10 +106,9 @@ export default function ZonesPage() {
           }}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <select
+            <SelectNative
               value={provinceId}
               onChange={(event) => setProvinceId(event.target.value)}
-              className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             >
               <option value="">Seleccionar provincia</option>
               {provincesQuery.data?.map((province) => (
@@ -117,12 +116,11 @@ export default function ZonesPage() {
                   {province.name}
                 </option>
               ))}
-            </select>
-            <input
+            </SelectNative>
+            <Input
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Nombre de zona"
-              className="px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md dark:bg-neutral-800 dark:text-white"
             />
             <Button
               type="submit"
@@ -282,11 +280,12 @@ export default function ZonesPage() {
             </div>
           )}
         </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <Button variant="outline" asChild>
         <Link href="/admin/inventory/taxonomy">Volver a taxonomía</Link>
       </Button>
-    </div>
+    </AdminPageShell>
   );
 }
