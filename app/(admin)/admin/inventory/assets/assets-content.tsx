@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
 const statusLabels: Record<(typeof statusOptions)[number], string> = {
@@ -80,11 +81,16 @@ function getGoogleMapsLink(latitude: unknown, longitude: unknown) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
 }
 
-function copyToClipboard(text: string) {
+async function copyToClipboard(text: string) {
   if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-    return;
+    return false;
   }
-  void navigator.clipboard.writeText(text);
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function AssetsContent() {
@@ -123,9 +129,6 @@ export function AssetsContent() {
   );
 
   const updateAssetStatusMutation = trpc.inventory.assets.update.useMutation({
-    onSuccess: async () => {
-      await utils.inventory.assets.list.invalidate();
-    },
     onSettled: () => {
       setUpdatingAssetId(null);
     },
@@ -155,12 +158,38 @@ export function AssetsContent() {
     setPage(0);
   }
 
-  function changeAssetStatus(assetId: string, nextStatus: AssetStatus) {
+  async function handleCopyAssetCode(code: string) {
+    const hasCopied = await copyToClipboard(code);
+    if (hasCopied) {
+      toast.success(`Código ${code} copiado al portapapeles.`);
+      return;
+    }
+    toast.error("No se pudo copiar el código. Intenta nuevamente.");
+  }
+
+  function changeAssetStatus(
+    assetId: string,
+    assetCode: string,
+    nextStatus: AssetStatus
+  ) {
     setUpdatingAssetId(assetId);
-    updateAssetStatusMutation.mutate({
-      id: assetId,
-      status: nextStatus,
-    });
+    updateAssetStatusMutation.mutate(
+      {
+        id: assetId,
+        status: nextStatus,
+      },
+      {
+        onSuccess: async () => {
+          await utils.inventory.assets.list.invalidate();
+          toast.success(
+            `${assetCode} actualizado a ${statusLabels[nextStatus].toLowerCase()}.`
+          );
+        },
+        onError: () => {
+          toast.error(`No se pudo actualizar el estado de ${assetCode}.`);
+        },
+      }
+    );
   }
 
   return (
@@ -366,7 +395,7 @@ export function AssetsContent() {
                               <DropdownMenuItem
                                 onSelect={(event) => {
                                   event.preventDefault();
-                                  copyToClipboard(asset.code);
+                                  void handleCopyAssetCode(asset.code);
                                 }}
                               >
                                 <Copy className="h-4 w-4" />
@@ -398,7 +427,7 @@ export function AssetsContent() {
                                   disabled={isUpdating || option === asset.status}
                                   onSelect={(event) => {
                                     event.preventDefault();
-                                    changeAssetStatus(asset.id, option);
+                                    changeAssetStatus(asset.id, asset.code, option);
                                   }}
                                 >
                                   {statusLabels[option]}
