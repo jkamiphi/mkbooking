@@ -75,6 +75,10 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   ]);
 
   const showPrices = Boolean(session);
+  const searchContextLabel =
+    searchTerm ||
+    (typeId && structureTypes.find((t) => t.id === typeId)?.name) ||
+    (zoneId && zones.find((z) => z.id === zoneId)?.name);
 
   const results = catalog.faces.map((face) => {
     const title =
@@ -166,20 +170,19 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 md:flex">
-            <MapPin className="h-4 w-4 text-neutral-400" />
-            <span className="text-sm font-medium text-neutral-900">
-              {searchTerm ||
-                (typeId && structureTypes.find((t) => t.id === typeId)?.name) ||
-                (zoneId && zones.find((z) => z.id === zoneId)?.name) ||
-                "Todos los espacios"}
-            </span>
-            {zoneId && zones.find((z) => z.id === zoneId) && (
-              <span className="text-sm text-neutral-500">
-                {zones.find((z) => z.id === zoneId)?.province.name}
+          {searchContextLabel ? (
+            <div className="hidden items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 md:flex">
+              <MapPin className="h-4 w-4 text-neutral-400" />
+              <span className="text-sm font-medium text-neutral-900">
+                {searchContextLabel}
               </span>
-            )}
-          </div>
+              {zoneId && zones.find((z) => z.id === zoneId) && (
+                <span className="text-sm text-neutral-500">
+                  {zones.find((z) => z.id === zoneId)?.province.name}
+                </span>
+              )}
+            </div>
+          ) : null}
 
           {session ? (
             <Link
