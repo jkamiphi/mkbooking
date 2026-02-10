@@ -320,6 +320,8 @@ export async function listCatalogFaces(options?: {
   structureTypeId?: string;
   zoneId?: string;
   organizationId?: string;
+  availableFrom?: Date;
+  availableTo?: Date;
   skip?: number;
   take?: number;
 }) {
@@ -329,6 +331,8 @@ export async function listCatalogFaces(options?: {
     structureTypeId,
     zoneId,
     organizationId,
+    availableFrom,
+    availableTo,
     skip = 0,
     take = 50,
   } = options ?? {};
@@ -361,6 +365,50 @@ export async function listCatalogFaces(options?: {
         OR: [{ catalogFace: { isPublished: false } }, { catalogFace: null }],
       });
     }
+  }
+
+  if (availableFrom || availableTo) {
+    const requestedFrom = availableFrom ?? availableTo ?? new Date();
+    const requestedTo = availableTo ?? availableFrom ?? requestedFrom;
+    const rangeStart =
+      requestedFrom <= requestedTo ? requestedFrom : requestedTo;
+    const rangeEnd =
+      requestedFrom <= requestedTo ? requestedTo : requestedFrom;
+
+    andFilters.push({
+      maintenanceWindows: {
+        none: {
+          startDate: { lte: rangeEnd },
+          endDate: { gte: rangeStart },
+        },
+      },
+    });
+    andFilters.push({
+      asset: {
+        maintenanceWindows: {
+          none: {
+            faceId: null,
+            startDate: { lte: rangeEnd },
+            endDate: { gte: rangeStart },
+          },
+        },
+      },
+    });
+    andFilters.push({
+      OR: [
+        { catalogFace: null },
+        {
+          catalogFace: {
+            holds: {
+              none: {
+                status: "ACTIVE",
+                expiresAt: { gte: rangeStart },
+              },
+            },
+          },
+        },
+      ],
+    });
   }
 
   if (andFilters.length > 0) {

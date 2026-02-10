@@ -29,6 +29,22 @@ function getParam(value?: string | string[]) {
   return value;
 }
 
+function parseDateParam(value?: string) {
+  if (!value) return undefined;
+  const parsed = new Date(`${value}T00:00:00`);
+  if (!Number.isFinite(parsed.getTime())) return undefined;
+  return parsed;
+}
+
+function getQuantityUpperBound(value?: string) {
+  if (!value) return undefined;
+  if (value === "1-2") return 2;
+  if (value === "3-5") return 5;
+  if (value === "6-10") return 10;
+  if (value === "11+") return 11;
+  return undefined;
+}
+
 export default async function SearchPage({ params, searchParams }: PageProps) {
   const { query } = await params;
   const awaitedSearchParams = await searchParams;
@@ -44,6 +60,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const quantity = getParam(awaitedSearchParams?.qty) || undefined;
   const fromDate = getParam(awaitedSearchParams?.from) || undefined;
   const toDate = getParam(awaitedSearchParams?.to) || undefined;
+  const availableFrom = parseDateParam(fromDate);
+  const availableTo = parseDateParam(toDate);
+  const quantityUpperBound = getQuantityUpperBound(quantity);
 
   const searchStateParams = new URLSearchParams();
   if (typeId) searchStateParams.set("type", typeId);
@@ -67,6 +86,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       isPublished: true,
       structureTypeId: typeId,
       zoneId,
+      availableFrom,
+      availableTo,
       take: 50,
       organizationId,
     }),
@@ -80,7 +101,12 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     (typeId && structureTypes.find((t) => t.id === typeId)?.name) ||
     (zoneId && zones.find((z) => z.id === zoneId)?.name);
 
-  const results = catalog.faces.map((face) => {
+  const visibleFaces = quantityUpperBound
+    ? catalog.faces.slice(0, quantityUpperBound)
+    : catalog.faces;
+  const visibleTotal = visibleFaces.length;
+
+  const results = visibleFaces.map((face) => {
     const title =
       face.catalogFace?.title || `${face.asset.structureType.name} · Cara ${face.code}`;
     const location = `${face.asset.zone.name}, ${face.asset.zone.province.name}`;
@@ -109,7 +135,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     };
   });
 
-  const markers = catalog.faces
+  const markers = visibleFaces
     .map((face) => {
       const lat = Number(face.asset.latitude);
       const lng = Number(face.asset.longitude);
@@ -204,15 +230,19 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
       {/* Filters Bar */}
       <SearchFilters
+        key={`${typeId ?? ""}-${zoneId ?? ""}-${quantity ?? ""}-${fromDate ?? ""}-${toDate ?? ""}`}
         structureTypes={structureTypes}
         zones={zones}
         selectedTypeId={typeId}
         selectedZoneId={zoneId}
+        selectedQuantity={quantity}
+        selectedFromDate={fromDate}
+        selectedToDate={toDate}
         query={decodedQuery}
       />
 
       <SearchResultsView
-        total={catalog.total}
+        total={visibleTotal}
         searchTerm={searchTerm}
         results={results}
         markers={markers}
