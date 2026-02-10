@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
 import { APIProvider, AdvancedMarker, Map } from "@vis.gl/react-google-maps";
 import { LocateFixed, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
+import type { AppRouter } from "@/lib/trpc/routers";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
 const statusLabels: Record<(typeof statusOptions)[number], string> = {
@@ -29,6 +31,8 @@ const DEFAULT_MAP_CENTER = { lat: 8.9824, lng: -79.5199 };
 
 type AssetStatus = (typeof statusOptions)[number];
 type Coordinates = { lat: number; lng: number };
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type AssetGetOutput = NonNullable<RouterOutputs["inventory"]["assets"]["get"]>;
 
 type AssetFormValues = {
   code: string;
@@ -152,7 +156,7 @@ function AssetLocationMap({
   );
 }
 
-function mapAssetToForm(asset: NonNullable<ReturnType<typeof trpc.inventory.assets.get.useQuery>["data"]>): AssetFormValues {
+function mapAssetToForm(asset: AssetGetOutput): AssetFormValues {
   const latitude = toNumber(asset.latitude);
   const longitude = toNumber(asset.longitude);
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
+import type { AppRouter } from "@/lib/trpc/routers";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
 const statusLabels: Record<(typeof statusOptions)[number], string> = {
@@ -27,6 +29,8 @@ const facingLabels: Record<(typeof facingOptions)[number], string> = {
 
 type FaceStatus = (typeof statusOptions)[number];
 type FaceFacing = (typeof facingOptions)[number];
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type FaceGetOutput = NonNullable<RouterOutputs["inventory"]["faces"]["get"]>;
 
 type FaceFormValues = {
   assetId: string;
@@ -42,7 +46,7 @@ type FaceFormValues = {
 };
 
 function mapFaceToForm(
-  face: NonNullable<ReturnType<typeof trpc.inventory.faces.get.useQuery>["data"]>
+  face: FaceGetOutput
 ): FaceFormValues {
   return {
     assetId: face.assetId,

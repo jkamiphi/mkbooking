@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +19,12 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
+import type { AppRouter } from "@/lib/trpc/routers";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
 
 type CatalogFaceQueryData = NonNullable<
-  ReturnType<typeof trpc.catalog.faces.get.useQuery>["data"]
+  RouterOutputs["catalog"]["faces"]["get"]
 >;
 
 export function CatalogFaceDetail({ faceId }: { faceId: string }) {

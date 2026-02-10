@@ -300,7 +300,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               Código: {face.asset.code}-{face.code}
             </span>
             <span>{location}</span>
-            <span>Actualizado: {formatDateTime(face.updatedAt)}</span>
+            <span>Actualizado: {formatDateTime(catalogFace.updatedAt)}</span>
           </div>
         </section>
 
@@ -743,7 +743,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
         ) : null}
 
         <footer className="mt-10 rounded-3xl border border-neutral-200 bg-white px-5 py-4 text-xs text-neutral-500">
-          Última actualización de inventario: {formatDateTime(face.updatedAt)}
+          Última actualización de inventario: {formatDateTime(catalogFace.updatedAt)}
         </footer>
       </main>
     </div>
