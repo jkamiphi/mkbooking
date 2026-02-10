@@ -226,6 +226,94 @@ function pickEffectiveRule<T extends { id: string; createdAt: Date }>({
   })[0];
 }
 
+type FacePricingContext = {
+  id: string;
+  asset: {
+    zoneId: string;
+    structureTypeId: string;
+  };
+};
+
+async function findActiveRulesForFaces(
+  faces: FacePricingContext[],
+  organizationId?: string
+) {
+  if (!faces.length) return [];
+
+  const now = new Date();
+  const faceIds = faces.map((face) => face.id);
+  const structureTypeIds = Array.from(
+    new Set(faces.map((face) => face.asset.structureTypeId))
+  );
+  const zoneIds = Array.from(new Set(faces.map((face) => face.asset.zoneId)));
+
+  const ruleOr: Prisma.CatalogPriceRuleWhereInput[] = [
+    { faceId: null, structureTypeId: null, zoneId: null },
+  ];
+  if (faceIds.length) ruleOr.push({ faceId: { in: faceIds } });
+  if (structureTypeIds.length) {
+    ruleOr.push({ structureTypeId: { in: structureTypeIds } });
+  }
+  if (zoneIds.length) ruleOr.push({ zoneId: { in: zoneIds } });
+
+  return db.catalogPriceRule.findMany({
+    where: {
+      isActive: true,
+      startDate: { lte: now },
+      AND: [
+        { OR: [{ endDate: null }, { endDate: { gte: now } }] },
+        organizationId
+          ? { OR: [{ organizationId }, { organizationId: null }] }
+          : { organizationId: null },
+        { OR: ruleOr },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+function mapFacesWithEffectivePrice<T extends FacePricingContext>({
+  faces,
+  rules,
+  organizationId,
+}: {
+  faces: T[];
+  rules: Array<{
+    id: string;
+    faceId: string | null;
+    zoneId: string | null;
+    structureTypeId: string | null;
+    organizationId: string | null;
+    priceDaily: Prisma.Decimal;
+    currency: string;
+    createdAt: Date;
+    startDate: Date;
+    endDate: Date | null;
+  }>;
+  organizationId?: string;
+}) {
+  return faces.map((face) => {
+    const rule = pickEffectiveRule({
+      rules,
+      faceId: face.id,
+      zoneId: face.asset.zoneId,
+      structureTypeId: face.asset.structureTypeId,
+      organizationId: organizationId ?? undefined,
+    });
+
+    return {
+      ...face,
+      effectivePrice: rule
+        ? {
+            priceDaily: rule.priceDaily,
+            currency: rule.currency,
+            ruleId: rule.id,
+          }
+        : null,
+    };
+  });
+}
+
 export async function listCatalogFaces(options?: {
   search?: string;
   isPublished?: boolean;
@@ -300,57 +388,11 @@ export async function listCatalogFaces(options?: {
     getActivePromo(),
   ]);
 
-  const now = new Date();
-  const faceIds = faces.map((face) => face.id);
-  const structureTypeIds = Array.from(
-    new Set(faces.map((face) => face.asset.structureTypeId))
-  );
-  const zoneIds = Array.from(new Set(faces.map((face) => face.asset.zoneId)));
-
-  const ruleOr: Prisma.CatalogPriceRuleWhereInput[] = [];
-  if (faceIds.length) ruleOr.push({ faceId: { in: faceIds } });
-  if (structureTypeIds.length) {
-    ruleOr.push({ structureTypeId: { in: structureTypeIds } });
-  }
-  if (zoneIds.length) ruleOr.push({ zoneId: { in: zoneIds } });
-  ruleOr.push({ faceId: null, structureTypeId: null, zoneId: null });
-
-  const activeRules =
-    ruleOr.length === 0
-      ? []
-      : await db.catalogPriceRule.findMany({
-          where: {
-            isActive: true,
-            startDate: { lte: now },
-            AND: [
-              { OR: [{ endDate: null }, { endDate: { gte: now } }] },
-              organizationId
-                ? { OR: [{ organizationId }, { organizationId: null }] }
-                : { organizationId: null },
-              { OR: ruleOr },
-            ],
-          },
-          orderBy: { createdAt: "desc" },
-        });
-
-  const facesWithPrice = faces.map((face) => {
-    const rule = pickEffectiveRule({
-      rules: activeRules,
-      faceId: face.id,
-      zoneId: face.asset.zoneId,
-      structureTypeId: face.asset.structureTypeId,
-      organizationId: organizationId ?? undefined,
-    });
-    return {
-      ...face,
-      effectivePrice: rule
-        ? {
-            priceDaily: rule.priceDaily,
-            currency: rule.currency,
-            ruleId: rule.id,
-          }
-        : null,
-    };
+  const activeRules = await findActiveRulesForFaces(faces, organizationId);
+  const facesWithPrice = mapFacesWithEffectivePrice({
+    faces,
+    rules: activeRules,
+    organizationId,
   });
 
   return {
@@ -358,6 +400,134 @@ export async function listCatalogFaces(options?: {
     total,
     hasMore: skip + faces.length < total,
     promo,
+  };
+}
+
+export async function getPublicCatalogFaceDetailById(
+  faceId: string,
+  options?: { organizationId?: string }
+) {
+  const now = new Date();
+  const face = await db.assetFace.findFirst({
+    where: {
+      id: faceId,
+      catalogFace: { isPublished: true },
+    },
+    include: {
+      asset: {
+        include: {
+          structureType: true,
+          zone: { include: { province: true } },
+          roadType: true,
+          images: {
+            orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+          },
+          permits: {
+            orderBy: [{ expiresDate: "asc" }, { issuedDate: "desc" }],
+          },
+          maintenanceWindows: {
+            orderBy: { startDate: "asc" },
+          },
+        },
+      },
+      position: true,
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      },
+      productionSpec: {
+        include: { mountingType: true },
+      },
+      permits: {
+        orderBy: [{ expiresDate: "asc" }, { issuedDate: "desc" }],
+      },
+      restrictionTags: {
+        include: { tag: true },
+      },
+      maintenanceWindows: {
+        orderBy: { startDate: "asc" },
+      },
+      catalogFace: {
+        include: {
+          holds: {
+            where: {
+              status: "ACTIVE",
+              expiresAt: { gte: now },
+            },
+            orderBy: { expiresAt: "asc" },
+            include: {
+              organization: true,
+            },
+          },
+          priceRules: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              organization: true,
+              structureType: true,
+              zone: { include: { province: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!face || !face.catalogFace) {
+    return null;
+  }
+
+  const [activeRules, promo, rawRelatedFaces] = await Promise.all([
+    findActiveRulesForFaces([face], options?.organizationId),
+    getActivePromo(),
+    db.assetFace.findMany({
+      where: {
+        id: { not: face.id },
+        catalogFace: { isPublished: true },
+        asset: { zoneId: face.asset.zoneId },
+      },
+      take: 6,
+      orderBy: [{ asset: { code: "asc" } }, { code: "asc" }],
+      include: {
+        asset: {
+          include: {
+            structureType: true,
+            zone: { include: { province: true } },
+          },
+        },
+        position: true,
+        catalogFace: true,
+      },
+    }),
+  ]);
+
+  const relatedRules = await findActiveRulesForFaces(
+    rawRelatedFaces,
+    options?.organizationId
+  );
+  const relatedFaces = mapFacesWithEffectivePrice({
+    faces: rawRelatedFaces,
+    rules: relatedRules,
+    organizationId: options?.organizationId,
+  });
+
+  const effectiveRule = pickEffectiveRule({
+    rules: activeRules,
+    faceId: face.id,
+    zoneId: face.asset.zoneId,
+    structureTypeId: face.asset.structureTypeId,
+    organizationId: options?.organizationId ?? undefined,
+  });
+
+  return {
+    face,
+    promo,
+    relatedFaces,
+    effectivePrice: effectiveRule
+      ? {
+          priceDaily: effectiveRule.priceDaily,
+          currency: effectiveRule.currency,
+          ruleId: effectiveRule.id,
+        }
+      : null,
   };
 }
 

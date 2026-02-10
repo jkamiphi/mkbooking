@@ -49,6 +49,19 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const searchTerm = decodedQuery === "all" ? undefined : decodedQuery;
   const typeId = getParam(awaitedSearchParams?.type) || undefined;
   const zoneId = getParam(awaitedSearchParams?.zone) || undefined;
+  const quantity = getParam(awaitedSearchParams?.qty) || undefined;
+  const fromDate = getParam(awaitedSearchParams?.from) || undefined;
+  const toDate = getParam(awaitedSearchParams?.to) || undefined;
+
+  const searchStateParams = new URLSearchParams();
+  if (typeId) searchStateParams.set("type", typeId);
+  if (zoneId) searchStateParams.set("zone", zoneId);
+  if (quantity) searchStateParams.set("qty", quantity);
+  if (fromDate) searchStateParams.set("from", fromDate);
+  if (toDate) searchStateParams.set("to", toDate);
+  const currentSearchPath = `/s/${encodeURIComponent(decodedQuery)}${
+    searchStateParams.toString() ? `?${searchStateParams.toString()}` : ""
+  }`;
 
   const profile = session?.user?.id
     ? await getUserProfileByUserId(session.user.id)
@@ -88,6 +101,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           )
         : null,
       structureType: face.asset.structureType.name,
+      href: `/faces/${face.id}?from=${encodeURIComponent(currentSearchPath)}`,
     }));
 
   // Default center (Panama City)
@@ -238,19 +252,25 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                     face.asset.structureType.name
                   );
                   const dimensions = formatFaceDimensions(face.width, face.height);
+                  const detailHref = `/faces/${face.id}?from=${encodeURIComponent(currentSearchPath)}`;
 
                   return (
                     <article
                       key={face.id}
-                      className="group cursor-pointer overflow-hidden rounded-2xl border border-neutral-200/90 bg-white transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-lg"
+                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-neutral-200/90 bg-white transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-lg"
                       style={{
                         animation: "fadeInUp 0.4s ease forwards",
                         animationDelay: `${index * 30}ms`,
                         opacity: 0,
                       }}
                     >
+                      <Link
+                        href={detailHref}
+                        aria-label={`Ver detalles de ${title}`}
+                        className="absolute inset-0 z-10"
+                      />
                       <div className="relative">
-                        <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-1.5">
+                        <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-1.5">
                           {face.asset.digital && (
                             <span className="rounded-full bg-[#0359A8]/90 px-2 py-0.5 text-[10px] font-semibold text-white">
                               Digital
@@ -283,7 +303,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                         </div>
                       </div>
 
-                      <div className="space-y-1.5 p-4">
+                      <div className="relative z-20 space-y-1.5 p-4">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="line-clamp-1 text-sm font-semibold text-neutral-900">
                             {title}
@@ -319,13 +339,13 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                             </Link>
                           )}
                           {showPrices ? (
-                            <button
-                              type="button"
+                            <Link
+                              href={detailHref}
                               className="flex items-center gap-1 rounded-full bg-[#0359A8] px-3 py-1.5 text-[10px] font-semibold text-white shadow-sm transition hover:bg-[#024a8c]"
                             >
-                              Añadir
+                              Ver
                               <ChevronRight className="h-3 w-3" />
-                            </button>
+                            </Link>
                           ) : null}
                         </div>
                       </div>

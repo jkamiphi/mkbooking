@@ -38,6 +38,19 @@ function buildSearchUrl(options: {
   return `/s/${encodeURIComponent(searchTerm)}${queryString ? `?${queryString}` : ""}`;
 }
 
+function buildHomeUrl(options: {
+  searchTerm?: string;
+  type?: string;
+  zone?: string;
+}) {
+  const params = new URLSearchParams();
+  if (options.searchTerm) params.set("q", options.searchTerm);
+  if (options.type) params.set("type", options.type);
+  if (options.zone) params.set("zone", options.zone);
+  const queryString = params.toString();
+  return `/${queryString ? `?${queryString}` : ""}`;
+}
+
 const structureTypeHints: Record<string, string> = {
   "Mupi Giant": "Peatones · alta frecuencia",
   "Pantalla Digital": "Impacto · rotación",
@@ -100,27 +113,6 @@ export default async function Home({
     (selectedZone?.province.name ?? "").toLowerCase().includes("panam") ||
     (selectedZone?.name ?? "").toLowerCase().includes("panam");
   const showPromo = Boolean(catalog.promo && isPanamaQuery);
-  const topZones = Object.entries(
-    catalog.faces.reduce<Record<string, number>>((acc, face) => {
-      const zoneName = face.asset.zone.name;
-      acc[zoneName] = (acc[zoneName] || 0) + 1;
-      return acc;
-    }, {}),
-  )
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-  const featuredFaceImage =
-    catalog.faces.find((face) => face.catalogFace?.primaryImageUrl)?.catalogFace
-      ?.primaryImageUrl || null;
-  const secondaryFaceImage =
-    catalog.faces.find(
-      (face) =>
-        face.catalogFace?.primaryImageUrl &&
-        face.catalogFace.primaryImageUrl !== featuredFaceImage,
-    )?.catalogFace?.primaryImageUrl || null;
-  const featuredZoneImage = zones[0]?.imageUrl || null;
-  const heroImage = featuredFaceImage || featuredZoneImage;
-  const sideImage = secondaryFaceImage || featuredZoneImage;
 
   const promoValueLabel = catalog.promo
     ? catalog.promo.type === "PERCENT"
@@ -129,6 +121,11 @@ export default async function Home({
         ? `${catalog.promo.value}`
         : `${catalog.promo.value}`
     : null;
+  const homeStateUrl = buildHomeUrl({
+    searchTerm: query,
+    type: typeId,
+    zone: zoneId,
+  });
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,_#fffdf5_0%,_#ffffff_45%,_#f4f7ff_100%)] text-neutral-950">
@@ -362,6 +359,7 @@ export default async function Home({
                 face.asset.structureType.name,
               );
               const dimensions = formatFaceDimensions(face.width, face.height);
+              const detailHref = `/faces/${face.id}?from=${encodeURIComponent(homeStateUrl)}`;
 
               return (
                 <article
@@ -373,8 +371,13 @@ export default async function Home({
                     opacity: 0,
                   }}
                 >
+                  <Link
+                    href={detailHref}
+                    aria-label={`Ver detalles de ${title}`}
+                    className="absolute inset-0 z-10"
+                  />
                   <div className="relative">
-                    <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
+                    <div className="absolute left-4 top-4 z-20 flex flex-wrap gap-2">
                       {face.asset.digital ? (
                         <span className="rounded-full bg-[#0359A8]/90 px-3 py-1 text-xs font-semibold text-white">
                           Digital
@@ -413,7 +416,7 @@ export default async function Home({
                     </div>
                   </div>
 
-                  <div className="space-y-2 px-5 pb-5 pt-4">
+                  <div className="relative z-20 space-y-2 px-5 pb-5 pt-4">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="line-clamp-1 text-base font-semibold text-neutral-900">
                         {title}
@@ -447,13 +450,13 @@ export default async function Home({
                           </span>
                         </div>
 
-                        <button
-                          type="button"
+                        <Link
+                          href={detailHref}
                           className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-[#0359A8]/20 transition hover:bg-[#024a8c]"
                         >
-                          Añadir a campaña
+                          Ver detalle
                           <ChevronRight className="h-3 w-3" />
-                        </button>
+                        </Link>
                       </>
                     ) : (
                       <Link

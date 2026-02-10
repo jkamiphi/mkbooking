@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import {
   APIProvider,
   Map,
   AdvancedMarker,
   InfoWindow,
-  useMap,
 } from "@vis.gl/react-google-maps";
 
 type Marker = {
@@ -16,6 +15,7 @@ type Marker = {
   title: string;
   price: string | null;
   structureType: string;
+  href: string;
 };
 
 type SearchMapProps = {
@@ -85,12 +85,12 @@ function MarkerWithInfoWindow({
                 </span>
               </p>
             )}
-            <button
-              type="button"
-              className="mt-3 w-full rounded-full bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#024a8c]"
+            <a
+              href={marker.href}
+              className="mt-3 block w-full rounded-full bg-[#0359A8] px-4 py-2 text-center text-xs font-semibold text-white transition hover:bg-[#024a8c]"
             >
               Ver detalles
-            </button>
+            </a>
           </div>
         </InfoWindow>
       )}
