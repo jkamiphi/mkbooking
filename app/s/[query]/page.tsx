@@ -1,14 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { headers } from "next/headers";
-import {
-  ArrowLeft,
-  ChevronRight,
-  Grid3X3,
-  List,
-  MapPin,
-  Sparkles,
-} from "lucide-react";
+import { ArrowLeft, MapPin, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth";
 import {
   formatFaceDimensions,
@@ -18,8 +10,8 @@ import {
 import { listCatalogFaces } from "@/lib/services/catalog";
 import { listStructureTypes, listZones } from "@/lib/services/inventory";
 import { getUserProfileByUserId } from "@/lib/services/user-profile";
-import { SearchMap } from "./_components/search-map";
 import { SearchFilters } from "./_components/search-filters";
+import { SearchResultsView } from "./_components/search-results-view";
 
 type PageProps = {
   params: Promise<{ query: string }>;
@@ -84,25 +76,59 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
   const showPrices = Boolean(session);
 
-  // Extract markers for the map
-  const markers = catalog.faces
-    .filter((face) => face.asset.latitude && face.asset.longitude)
-    .map((face) => ({
-      id: face.id,
-      lat: Number(face.asset.latitude),
-      lng: Number(face.asset.longitude),
-      title:
-        face.catalogFace?.title ||
-        `${face.asset.structureType.name} · ${face.code}`,
-      price: face.effectivePrice
+  const results = catalog.faces.map((face) => {
+    const title =
+      face.catalogFace?.title || `${face.asset.structureType.name} · Cara ${face.code}`;
+    const location = `${face.asset.zone.name}, ${face.asset.zone.province.name}`;
+    const dimensions = formatFaceDimensions(face.width, face.height);
+    const priceLabel =
+      face.effectivePrice && showPrices
         ? formatPrice(
             Number(face.effectivePrice.priceDaily),
             face.effectivePrice.currency ?? "USD"
           )
-        : null,
+        : null;
+
+    return {
+      id: face.id,
+      title,
+      location,
+      imageUrl: face.catalogFace?.primaryImageUrl ?? null,
+      detailHref: `/faces/${face.id}?from=${encodeURIComponent(currentSearchPath)}`,
+      isDigital: face.asset.digital,
+      isIlluminated: face.asset.illuminated,
+      trafficLabel: getTrafficLabel(face.asset.structureType.name),
+      dimensionsLabel: dimensions?.label ?? null,
+      areaLabel: dimensions?.areaLabel ?? null,
+      priceLabel,
       structureType: face.asset.structureType.name,
-      href: `/faces/${face.id}?from=${encodeURIComponent(currentSearchPath)}`,
-    }));
+    };
+  });
+
+  const markers = catalog.faces
+    .map((face) => {
+      const lat = Number(face.asset.latitude);
+      const lng = Number(face.asset.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+      return {
+        id: face.id,
+        lat,
+        lng,
+        title:
+          face.catalogFace?.title || `${face.asset.structureType.name} · Cara ${face.code}`,
+        price:
+          face.effectivePrice && showPrices
+            ? formatPrice(
+                Number(face.effectivePrice.priceDaily),
+                face.effectivePrice.currency ?? "USD"
+              )
+            : null,
+        structureType: face.asset.structureType.name,
+        href: `/faces/${face.id}?from=${encodeURIComponent(currentSearchPath)}`,
+      };
+    })
+    .filter((marker): marker is NonNullable<typeof marker> => Boolean(marker));
 
   // Default center (Panama City)
   const defaultCenter = { lat: 9.0, lng: -79.5 };
@@ -182,203 +208,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         query={decodedQuery}
       />
 
-      {/* Main Content - Split View */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel - Results Grid */}
-        <div className="flex w-full flex-col overflow-hidden lg:w-[55%] xl:w-[60%]">
-          {/* Results Count */}
-          <div className="flex items-center justify-between border-b border-neutral-100 bg-neutral-50/50 px-6 py-3">
-            <p className="text-sm text-neutral-600">
-              <span className="font-semibold text-neutral-900">
-                {catalog.total}
-              </span>{" "}
-              {catalog.total === 1 ? "espacio disponible" : "espacios disponibles"}
-              {searchTerm && (
-                <span>
-                  {" "}
-                  para{" "}
-                  <span className="font-medium text-neutral-900">
-                    &quot;{searchTerm}&quot;
-                  </span>
-                </span>
-              )}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition hover:border-neutral-300"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-neutral-400 transition hover:bg-neutral-100"
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Scrollable Results */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
-              {catalog.faces.length === 0 ? (
-                <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 py-16 text-center">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-200">
-                    <MapPin className="h-6 w-6 text-neutral-500" />
-                  </div>
-                  <p className="text-sm font-medium text-neutral-700">
-                    No se encontraron espacios
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    Intenta con otra búsqueda o filtros diferentes
-                  </p>
-                </div>
-              ) : (
-                catalog.faces.map((face, index) => {
-                  const title =
-                    face.catalogFace?.title ||
-                    `${face.asset.structureType.name} · Cara ${face.code}`;
-                  const location = `${face.asset.zone.name}, ${face.asset.zone.province.name}`;
-                  const imageUrl = face.catalogFace?.primaryImageUrl;
-                  const priceLabel =
-                    face.effectivePrice && showPrices
-                      ? formatPrice(
-                          Number(face.effectivePrice.priceDaily),
-                          face.effectivePrice.currency ?? "USD"
-                        )
-                      : null;
-                  const trafficLabel = getTrafficLabel(
-                    face.asset.structureType.name
-                  );
-                  const dimensions = formatFaceDimensions(face.width, face.height);
-                  const detailHref = `/faces/${face.id}?from=${encodeURIComponent(currentSearchPath)}`;
-
-                  return (
-                    <article
-                      key={face.id}
-                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-neutral-200/90 bg-white transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-lg"
-                      style={{
-                        animation: "fadeInUp 0.4s ease forwards",
-                        animationDelay: `${index * 30}ms`,
-                        opacity: 0,
-                      }}
-                    >
-                      <Link
-                        href={detailHref}
-                        aria-label={`Ver detalles de ${title}`}
-                        className="absolute inset-0 z-10"
-                      />
-                      <div className="relative">
-                        <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-1.5">
-                          {face.asset.digital && (
-                            <span className="rounded-full bg-[#0359A8]/90 px-2 py-0.5 text-[10px] font-semibold text-white">
-                              Digital
-                            </span>
-                          )}
-                          {face.asset.illuminated && (
-                            <span className="rounded-full bg-[#fcb814]/90 px-2 py-0.5 text-[10px] font-semibold text-neutral-900">
-                              Iluminado
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-neutral-100 to-neutral-50">
-                          {imageUrl ? (
-                            <Image
-                              src={imageUrl}
-                              alt={title}
-                              fill
-                              sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-[#fcb814]/20 to-[#0359A8]/20 p-4">
-                              <span className="mb-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold text-neutral-700">
-                                {face.asset.structureType.name}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="relative z-20 space-y-1.5 p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="line-clamp-1 text-sm font-semibold text-neutral-900">
-                            {title}
-                          </h3>
-                          {dimensions && (
-                            <span className="flex-shrink-0 whitespace-nowrap rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
-                              {dimensions.label}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-neutral-500">{location}</p>
-                        <div className="flex items-center justify-between text-xs text-neutral-400">
-                          <p>Tráfico: {trafficLabel}</p>
-                          {dimensions ? <p>{dimensions.areaLabel}</p> : null}
-                        </div>
-
-                        <div className="flex items-center justify-between border-t border-neutral-100 pt-2">
-                          {showPrices ? (
-                            <div>
-                              <p className="text-base font-semibold text-neutral-900">
-                                {priceLabel ?? "Consultar"}
-                              </p>
-                              <p className="text-[10px] text-neutral-500">
-                                por día
-                              </p>
-                            </div>
-                          ) : (
-                            <Link
-                              href="/login"
-                              className="text-xs font-medium text-[#0359A8] hover:underline"
-                            >
-                              Inicia sesión para ver precio
-                            </Link>
-                          )}
-                          {showPrices ? (
-                            <Link
-                              href={detailHref}
-                              className="flex items-center gap-1 rounded-full bg-[#0359A8] px-3 py-1.5 text-[10px] font-semibold text-white shadow-sm transition hover:bg-[#024a8c]"
-                            >
-                              Ver
-                              <ChevronRight className="h-3 w-3" />
-                            </Link>
-                          ) : null}
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Panel - Map */}
-        <div className="hidden border-l border-neutral-200 lg:block lg:w-[45%] xl:w-[40%]">
-          <SearchMap
-            markers={markers}
-            center={mapCenter}
-            showPrices={showPrices}
-          />
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+      <SearchResultsView
+        total={catalog.total}
+        searchTerm={searchTerm}
+        results={results}
+        markers={markers}
+        center={mapCenter}
+        showPrices={showPrices}
+      />
     </div>
   );
 }
