@@ -3,12 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Boxes,
   Calendar,
   ChevronRight,
   MapPin,
   Search,
-  Users,
   X,
 } from "lucide-react";
 
@@ -26,27 +24,18 @@ type ZoneOption = {
 type HomeSearchBarProps = {
   query?: string;
   typeId?: string;
-  zoneId?: string;
   zones: ZoneOption[];
   structureTypes: StructureTypeOption[];
   showPromo: boolean;
   promoValueLabel: string | null;
 };
 
-type PanelKey = "destination" | "dates" | "type" | "quantity" | null;
+type PanelKey = "destination" | "dates" | "type" | null;
 
 type DateRange = {
   from?: Date;
   to?: Date;
 };
-
-const quantityOptions = [
-  { value: "", label: "Indistinto" },
-  { value: "1-2", label: "1 a 2" },
-  { value: "3-5", label: "3 a 5" },
-  { value: "6-10", label: "6 a 10" },
-  { value: "11+", label: "11 o más" },
-];
 
 function isSameDay(left: Date, right: Date) {
   return (
@@ -85,7 +74,6 @@ function getMonthLabel(date: Date) {
 export function HomeSearchBar({
   query,
   typeId,
-  zoneId,
   zones,
   structureTypes,
   showPromo,
@@ -96,7 +84,6 @@ export function HomeSearchBar({
   const [activePanel, setActivePanel] = useState<PanelKey>(null);
   const [queryValue, setQueryValue] = useState(query ?? "");
   const [selectedTypeId, setSelectedTypeId] = useState(typeId ?? "");
-  const [selectedQuantity, setSelectedQuantity] = useState("");
   const [dateRange, setDateRange] = useState<DateRange>({});
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const today = new Date();
@@ -113,7 +100,6 @@ export function HomeSearchBar({
     event.preventDefault();
     const params = new URLSearchParams();
     if (selectedTypeId) params.set("type", selectedTypeId);
-    if (selectedQuantity) params.set("qty", selectedQuantity);
     if (dateRange.from) params.set("from", dateRange.from.toISOString().split("T")[0]);
     if (dateRange.to) params.set("to", dateRange.to.toISOString().split("T")[0]);
 
@@ -122,14 +108,6 @@ export function HomeSearchBar({
     const url = `/s/${encodeURIComponent(searchTerm)}${queryString ? `?${queryString}` : ""}`;
     router.push(url);
   }
-
-  useEffect(() => {
-    setQueryValue(query ?? "");
-  }, [query]);
-
-  useEffect(() => {
-    setSelectedTypeId(typeId ?? "");
-  }, [typeId]);
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {
@@ -275,7 +253,7 @@ export function HomeSearchBar({
               <div className="hidden h-8 w-px bg-neutral-200 md:block" />
 
               <div
-                className={`${segmentBase} min-w-[220px] md:rounded-none ${
+                className={`${segmentBase} min-w-[220px] md:rounded-r-full ${
                   activePanel === "type" ? segmentActive : ""
                 }`}
                 role="button"
@@ -285,25 +263,6 @@ export function HomeSearchBar({
                 Tipo de estructura
                 <span className="mt-1 text-sm font-medium text-neutral-900">
                   {selectedType?.name ?? "Agregar una estructura"}
-                </span>
-              </div>
-
-              <div className="hidden h-8 w-px bg-neutral-200 md:block" />
-
-              <div
-                className={`${segmentBase} min-w-[180px] md:rounded-none md:rounded-r-full ${
-                  activePanel === "quantity" ? segmentActive : ""
-                }`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setActivePanel("quantity")}
-              >
-                Espacios
-                <span className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-neutral-900">
-                  <Boxes className="h-4 w-4 text-neutral-400" />
-                  {quantityOptions.find(
-                    (option) => option.value === selectedQuantity,
-                  )?.label ?? "Indistinto"}
                 </span>
               </div>
 
@@ -519,35 +478,6 @@ export function HomeSearchBar({
                 </div>
               ) : null}
 
-              {activePanel === "quantity" ? (
-                <div className="space-y-4">
-                  <p className="text-sm font-semibold text-neutral-900">
-                    ¿Cuántos espacios necesitas?
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {quantityOptions.map((option) => {
-                      const selected = option.value === selectedQuantity;
-                      return (
-                        <button
-                          key={option.label}
-                          type="button"
-                          onClick={() => {
-                            setSelectedQuantity(option.value);
-                            setActivePanel(null);
-                          }}
-                          className={`rounded-2xl border px-4 py-3 text-left aspect-[7/3] text-lg font-semibold transition ${
-                            selected
-                              ? "border-neutral-900 bg-neutral-900 text-white"
-                              : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
             </div>
           ) : null}
         </div>

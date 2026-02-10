@@ -27,19 +27,10 @@ type SearchFiltersProps = {
   zones: Zone[];
   selectedTypeId?: string;
   selectedZoneId?: string;
-  selectedQuantity?: string;
   selectedFromDate?: string;
   selectedToDate?: string;
   query: string;
 };
-
-const quantityOptions = [
-  { value: "", label: "Indistinto" },
-  { value: "1-2", label: "1 a 2" },
-  { value: "3-5", label: "3 a 5" },
-  { value: "6-10", label: "6 a 10" },
-  { value: "11+", label: "11 o mas" },
-];
 
 function formatDateLabel(value?: string) {
   if (!value) return "";
@@ -56,7 +47,6 @@ export function SearchFilters({
   zones,
   selectedTypeId,
   selectedZoneId,
-  selectedQuantity,
   selectedFromDate,
   selectedToDate,
   query,
@@ -64,29 +54,24 @@ export function SearchFilters({
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [draftZoneId, setDraftZoneId] = useState(selectedZoneId ?? "");
-  const [draftQuantity, setDraftQuantity] = useState(selectedQuantity ?? "");
   const [draftFromDate, setDraftFromDate] = useState(selectedFromDate ?? "");
   const [draftToDate, setDraftToDate] = useState(selectedToDate ?? "");
 
   function navigateWithFilters(next: {
     typeId?: string | null;
     zoneId?: string | null;
-    quantity?: string | null;
     fromDate?: string | null;
     toDate?: string | null;
   }) {
     const params = new URLSearchParams();
     const newTypeId = next.typeId !== undefined ? next.typeId : selectedTypeId;
     const newZoneId = next.zoneId !== undefined ? next.zoneId : selectedZoneId;
-    const newQuantity =
-      next.quantity !== undefined ? next.quantity : selectedQuantity;
     const newFromDate =
       next.fromDate !== undefined ? next.fromDate : selectedFromDate;
     const newToDate = next.toDate !== undefined ? next.toDate : selectedToDate;
 
     if (newTypeId) params.set("type", newTypeId);
     if (newZoneId) params.set("zone", newZoneId);
-    if (newQuantity) params.set("qty", newQuantity);
     if (newFromDate) params.set("from", newFromDate);
     if (newToDate) params.set("to", newToDate);
 
@@ -111,7 +96,6 @@ export function SearchFilters({
 
     navigateWithFilters({
       zoneId: draftZoneId || null,
-      quantity: draftQuantity || null,
       fromDate: normalizedFrom,
       toDate: normalizedTo,
     });
@@ -120,13 +104,11 @@ export function SearchFilters({
 
   function clearAllFilters() {
     setDraftZoneId("");
-    setDraftQuantity("");
     setDraftFromDate("");
     setDraftToDate("");
     navigateWithFilters({
       typeId: null,
       zoneId: null,
-      quantity: null,
       fromDate: null,
       toDate: null,
     });
@@ -134,9 +116,6 @@ export function SearchFilters({
   }
 
   const selectedZone = zones.find((zone) => zone.id === selectedZoneId);
-  const selectedQuantityLabel =
-    quantityOptions.find((option) => option.value === selectedQuantity)?.label ??
-    null;
   const dateBadgeLabel = useMemo(() => {
     if (!selectedFromDate && !selectedToDate) return null;
     if (selectedFromDate && selectedToDate) {
@@ -169,17 +148,6 @@ export function SearchFilters({
             >
               <MapPin className="h-3 w-3" />
               {selectedZone.name}
-              <X className="h-3 w-3" />
-            </button>
-          ) : null}
-
-          {selectedQuantityLabel ? (
-            <button
-              type="button"
-              onClick={() => navigateWithFilters({ quantity: null })}
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-[#0359A8] bg-[#0359A8]/10 px-3 py-1.5 text-xs font-semibold text-[#0359A8] transition hover:bg-[#0359A8]/20"
-            >
-              {selectedQuantityLabel}
               <X className="h-3 w-3" />
             </button>
           ) : null}
@@ -235,7 +203,7 @@ export function SearchFilters({
                   Filtros de búsqueda
                 </DialogTitle>
                 <DialogDescription className="mt-1 text-xs text-neutral-500">
-                  Ajusta zona, rango de fechas y cantidad de espacios.
+                  Ajusta zona y rango de fechas.
                 </DialogDescription>
               </div>
               <button
@@ -260,21 +228,6 @@ export function SearchFilters({
                   {zones.map((zone) => (
                     <option key={zone.id} value={zone.id}>
                       {zone.name} - {zone.province.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-neutral-600">Espacios</span>
-                <select
-                  value={draftQuantity}
-                  onChange={(event) => setDraftQuantity(event.target.value)}
-                  className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none"
-                >
-                  {quantityOptions.map((option) => (
-                    <option key={option.value || "indistinto"} value={option.value}>
-                      {option.label}
                     </option>
                   ))}
                 </select>

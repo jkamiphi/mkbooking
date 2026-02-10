@@ -18,7 +18,6 @@ type PageProps = {
   searchParams: Promise<{
     type?: string | string[];
     zone?: string | string[];
-    qty?: string | string[];
     from?: string | string[];
     to?: string | string[];
   }>;
@@ -36,15 +35,6 @@ function parseDateParam(value?: string) {
   return parsed;
 }
 
-function getQuantityUpperBound(value?: string) {
-  if (!value) return undefined;
-  if (value === "1-2") return 2;
-  if (value === "3-5") return 5;
-  if (value === "6-10") return 10;
-  if (value === "11+") return 11;
-  return undefined;
-}
-
 export default async function SearchPage({ params, searchParams }: PageProps) {
   const { query } = await params;
   const awaitedSearchParams = await searchParams;
@@ -57,17 +47,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const searchTerm = decodedQuery === "all" ? undefined : decodedQuery;
   const typeId = getParam(awaitedSearchParams?.type) || undefined;
   const zoneId = getParam(awaitedSearchParams?.zone) || undefined;
-  const quantity = getParam(awaitedSearchParams?.qty) || undefined;
   const fromDate = getParam(awaitedSearchParams?.from) || undefined;
   const toDate = getParam(awaitedSearchParams?.to) || undefined;
   const availableFrom = parseDateParam(fromDate);
   const availableTo = parseDateParam(toDate);
-  const quantityUpperBound = getQuantityUpperBound(quantity);
 
   const searchStateParams = new URLSearchParams();
   if (typeId) searchStateParams.set("type", typeId);
   if (zoneId) searchStateParams.set("zone", zoneId);
-  if (quantity) searchStateParams.set("qty", quantity);
   if (fromDate) searchStateParams.set("from", fromDate);
   if (toDate) searchStateParams.set("to", toDate);
   const currentSearchPath = `/s/${encodeURIComponent(decodedQuery)}${
@@ -101,9 +88,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     (typeId && structureTypes.find((t) => t.id === typeId)?.name) ||
     (zoneId && zones.find((z) => z.id === zoneId)?.name);
 
-  const visibleFaces = quantityUpperBound
-    ? catalog.faces.slice(0, quantityUpperBound)
-    : catalog.faces;
+  const visibleFaces = catalog.faces;
   const visibleTotal = visibleFaces.length;
 
   const results = visibleFaces.map((face) => {
@@ -230,12 +215,11 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
       {/* Filters Bar */}
       <SearchFilters
-        key={`${typeId ?? ""}-${zoneId ?? ""}-${quantity ?? ""}-${fromDate ?? ""}-${toDate ?? ""}`}
+        key={`${typeId ?? ""}-${zoneId ?? ""}-${fromDate ?? ""}-${toDate ?? ""}`}
         structureTypes={structureTypes}
         zones={zones}
         selectedTypeId={typeId}
         selectedZoneId={zoneId}
-        selectedQuantity={quantity}
         selectedFromDate={fromDate}
         selectedToDate={toDate}
         query={decodedQuery}
@@ -248,6 +232,12 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         markers={markers}
         center={mapCenter}
         showPrices={showPrices}
+        selectedTypeId={typeId}
+        selectedZoneId={zoneId}
+        selectedFromDate={fromDate}
+        selectedToDate={toDate}
+        isAuthenticated={Boolean(session)}
+        searchPath={currentSearchPath}
       />
     </div>
   );

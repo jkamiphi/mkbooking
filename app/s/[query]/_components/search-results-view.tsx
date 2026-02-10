@@ -28,6 +28,12 @@ type SearchResultsViewProps = {
   markers: SearchMapMarker[];
   center: { lat: number; lng: number };
   showPrices: boolean;
+  selectedTypeId?: string;
+  selectedZoneId?: string;
+  selectedFromDate?: string;
+  selectedToDate?: string;
+  isAuthenticated: boolean;
+  searchPath: string;
 };
 
 export function SearchResultsView({
@@ -37,9 +43,26 @@ export function SearchResultsView({
   markers,
   center,
   showPrices,
+  selectedTypeId,
+  selectedZoneId,
+  selectedFromDate,
+  selectedToDate,
+  isAuthenticated,
+  searchPath,
 }: SearchResultsViewProps) {
   const [selectedFaceId, setSelectedFaceId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  const campaignRequestUrl = (() => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set("q", searchTerm);
+    if (selectedTypeId) params.set("type", selectedTypeId);
+    if (selectedZoneId) params.set("zone", selectedZoneId);
+    if (selectedFromDate) params.set("from", selectedFromDate);
+    if (selectedToDate) params.set("to", selectedToDate);
+    params.set("returnTo", searchPath);
+    return `/campaign-requests/new?${params.toString()}`;
+  })();
 
   useEffect(() => {
     if (!selectedFaceId) return;
@@ -65,6 +88,21 @@ export function SearchResultsView({
             )}
           </p>
           <div className="flex items-center gap-2">
+            {isAuthenticated ? (
+              <Link
+                href={campaignRequestUrl}
+                className="rounded-full border border-[#0359A8]/30 bg-[#0359A8]/10 px-3 py-1.5 text-xs font-semibold text-[#0359A8] transition hover:bg-[#0359A8]/15"
+              >
+                Solicitar campaña
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50"
+              >
+                Inicia sesión para solicitar
+              </Link>
+            )}
             <button
               type="button"
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition hover:border-neutral-300"
@@ -89,7 +127,7 @@ export function SearchResultsView({
                 </div>
                 <p className="text-sm font-medium text-neutral-700">No se encontraron espacios</p>
                 <p className="mt-1 text-xs text-neutral-500">
-                  Intenta con otra busqueda o filtros diferentes
+                  Intenta con otra búsqueda o filtros diferentes
                 </p>
               </div>
             ) : (
@@ -177,7 +215,7 @@ export function SearchResultsView({
                       </div>
                       <p className="text-xs text-neutral-500">{face.location}</p>
                       <div className="flex items-center justify-between text-xs text-neutral-400">
-                        <p>Trafico: {face.trafficLabel}</p>
+                        <p>Tráfico: {face.trafficLabel}</p>
                         {face.areaLabel ? <p>{face.areaLabel}</p> : null}
                       </div>
 
@@ -194,7 +232,7 @@ export function SearchResultsView({
                             href="/login"
                             className="text-xs font-medium text-[#0359A8] hover:underline"
                           >
-                            Inicia sesion para ver precio
+                            Inicia sesión para ver precio
                           </Link>
                         )}
                         {showPrices ? (

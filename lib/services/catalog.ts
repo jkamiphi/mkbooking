@@ -685,7 +685,7 @@ export async function createHold(
   input: CreateHoldInput,
   createdByUserId?: string
 ) {
-  await upsertCatalogFace({ faceId: input.faceId });
+  const catalogFace = await upsertCatalogFace({ faceId: input.faceId });
   const expiresAt = new Date(Date.now() + DAY_IN_MS);
   const profile = createdByUserId
     ? await db.userProfile.findUnique({
@@ -696,7 +696,7 @@ export async function createHold(
 
   return db.catalogHold.create({
     data: {
-      faceId: input.faceId,
+      faceId: catalogFace.id,
       organizationId: input.organizationId ?? null,
       createdById: profile?.id ?? null,
       expiresAt,

@@ -198,9 +198,9 @@ export default async function Home({
       </header>
 
       <HomeSearchBar
+        key={`${query ?? ""}-${typeId ?? ""}-${zoneId ?? ""}`}
         query={query}
         typeId={typeId}
-        zoneId={zoneId}
         zones={zones}
         structureTypes={structureTypes}
         showPromo={showPromo}

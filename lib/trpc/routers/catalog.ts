@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, adminProcedure } from "../init";
+import { router, adminProcedure, protectedProcedure } from "../init";
 import {
   createPriceRule,
   createPriceRuleSchema,
@@ -17,6 +17,20 @@ import {
   upsertCatalogFaceSchema,
   holdStatusSchema,
 } from "@/lib/services/catalog";
+import {
+  assignCampaignRequestFaces,
+  assignCampaignRequestFacesSchema,
+  confirmCampaignRequest,
+  createCampaignRequest,
+  createCampaignRequestSchema,
+  getCampaignRequestById,
+  listCampaignRequests,
+  listCampaignRequestsSchema,
+  suggestCampaignRequestFacesSchema,
+  suggestFacesForCampaignRequest,
+  updateCampaignRequestStatus,
+  updateCampaignRequestStatusSchema,
+} from "@/lib/services/campaign-request";
 
 export const catalogRouter = router({
   faces: router({
@@ -103,6 +117,61 @@ export const catalogRouter = router({
       .input(z.object({ holdId: z.string() }))
       .mutation(async ({ input }) => {
         return releaseHold(input.holdId);
+      }),
+  }),
+
+  requests: router({
+    create: protectedProcedure
+      .input(createCampaignRequestSchema)
+      .mutation(async ({ ctx, input }) => {
+        return createCampaignRequest(
+          {
+            ...input,
+            // Evita que el cliente publique organizationId arbitrario.
+            organizationId: undefined,
+          },
+          {
+            createdByUserId: ctx.user?.id,
+          }
+        );
+      }),
+
+    list: adminProcedure
+      .input(listCampaignRequestsSchema.optional())
+      .query(async ({ input }) => {
+        return listCampaignRequests(
+          input ?? listCampaignRequestsSchema.parse({})
+        );
+      }),
+
+    get: adminProcedure
+      .input(z.object({ requestId: z.string().min(1) }))
+      .query(async ({ input }) => {
+        return getCampaignRequestById(input.requestId);
+      }),
+
+    suggestFaces: adminProcedure
+      .input(suggestCampaignRequestFacesSchema)
+      .query(async ({ input }) => {
+        return suggestFacesForCampaignRequest(input);
+      }),
+
+    assignFaces: adminProcedure
+      .input(assignCampaignRequestFacesSchema)
+      .mutation(async ({ input }) => {
+        return assignCampaignRequestFaces(input);
+      }),
+
+    updateStatus: adminProcedure
+      .input(updateCampaignRequestStatusSchema)
+      .mutation(async ({ ctx, input }) => {
+        return updateCampaignRequestStatus(input, ctx.user.id);
+      }),
+
+    confirm: adminProcedure
+      .input(z.object({ requestId: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        return confirmCampaignRequest(input.requestId, ctx.user.id);
       }),
   }),
 });

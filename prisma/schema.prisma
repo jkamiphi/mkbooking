@@ -123,6 +123,8 @@ model UserProfile {
   createdOrganizations Organization[]       @relation("OrganizationCreator")
   auditLogs            AuditLog[]           @relation("AuditLogActor")
   catalogHolds         CatalogHold[]        @relation("CatalogHoldCreator")
+  createdCampaignRequests CampaignRequest[] @relation("CampaignRequestCreator")
+  resolvedCampaignRequests CampaignRequest[] @relation("CampaignRequestResolver")
 
   @@index([userId])
   @@index([isActive])
@@ -202,6 +204,7 @@ model Organization {
   documents OrganizationDocument[]
   catalogPriceRules CatalogPriceRule[]
   catalogHolds      CatalogHold[]
+  campaignRequests  CampaignRequest[]
 
   @@index([organizationType])
   @@index([isActive])
@@ -307,6 +310,7 @@ model Zone {
   province Province @relation(fields: [provinceId], references: [id], onDelete: Cascade)
   assets   Asset[]
   catalogPriceRules CatalogPriceRule[]
+  campaignRequests CampaignRequest[]
 
   @@unique([provinceId, name])
   @@index([provinceId])
@@ -320,6 +324,7 @@ model StructureType {
 
   assets Asset[]
   catalogPriceRules CatalogPriceRule[]
+  campaignRequests CampaignRequest[]
 
   @@map("structure_type")
 }
@@ -415,6 +420,7 @@ model AssetFace {
   restrictionTags    AssetFaceRestriction[]
   maintenanceWindows MaintenanceWindow[]
   catalogFace        CatalogFace?
+  campaignRequestAssignments CampaignRequestFaceAssignment[]
 
   @@unique([assetId, code])
   @@index([assetId])
@@ -570,6 +576,16 @@ enum CatalogHoldStatus {
   @@map("catalog_hold_status")
 }
 
+enum CampaignRequestStatus {
+  NEW           @map("new")
+  IN_REVIEW     @map("in_review")
+  PROPOSAL_SENT @map("proposal_sent")
+  CONFIRMED     @map("confirmed")
+  REJECTED      @map("rejected")
+
+  @@map("campaign_request_status")
+}
+
 model CatalogFace {
   id String @id @default(cuid())
 
@@ -661,6 +677,64 @@ model CatalogHold {
   @@index([status])
   @@index([expiresAt])
   @@map("catalog_hold")
+}
+
+model CampaignRequest {
+  id String @id @default(cuid())
+
+  query           String?
+  zoneId          String?
+  structureTypeId String?
+  quantity        Int
+  fromDate        DateTime? @db.Date
+  toDate          DateTime? @db.Date
+  notes           String?   @db.Text
+
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+
+  organizationId String?
+  createdById    String?
+
+  status CampaignRequestStatus @default(NEW)
+  resolvedAt DateTime?
+  resolvedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  zone          Zone?          @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  structureType StructureType? @relation(fields: [structureTypeId], references: [id], onDelete: SetNull)
+  organization  Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdBy     UserProfile?   @relation("CampaignRequestCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  resolvedBy    UserProfile?   @relation("CampaignRequestResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  assignments   CampaignRequestFaceAssignment[]
+
+  @@index([status])
+  @@index([zoneId])
+  @@index([structureTypeId])
+  @@index([organizationId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@map("campaign_request")
+}
+
+model CampaignRequestFaceAssignment {
+  id String @id @default(cuid())
+
+  requestId String
+  faceId    String
+
+  createdAt DateTime @default(now())
+
+  request CampaignRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  face    AssetFace       @relation(fields: [faceId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, faceId])
+  @@index([requestId])
+  @@index([faceId])
+  @@map("campaign_request_face_assignment")
 }
 
 // ============================================================================
