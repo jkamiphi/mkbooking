@@ -87,6 +87,15 @@ function facingLabel(value: string) {
   return value === "OPPOSITE_TRAFFIC" ? "Sentido opuesto" : "Sentido de tráfico";
 }
 
+function statusLabel(value: string) {
+  const normalized = value.toLowerCase();
+  if (normalized === "active") return "activo";
+  if (normalized === "inactive") return "inactivo";
+  if (normalized === "maintenance") return "mantenimiento";
+  if (normalized === "retired") return "retirado";
+  return normalized;
+}
+
 function dedupeGallery(items: GalleryItem[]) {
   const seen = new Set<string>();
   const unique: GalleryItem[] = [];
@@ -263,14 +272,14 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                 className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
               >
                 <Share2 className="h-4 w-4" />
-                Share
+                Compartir
               </button>
               <button
                 type="button"
                 className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
               >
                 <Heart className="h-4 w-4" />
-                Save
+                Guardar
               </button>
             </div>
           </div>
@@ -364,7 +373,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                   </p>
                 </div>
                 <div className="rounded-2xl border border-neutral-200 p-4">
-                  <p className="text-xs text-neutral-500">Posición y facing</p>
+                  <p className="text-xs text-neutral-500">Posición y orientación</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
                     {face.position?.name || "N/D"} · {facingLabel(face.facing)}
                   </p>
@@ -391,7 +400,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                 <div className="rounded-2xl border border-neutral-200 p-4">
                   <p className="text-xs text-neutral-500">Estado</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
-                    Activo: {face.asset.status.toLowerCase()} · Cara: {face.status.toLowerCase()}
+                    Activo: {statusLabel(face.asset.status)} · Cara: {statusLabel(face.status)}
                   </p>
                 </div>
               </div>
@@ -400,11 +409,11 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
             <article id="technical-specs" className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
               <h3 className="flex items-center gap-2 text-lg font-semibold text-neutral-900">
                 <Ruler className="h-4 w-4 text-[#ff385c]" />
-                Technical Specs
+                Especificaciones técnicas
               </h3>
               <div className="mt-4 space-y-2 text-sm text-neutral-700">
                 <p>
-                  <span className="font-semibold text-neutral-900">Face:</span> {face.asset.code}-
+                  <span className="font-semibold text-neutral-900">Cara:</span> {face.asset.code}-
                   {face.code}
                 </p>
                 <p>
@@ -457,7 +466,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                   {face.asset.landmark || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Road type:</span>{" "}
+                  <span className="font-semibold text-neutral-900">Tipo de vía:</span>{" "}
                   {face.asset.roadType?.name || "N/D"}
                 </p>
                 <p>
@@ -504,7 +513,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               </h3>
 
               <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                <p className="text-sm font-semibold text-neutral-900">Restriction tags</p>
+                <p className="text-sm font-semibold text-neutral-900">Etiquetas de restricción</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {face.restrictionTags.length ? (
                     face.restrictionTags.map((restriction) => (
@@ -516,7 +525,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-neutral-500">Sin tags registrados.</span>
+                    <span className="text-xs text-neutral-500">Sin etiquetas registradas.</span>
                   )}
                 </div>
                 {face.restrictions ? (
@@ -527,7 +536,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                 <p className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
                   <FileText className="h-4 w-4 text-[#ff385c]" />
-                  Permits
+                  Permisos
                 </p>
                 {permits.length ? (
                   <div className="mt-2 space-y-2">
@@ -562,7 +571,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                 <p className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
                   <Wrench className="h-4 w-4 text-[#ff385c]" />
-                  Maintenance windows
+                  Ventanas de mantenimiento
                 </p>
                 {maintenanceWindows.length ? (
                   <div className="mt-2 space-y-2">
@@ -596,7 +605,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                           Vigencia: {formatDate(rule.startDate)} - {formatDate(rule.endDate)}
                         </p>
                         <p>
-                          Scope:{" "}
+                          Alcance:{" "}
                           {rule.faceId
                             ? "Cara"
                             : rule.zoneId
@@ -637,8 +646,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                   ) : null}
 
                   <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-                    <p>Holds activos: {activeHolds}</p>
-                    <p>Próximo vencimiento hold: {formatDateTime(nextHoldExpiration)}</p>
+                    <p>Bloqueos activos: {activeHolds}</p>
+                    <p>Próximo vencimiento de bloqueo: {formatDateTime(nextHoldExpiration)}</p>
                   </div>
 
                   <button
@@ -670,7 +679,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               type="button"
               className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
             >
-              Report this placement
+              Reportar este espacio
             </button>
           </aside>
         </section>
