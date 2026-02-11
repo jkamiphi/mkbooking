@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { db } from "@/lib/db";
+import { createServerTRPCCaller } from "@/lib/trpc/server";
 
 const statusOptions = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
 type InventoryStatus = (typeof statusOptions)[number];
@@ -41,20 +41,6 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("es-PA").format(value);
 }
 
-function buildStatusCounts(
-  rows: Array<{ status: InventoryStatus; _count: { _all: number } }>
-) {
-  const initial = Object.fromEntries(
-    statusOptions.map((status) => [status, 0])
-  ) as Record<InventoryStatus, number>;
-
-  for (const row of rows) {
-    initial[row.status] = row._count._all;
-  }
-
-  return initial;
-}
-
 function formatRelativeDate(date: Date) {
   return new Intl.DateTimeFormat("es-PA", {
     day: "2-digit",
@@ -64,62 +50,18 @@ function formatRelativeDate(date: Date) {
 }
 
 export async function InventoryOverview() {
-  const [
+  const caller = await createServerTRPCCaller();
+  const {
     totalAssets,
     totalFaces,
     digitalAssets,
     illuminatedAssets,
     assetsWithoutFaces,
-    assetsByStatusRows,
-    facesByStatusRows,
+    assetsByStatus,
+    facesByStatus,
     latestAssets,
     latestFaces,
-  ] = await Promise.all([
-    db.asset.count(),
-    db.assetFace.count(),
-    db.asset.count({ where: { digital: true } }),
-    db.asset.count({ where: { illuminated: true } }),
-    db.asset.count({ where: { faces: { none: {} } } }),
-    db.asset.groupBy({
-      by: ["status"],
-      _count: { _all: true },
-    }),
-    db.assetFace.groupBy({
-      by: ["status"],
-      _count: { _all: true },
-    }),
-    db.asset.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        code: true,
-        status: true,
-        createdAt: true,
-      },
-    }),
-    db.assetFace.findMany({
-      orderBy: { id: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        code: true,
-        status: true,
-        asset: {
-          select: {
-            code: true,
-          },
-        },
-      },
-    }),
-  ]);
-
-  const assetsByStatus = buildStatusCounts(
-    assetsByStatusRows as Array<{ status: InventoryStatus; _count: { _all: number } }>
-  );
-  const facesByStatus = buildStatusCounts(
-    facesByStatusRows as Array<{ status: InventoryStatus; _count: { _all: number } }>
-  );
+  } = await caller.inventory.overview();
 
   const maintenanceAssets = assetsByStatus.MAINTENANCE;
   const maintenanceFaces = facesByStatus.MAINTENANCE;

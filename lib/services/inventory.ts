@@ -185,6 +185,92 @@ export type CreateAssetFaceRestrictionInput = z.infer<
 export type CreateMaintenanceWindowInput = z.infer<
   typeof createMaintenanceWindowSchema
 >;
+type InventoryStatus = (typeof assetStatusValues)[number];
+
+function buildStatusCounts(
+  rows: Array<{ status: InventoryStatus; _count: { _all: number } }>
+) {
+  const initial = Object.fromEntries(
+    assetStatusValues.map((status) => [status, 0])
+  ) as Record<InventoryStatus, number>;
+
+  for (const row of rows) {
+    initial[row.status] = row._count._all;
+  }
+
+  return initial;
+}
+
+export async function getInventoryOverview() {
+  const [
+    totalAssets,
+    totalFaces,
+    digitalAssets,
+    illuminatedAssets,
+    assetsWithoutFaces,
+    assetsByStatusRows,
+    facesByStatusRows,
+    latestAssets,
+    latestFaces,
+  ] = await Promise.all([
+    db.asset.count(),
+    db.assetFace.count(),
+    db.asset.count({ where: { digital: true } }),
+    db.asset.count({ where: { illuminated: true } }),
+    db.asset.count({ where: { faces: { none: {} } } }),
+    db.asset.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    }),
+    db.assetFace.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    }),
+    db.asset.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        code: true,
+        status: true,
+        createdAt: true,
+      },
+    }),
+    db.assetFace.findMany({
+      orderBy: { id: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        code: true,
+        status: true,
+        asset: {
+          select: {
+            code: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const assetsByStatus = buildStatusCounts(
+    assetsByStatusRows as Array<{ status: InventoryStatus; _count: { _all: number } }>
+  );
+  const facesByStatus = buildStatusCounts(
+    facesByStatusRows as Array<{ status: InventoryStatus; _count: { _all: number } }>
+  );
+
+  return {
+    totalAssets,
+    totalFaces,
+    digitalAssets,
+    illuminatedAssets,
+    assetsWithoutFaces,
+    assetsByStatus,
+    facesByStatus,
+    latestAssets,
+    latestFaces,
+  };
+}
 
 // ============================================================================
 // Taxonomy Services

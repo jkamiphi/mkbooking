@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, adminProcedure } from "../init";
+import { router, adminProcedure, publicProcedure } from "../init";
 import {
   assetFaceStatusSchema,
   assetStatusSchema,
@@ -29,6 +29,7 @@ import {
   listRoadTypes,
   listStructureTypes,
   listZones,
+  getInventoryOverview,
   createAsset,
   createAssetFace,
   createFacePosition,
@@ -46,7 +47,17 @@ import {
   updateZone,
 } from "@/lib/services/inventory";
 
+const listZonesInputSchema = z
+  .object({
+    provinceId: z.string().optional(),
+  })
+  .optional();
+
 export const inventoryRouter = router({
+  overview: adminProcedure.query(async () => {
+    return getInventoryOverview();
+  }),
+
   provinces: router({
     list: adminProcedure.query(async () => {
       return listProvinces();
@@ -60,13 +71,12 @@ export const inventoryRouter = router({
 
   zones: router({
     list: adminProcedure
-      .input(
-        z
-          .object({
-            provinceId: z.string().optional(),
-          })
-          .optional()
-      )
+      .input(listZonesInputSchema)
+      .query(async ({ input }) => {
+        return listZones(input);
+      }),
+    publicList: publicProcedure
+      .input(listZonesInputSchema)
       .query(async ({ input }) => {
         return listZones(input);
       }),
@@ -80,6 +90,9 @@ export const inventoryRouter = router({
 
   structureTypes: router({
     list: adminProcedure.query(async () => {
+      return listStructureTypes();
+    }),
+    publicList: publicProcedure.query(async () => {
       return listStructureTypes();
     }),
     create: adminProcedure

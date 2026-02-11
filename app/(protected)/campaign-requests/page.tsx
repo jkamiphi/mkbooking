@@ -1,11 +1,6 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { ClipboardList, Plus, Shapes, MapPin, CalendarDays, Hash } from "lucide-react";
-import { auth } from "@/lib/auth";
-import {
-  listCampaignRequestsForUser,
-  listCampaignRequestsSchema,
-} from "@/lib/services/campaign-request";
+import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { CampaignRequestStatusBadge } from "@/components/user/campaign-request-status";
 import { UserZoneNav } from "@/components/user/user-zone-nav";
 
@@ -24,17 +19,8 @@ export const metadata = {
 };
 
 export default async function CampaignRequestsPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  const data = await listCampaignRequestsForUser(
-    listCampaignRequestsSchema.parse({ take: 50, skip: 0 }),
-    {
-      userId: session?.user.id ?? "",
-      userEmail: session?.user.email,
-    }
-  );
+  const caller = await createServerTRPCCaller();
+  const data = await caller.catalog.requests.mine({ take: 50, skip: 0 });
 
   return (
     <div className="relative mx-auto max-w-5xl px-6 pb-12">

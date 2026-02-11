@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { router, adminProcedure, protectedProcedure } from "../init";
+import { TRPCError } from "@trpc/server";
+import {
+  router,
+  adminProcedure,
+  protectedProcedure,
+  publicProcedure,
+} from "../init";
 import {
   createPriceRule,
   createPriceRuleSchema,
@@ -8,6 +14,7 @@ import {
   createPromo,
   createPromoSchema,
   getCatalogFaceByFaceId,
+  getPublicCatalogFaceDetailById,
   listCatalogFaces,
   listHolds,
   listPromos,
@@ -23,14 +30,30 @@ import {
   confirmCampaignRequest,
   createCampaignRequest,
   createCampaignRequestSchema,
+  getCampaignRequestByIdForUser,
   getCampaignRequestById,
   listCampaignRequests,
+  listCampaignRequestsForUser,
   listCampaignRequestsSchema,
   suggestCampaignRequestFacesSchema,
   suggestFacesForCampaignRequest,
   updateCampaignRequestStatus,
   updateCampaignRequestStatusSchema,
 } from "@/lib/services/campaign-request";
+
+const publicFaceListInputSchema = z
+  .object({
+    search: z.string().optional(),
+    isPublished: z.boolean().optional(),
+    structureTypeId: z.string().optional(),
+    zoneId: z.string().optional(),
+    organizationId: z.string().optional(),
+    availableFrom: z.coerce.date().optional(),
+    availableTo: z.coerce.date().optional(),
+    skip: z.number().min(0).default(0),
+    take: z.number().min(1).max(100).default(50),
+  })
+  .optional();
 
 export const catalogRouter = router({
   faces: router({
@@ -50,10 +73,27 @@ export const catalogRouter = router({
       .query(async ({ input }) => {
         return listCatalogFaces(input);
       }),
+    publicList: publicProcedure
+      .input(publicFaceListInputSchema)
+      .query(async ({ input }) => {
+        return listCatalogFaces(input);
+      }),
     get: adminProcedure
       .input(z.object({ faceId: z.string() }))
       .query(async ({ input }) => {
         return getCatalogFaceByFaceId(input.faceId);
+      }),
+    publicDetail: publicProcedure
+      .input(
+        z.object({
+          faceId: z.string().min(1),
+          organizationId: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return getPublicCatalogFaceDetailById(input.faceId, {
+          organizationId: input.organizationId,
+        });
       }),
     upsert: adminProcedure
       .input(upsertCatalogFaceSchema)
@@ -148,6 +188,34 @@ export const catalogRouter = router({
       .input(z.object({ requestId: z.string().min(1) }))
       .query(async ({ input }) => {
         return getCampaignRequestById(input.requestId);
+      }),
+    mine: protectedProcedure
+      .input(listCampaignRequestsSchema.optional())
+      .query(async ({ ctx, input }) => {
+        return listCampaignRequestsForUser(
+          input ?? listCampaignRequestsSchema.parse({}),
+          {
+            userId: ctx.user.id,
+            userEmail: ctx.user.email,
+          }
+        );
+      }),
+    mineById: protectedProcedure
+      .input(z.object({ requestId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        const request = await getCampaignRequestByIdForUser(input.requestId, {
+          userId: ctx.user.id,
+          userEmail: ctx.user.email,
+        });
+
+        if (!request) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Campaign request not found",
+          });
+        }
+
+        return request;
       }),
 
     suggestFaces: adminProcedure

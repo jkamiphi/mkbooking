@@ -1,15 +1,11 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { ArrowLeft, MapPin, Sparkles } from "lucide-react";
-import { auth } from "@/lib/auth";
 import {
   formatFaceDimensions,
   formatPrice,
   getTrafficLabel,
 } from "@/lib/formatters/catalog-face";
-import { listCatalogFaces } from "@/lib/services/catalog";
-import { listStructureTypes, listZones } from "@/lib/services/inventory";
-import { getUserProfileByUserId } from "@/lib/services/user-profile";
+import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 import { UserHeaderActions } from "@/components/layout/user-header-actions";
 import { SearchFilters } from "./_components/search-filters";
 import { SearchResultsView } from "./_components/search-results-view";
@@ -39,10 +35,10 @@ function parseDateParam(value?: string) {
 export default async function SearchPage({ params, searchParams }: PageProps) {
   const { query } = await params;
   const awaitedSearchParams = await searchParams;
-
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const [session, caller] = await Promise.all([
+    getServerSession(),
+    createServerTRPCCaller(),
+  ]);
 
   const decodedQuery = decodeURIComponent(query);
   const searchTerm = decodedQuery === "all" ? undefined : decodedQuery;
@@ -62,14 +58,12 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     searchStateParams.toString() ? `?${searchStateParams.toString()}` : ""
   }`;
 
-  const profile = session?.user?.id
-    ? await getUserProfileByUserId(session.user.id)
-    : null;
+  const profile = session?.user?.id ? await caller.userProfile.current() : null;
   const organizationId =
     profile?.organizationRoles?.[0]?.organization?.id || undefined;
 
   const [catalog, structureTypes, zones] = await Promise.all([
-    listCatalogFaces({
+    caller.catalog.faces.publicList({
       search: searchTerm,
       isPublished: true,
       structureTypeId: typeId,
@@ -79,8 +73,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       take: 50,
       organizationId,
     }),
-    listStructureTypes(),
-    listZones(),
+    caller.inventory.structureTypes.publicList(),
+    caller.inventory.zones.publicList(),
   ]);
 
   const showPrices = Boolean(session);

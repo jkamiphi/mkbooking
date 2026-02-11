@@ -14,6 +14,11 @@ import {
 import { TRPCError } from "@trpc/server";
 
 export const userProfileRouter = router({
+  // Get the current user's profile without creating one
+  current: protectedProcedure.query(async ({ ctx }) => {
+    return getUserProfileByUserId(ctx.user.id);
+  }),
+
   // Get the current user's profile (creates if doesn't exist)
   me: protectedProcedure.query(async ({ ctx }) => {
     return getOrCreateUserProfile(ctx.user.id);

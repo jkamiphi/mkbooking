@@ -1,16 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
-import { headers } from "next/headers";
 import { ChevronRight, MapPin, Sparkles } from "lucide-react";
-import { auth } from "@/lib/auth";
 import {
   formatFaceDimensions,
   formatPrice,
   getTrafficLabel,
 } from "@/lib/formatters/catalog-face";
-import { listCatalogFaces } from "@/lib/services/catalog";
-import { listStructureTypes, listZones } from "@/lib/services/inventory";
-import { getUserProfileByUserId } from "@/lib/services/user-profile";
+import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 import { HomeSearchBar } from "@/components/home/home-search";
 import { ScrollNavigation } from "@/components/home/scroll-navigation";
 import { UserHeaderActions } from "@/components/layout/user-header-actions";
@@ -80,22 +76,21 @@ export default async function Home({
 }: {
   searchParams?: SearchParams;
 }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const [session, caller] = await Promise.all([
+    getServerSession(),
+    createServerTRPCCaller(),
+  ]);
 
   const query = getParam(searchParams?.q)?.trim() || undefined;
   const zoneId = getParam(searchParams?.zone) || undefined;
   const typeId = getParam(searchParams?.type) || undefined;
 
-  const profile = session?.user?.id
-    ? await getUserProfileByUserId(session.user.id)
-    : null;
+  const profile = session?.user?.id ? await caller.userProfile.current() : null;
   const organizationId =
     profile?.organizationRoles?.[0]?.organization?.id || undefined;
 
   const [catalog, structureTypes, zones] = await Promise.all([
-    listCatalogFaces({
+    caller.catalog.faces.publicList({
       search: query,
       isPublished: true,
       structureTypeId: typeId,
@@ -103,8 +98,8 @@ export default async function Home({
       take: 24,
       organizationId,
     }),
-    listStructureTypes(),
-    listZones(),
+    caller.inventory.structureTypes.publicList(),
+    caller.inventory.zones.publicList(),
   ]);
 
   const selectedZone = zones.find((zone) => zone.id === zoneId);

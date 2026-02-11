@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ClipboardCheck, Clock3, PackageOpen } from "lucide-react";
-import { auth } from "@/lib/auth";
-import { getCampaignRequestByIdForUser } from "@/lib/services/campaign-request";
+import { TRPCError } from "@trpc/server";
+import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { CampaignRequestStatusBadge } from "@/components/user/campaign-request-status";
 import { UserZoneNav } from "@/components/user/user-zone-nav";
 
@@ -22,19 +21,18 @@ function formatDate(value: Date | null) {
 
 export default async function CampaignRequestDetailPage({ params }: PageProps) {
   const { requestId } = await params;
-
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  const request = await getCampaignRequestByIdForUser(requestId, {
-    userId: session?.user.id ?? "",
-    userEmail: session?.user.email,
-  });
-
-  if (!request) {
-    notFound();
-  }
+  const caller = await createServerTRPCCaller();
+  const request = await caller.catalog.requests
+    .mineById({ requestId })
+    .catch((error: unknown) => {
+      if (
+        error instanceof TRPCError &&
+        (error.code === "NOT_FOUND" || error.code === "FORBIDDEN")
+      ) {
+        notFound();
+      }
+      throw error;
+    });
 
   return (
     <div className="relative mx-auto max-w-5xl px-6 pb-12">

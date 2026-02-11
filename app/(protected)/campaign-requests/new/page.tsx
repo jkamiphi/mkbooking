@@ -1,9 +1,6 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { ArrowLeft, ClipboardPlus } from "lucide-react";
-import { auth } from "@/lib/auth";
-import { listStructureTypes, listZones } from "@/lib/services/inventory";
-import { getUserProfileByUserId } from "@/lib/services/user-profile";
+import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { UserZoneNav } from "@/components/user/user-zone-nav";
 import { NewCampaignRequestForm } from "./new-campaign-request-form";
 
@@ -42,18 +39,12 @@ export const metadata = {
 
 export default async function NewCampaignRequestPage({ searchParams }: PageProps) {
   const params = await searchParams;
+  const caller = await createServerTRPCCaller();
 
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  const profile = session?.user?.id
-    ? await getUserProfileByUserId(session.user.id)
-    : null;
-
-  const [structureTypes, zones] = await Promise.all([
-    listStructureTypes(),
-    listZones(),
+  const [profile, structureTypes, zones] = await Promise.all([
+    caller.userProfile.current(),
+    caller.inventory.structureTypes.publicList(),
+    caller.inventory.zones.publicList(),
   ]);
 
   const returnToParam = getParam(params.returnTo);

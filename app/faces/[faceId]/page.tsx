@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
@@ -14,10 +13,8 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
-import { auth } from "@/lib/auth";
 import { formatFaceDimensions, formatPrice } from "@/lib/formatters/catalog-face";
-import { getPublicCatalogFaceDetailById } from "@/lib/services/catalog";
-import { getUserProfileByUserId } from "@/lib/services/user-profile";
+import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 
 type PageProps = {
   params: Promise<{ faceId: string }>;
@@ -119,18 +116,18 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
   const awaitedSearchParams = await searchParams;
   const fromParam = getParam(awaitedSearchParams.from);
   const returnHref = fromParam?.startsWith("/") ? fromParam : "/";
-
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  const profile = session?.user?.id
-    ? await getUserProfileByUserId(session.user.id)
-    : null;
+  const [session, caller] = await Promise.all([
+    getServerSession(),
+    createServerTRPCCaller(),
+  ]);
+  const profile = session?.user?.id ? await caller.userProfile.current() : null;
   const organizationId =
     profile?.organizationRoles?.[0]?.organization?.id || undefined;
 
-  const detail = await getPublicCatalogFaceDetailById(faceId, { organizationId });
+  const detail = await caller.catalog.faces.publicDetail({
+    faceId,
+    organizationId,
+  });
   if (!detail) notFound();
 
   const { face, effectivePrice, relatedFaces, promo } = detail;
