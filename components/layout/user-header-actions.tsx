@@ -3,7 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Bell, ChevronDown, ClipboardPlus, Home, LogOut, Search, UserRound } from "lucide-react";
+import {
+  Bell,
+  ChevronDown,
+  ClipboardList,
+  ClipboardPlus,
+  Home,
+  LogOut,
+  Package,
+  Search,
+  UserRound,
+} from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -115,6 +125,18 @@ export function UserHeaderActions({ user }: UserHeaderActionsProps) {
             <Link href="/campaign-requests/new" className="cursor-pointer">
               <ClipboardPlus className="h-4 w-4" />
               Nueva solicitud
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/campaign-requests" className="cursor-pointer">
+              <ClipboardList className="h-4 w-4" />
+              Mis solicitudes
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/orders" className="cursor-pointer">
+              <Package className="h-4 w-4" />
+              Mis órdenes
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

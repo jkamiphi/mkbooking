@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react";
+import { UserZoneNav } from "@/components/user/user-zone-nav";
 import { ProfileContent } from "./profile-content";
 
 export const metadata = {
@@ -21,6 +22,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      <UserZoneNav />
       <ProfileContent />
     </div>
   );

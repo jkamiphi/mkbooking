@@ -76,7 +76,6 @@ async function resolveUserProfile(userId?: string) {
       },
       organizationRoles: {
         where: { isActive: true },
-        take: 1,
         select: {
           organizationId: true,
           organization: { select: { id: true, isActive: true } },
@@ -207,6 +206,98 @@ export async function listCampaignRequests(
     total,
     hasMore: input.skip + requests.length < total,
   };
+}
+
+export async function listCampaignRequestsForUser(
+  input: z.infer<typeof listCampaignRequestsSchema>,
+  options: { userId: string; userEmail?: string | null }
+) {
+  const profile = await resolveUserProfile(options.userId);
+  const ownershipFilters = buildCampaignRequestOwnershipFilters(
+    profile,
+    options.userEmail
+  );
+
+  if (!ownershipFilters.length) {
+    return {
+      requests: [],
+      total: 0,
+      hasMore: false,
+    };
+  }
+
+  const where = {
+    ...(input.status ? { status: input.status } : {}),
+    OR: ownershipFilters,
+  };
+
+  const [requests, total] = await Promise.all([
+    db.campaignRequest.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }],
+      skip: input.skip,
+      take: input.take,
+      include: requestInclude,
+    }),
+    db.campaignRequest.count({ where }),
+  ]);
+
+  return {
+    requests,
+    total,
+    hasMore: input.skip + requests.length < total,
+  };
+}
+
+function buildCampaignRequestOwnershipFilters(
+  profile: Awaited<ReturnType<typeof resolveUserProfile>>,
+  userEmail?: string | null
+) {
+  const activeOrganizationIds = (profile?.organizationRoles ?? [])
+    .filter((membership) => membership.organization.isActive)
+    .map((membership) => membership.organizationId);
+
+  return [
+    profile?.id ? { createdById: profile.id } : null,
+    userEmail
+      ? {
+          contactEmail: {
+            equals: userEmail,
+            mode: "insensitive" as const,
+          },
+        }
+      : null,
+    activeOrganizationIds.length
+      ? {
+          organizationId: {
+            in: activeOrganizationIds,
+          },
+        }
+      : null,
+  ].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+}
+
+export async function getCampaignRequestByIdForUser(
+  requestId: string,
+  options: { userId: string; userEmail?: string | null }
+) {
+  const profile = await resolveUserProfile(options.userId);
+  const ownershipFilters = buildCampaignRequestOwnershipFilters(
+    profile,
+    options.userEmail
+  );
+
+  if (!ownershipFilters.length) {
+    return null;
+  }
+
+  return db.campaignRequest.findFirst({
+    where: {
+      id: requestId,
+      OR: ownershipFilters,
+    },
+    include: requestInclude,
+  });
 }
 
 export async function getCampaignRequestById(requestId: string) {

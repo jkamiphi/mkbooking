@@ -4,6 +4,7 @@ import { ArrowLeft, ClipboardPlus } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { listStructureTypes, listZones } from "@/lib/services/inventory";
 import { getUserProfileByUserId } from "@/lib/services/user-profile";
+import { UserZoneNav } from "@/components/user/user-zone-nav";
 import { NewCampaignRequestForm } from "./new-campaign-request-form";
 
 type PageProps = {
@@ -83,6 +84,8 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
           </Link>
         </div>
       </div>
+
+      <UserZoneNav />
 
       <NewCampaignRequestForm
         query={getParam(params.q) || undefined}
