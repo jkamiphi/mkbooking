@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Building2, ChevronLeft, CircleCheckBig, Sparkles, UserRound } from "lucide-react";
+import { Building2, ChevronLeft, CircleCheckBig, UserRound } from "lucide-react";
 import { signUp } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { AuthBrand, AuthHomeLink } from "@/components/auth/auth-brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -157,19 +158,7 @@ export function RegisterForm() {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <div className="mb-5 flex items-center justify-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30">
-          <Sparkles className="h-5 w-5" />
-        </span>
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
-            MK Booking
-          </p>
-          <p className="text-sm font-semibold text-neutral-900">
-            Catálogo OOH
-          </p>
-        </div>
-      </div>
+      <AuthBrand className="mb-5" />
 
       <Card className="overflow-hidden border-border/70 shadow-lg">
         <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
@@ -344,11 +333,7 @@ export function RegisterForm() {
         </div>
       </Card>
 
-      <p className="mt-4 text-center text-sm text-muted-foreground">
-        <Link href="/" className="font-medium text-primary hover:underline">
-          Regresar al home
-        </Link>
-      </p>
+      <AuthHomeLink className="mt-4" />
     </div>
   );
 }

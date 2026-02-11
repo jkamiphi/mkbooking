@@ -1,42 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "@/lib/auth-client";
+import { useState } from "react";
 import { AuthBrand, AuthHomeLink } from "@/components/auth/auth-brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authClient } from "@/lib/auth-client";
 
-export function LoginForm() {
-  const router = useRouter();
+export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const result = await signIn.email({
-        email,
-        password,
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/reset-password`
+          : undefined;
+
+      const result = await authClient.requestPasswordReset({
+        email: email.trim().toLowerCase(),
+        redirectTo,
       });
 
       if (result.error) {
-        setError(result.error.message || "Correo o contraseña inválidos");
+        setError(result.error.message || "No se pudo procesar la solicitud.");
         return;
       }
 
-      router.push("/profile");
-      router.refresh();
+      setSubmitted(true);
     } catch {
-      setError("Ocurrió un error inesperado");
+      setError("Ocurrió un error inesperado.");
     } finally {
       setLoading(false);
     }
@@ -48,13 +50,20 @@ export function LoginForm() {
 
       <Card className="border-border/70 shadow-lg">
         <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
+          <CardTitle className="text-2xl">Recuperar contraseña</CardTitle>
           <CardDescription>
-            Accede a tu cuenta para gestionar campañas, reservas y solicitudes.
+            Te enviaremos un enlace para restablecer tu contraseña.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-5">
+          {submitted ? (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+              Si ese correo existe en el sistema, recibirás un enlace para restablecer tu
+              contraseña.
+            </div>
+          ) : null}
+
           {error ? (
             <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
               {error}
@@ -63,43 +72,25 @@ export function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Correo electrónico</Label>
+              <Label htmlFor="forgot-email">Correo electrónico</Label>
               <Input
-                id="email"
+                id="forgot-email"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                required
                 placeholder="correo@ejemplo.com"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
                 required
-                placeholder="••••••••"
               />
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+              {loading ? "Enviando..." : "Enviar enlace de recuperación"}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta?{" "}
-            <Link href="/register" className="font-medium text-primary hover:underline">
-              Regístrate
+            <Link href="/login" className="font-medium text-primary hover:underline">
+              Volver a iniciar sesión
             </Link>
           </p>
         </CardContent>

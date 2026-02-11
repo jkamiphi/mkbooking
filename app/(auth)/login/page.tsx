@@ -1,10 +1,14 @@
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata = {
-  title: "Sign In - MK Booking",
-  description: "Sign in to your account",
+  title: "Iniciar sesión - MK Booking",
+  description: "Accede a tu cuenta de MK Booking.",
 };
 
 export default function LoginPage() {
-  return <LoginForm />;
+  return (
+    <div className="w-full py-6">
+      <LoginForm />
+    </div>
+  );
 }
