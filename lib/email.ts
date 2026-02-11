@@ -31,12 +31,21 @@ export async function sendEmail(input: SendEmailInput) {
         status: response.status,
         body: errorBody,
       });
+
+      console.info(
+        "[auth-email:fallback] Missing RESEND_API_KEY or AUTH_EMAIL_FROM.",
+      );
+      console.info("[auth-email:fallback] To:", input.to);
+      console.info("[auth-email:fallback] Subject:", input.subject);
+      console.info("[auth-email:fallback] Body:", input.text);
     }
 
     return;
   }
 
-  console.info("[auth-email:fallback] Missing RESEND_API_KEY or AUTH_EMAIL_FROM.");
+  console.info(
+    "[auth-email:fallback] Missing RESEND_API_KEY or AUTH_EMAIL_FROM.",
+  );
   console.info("[auth-email:fallback] To:", input.to);
   console.info("[auth-email:fallback] Subject:", input.subject);
   console.info("[auth-email:fallback] Body:", input.text);
