@@ -13,6 +13,7 @@ import { listStructureTypes, listZones } from "@/lib/services/inventory";
 import { getUserProfileByUserId } from "@/lib/services/user-profile";
 import { HomeSearchBar } from "@/components/home/home-search";
 import { ScrollNavigation } from "@/components/home/scroll-navigation";
+import { UserHeaderActions } from "@/components/layout/user-header-actions";
 
 type SearchParams = {
   q?: string | string[];
@@ -164,31 +165,28 @@ export default async function Home({
               MK Booking
             </p>
             <p className="text-lg font-semibold tracking-tight">Catálogo OOH</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Reserva espacios OOH por ubicación, tipo y fechas en minutos
-            </p>
           </div>
         </Link>
 
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2">
           {session ? (
-            <Link
-              href="/profile"
-              className="rounded-full border border-neutral-200 bg-white/80 px-3 py-2 font-semibold text-neutral-900 shadow-sm hover:bg-white"
-            >
-              Mi Panel
-            </Link>
+            <UserHeaderActions
+              user={{
+                email: session.user.email,
+                name: session.user.name,
+              }}
+            />
           ) : (
             <>
               <Link
                 href="/login"
-                className="rounded-full border border-neutral-200 bg-white/80 px-3 py-2 font-semibold text-neutral-900 shadow-sm hover:bg-white"
+                className="rounded-full border border-neutral-200 bg-white/80 px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm hover:bg-white"
               >
                 Iniciar sesión
               </Link>
               <Link
                 href="/register"
-                className="rounded-full bg-[#0359A8] px-3 py-2 font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
+                className="rounded-full bg-[#0359A8] px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8c]"
               >
                 Crear cuenta
               </Link>

@@ -10,6 +10,7 @@ import {
 import { listCatalogFaces } from "@/lib/services/catalog";
 import { listStructureTypes, listZones } from "@/lib/services/inventory";
 import { getUserProfileByUserId } from "@/lib/services/user-profile";
+import { UserHeaderActions } from "@/components/layout/user-header-actions";
 import { SearchFilters } from "./_components/search-filters";
 import { SearchResultsView } from "./_components/search-results-view";
 
@@ -196,12 +197,12 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           ) : null}
 
           {session ? (
-            <Link
-              href="/profile"
-              className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow-sm transition hover:bg-neutral-50"
-            >
-              Mi Panel
-            </Link>
+            <UserHeaderActions
+              user={{
+                email: session.user.email,
+                name: session.user.name,
+              }}
+            />
           ) : (
             <Link
               href="/login"

@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
-import { SignOutButton } from "@/components/auth/sign-out-button";
+import { UserHeaderActions } from "@/components/layout/user-header-actions";
 
 export default async function ProtectedLayout({
   children,
@@ -53,10 +53,12 @@ export default async function ProtectedLayout({
             <p className="text-lg font-semibold tracking-tight">Catálogo OOH</p>
           </div>
         </Link>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-neutral-600">{session.user.email}</span>
-          <SignOutButton />
-        </div>
+        <UserHeaderActions
+          user={{
+            email: session.user.email,
+            name: session.user.name,
+          }}
+        />
       </header>
       <main className="relative">{children}</main>
     </div>

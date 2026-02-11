@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { signIn } from "@/lib/auth-client";
 
 export function LoginForm() {
@@ -40,6 +41,20 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-md p-8">
+        <div className="mb-6 flex items-center justify-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
+              MK Booking
+            </p>
+            <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+              Catálogo OOH
+            </p>
+          </div>
+        </div>
+
         <h1 className="text-2xl font-bold text-center mb-6">Iniciar Sesión</h1>
 
         {error && (
@@ -104,6 +119,15 @@ export function LoginForm() {
           </Link>
         </p>
       </div>
+
+      <p className="mt-4 text-center text-sm text-neutral-600 dark:text-neutral-400">
+        <Link
+          href="/"
+          className="font-medium text-blue-600 hover:text-blue-500"
+        >
+          Regresar al home
+        </Link>
+      </p>
     </div>
   );
 }
