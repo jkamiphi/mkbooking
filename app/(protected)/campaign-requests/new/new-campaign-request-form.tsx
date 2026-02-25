@@ -339,42 +339,6 @@ export function NewCampaignRequestForm({
         </section>
       )}
 
-      {hasSearchContext ? (
-        <section className={sectionClassName}>
-          <h2 className="text-lg font-semibold text-neutral-900">Contexto de búsqueda</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Esta solicitud conserva los filtros activos para mantener continuidad con el catálogo.
-          </p>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {query ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-700">
-                <Search className="h-3.5 w-3.5 text-neutral-500" />
-                {query}
-              </span>
-            ) : null}
-            {selectedStructureType ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-700">
-                <Shapes className="h-3.5 w-3.5 text-neutral-500" />
-                {selectedStructureType.name}
-              </span>
-            ) : null}
-            {selectedZone ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-700">
-                <MapPin className="h-3.5 w-3.5 text-neutral-500" />
-                {selectedZone.name}, {selectedZone.province.name}
-              </span>
-            ) : null}
-            {fromDate || toDate ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-700">
-                <CalendarDays className="h-3.5 w-3.5 text-neutral-500" />
-                {fromDate ? formatDateLabel(fromDate) : "Sin fecha inicial"} -{" "}
-                {toDate ? formatDateLabel(toDate) : "Sin fecha final"}
-              </span>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
 
       <section className={sectionClassName}>
         <h2 className="text-lg font-semibold text-neutral-900">Configuración de campaña</h2>
