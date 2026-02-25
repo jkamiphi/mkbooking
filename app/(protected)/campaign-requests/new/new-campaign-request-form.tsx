@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ListFilter, MapPin, Search, Shapes } from "lucide-react";
+import { CalendarDays, ListFilter, MapPin, Search, Shapes, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
+import { useFaceSelection } from "@/components/face-selection-context";
 
 type StructureTypeOption = {
   id: string;
@@ -20,6 +22,15 @@ type ZoneOption = {
   id: string;
   name: string;
   province: { name: string };
+};
+
+type SelectedFaceData = {
+  id: string;
+  title: string;
+  location: string;
+  imageUrl: string | null;
+  priceLabel: string | null;
+  structureType: string;
 };
 
 type NewCampaignRequestFormProps = {
@@ -35,6 +46,7 @@ type NewCampaignRequestFormProps = {
   returnTo: string;
   structureTypes: StructureTypeOption[];
   zones: ZoneOption[];
+  selectedFaces?: SelectedFaceData[];
 };
 
 function formatDateLabel(value: string) {
@@ -60,8 +72,13 @@ export function NewCampaignRequestForm({
   returnTo,
   structureTypes,
   zones,
+  selectedFaces: initialSelectedFaces,
 }: NewCampaignRequestFormProps) {
   const router = useRouter();
+  const { clearSelection } = useFaceSelection();
+
+  const [faces, setFaces] = useState<SelectedFaceData[]>(initialSelectedFaces ?? []);
+  const hasFaces = faces.length > 0;
 
   const [structureTypeId, setStructureTypeId] = useState(defaultStructureTypeId ?? "");
   const [zoneId, setZoneId] = useState(defaultZoneId ?? "");
@@ -76,10 +93,10 @@ export function NewCampaignRequestForm({
   const selectedZone = zones.find((zone) => zone.id === zoneId);
   const hasSearchContext = Boolean(
     query ||
-      selectedStructureType ||
-      selectedZone ||
-      fromDate ||
-      toDate,
+    selectedStructureType ||
+    selectedZone ||
+    fromDate ||
+    toDate,
   );
 
   const sectionClassName =
@@ -92,8 +109,11 @@ export function NewCampaignRequestForm({
   const createRequestMutation = trpc.catalog.requests.create.useMutation({
     onSuccess: () => {
       toast.success("Solicitud enviada", {
-        description: "El equipo comercial revisará tu campaña desde admin.",
+        description: hasFaces
+          ? `Cotización de ${faces.length} ${faces.length === 1 ? "cara" : "caras"} enviada al equipo comercial.`
+          : "El equipo comercial revisará tu campaña desde admin.",
       });
+      clearSelection();
       router.push(returnTo);
       router.refresh();
     },
@@ -104,10 +124,18 @@ export function NewCampaignRequestForm({
     },
   });
 
+  function removeFaceFromForm(faceId: string) {
+    setFaces((prev) => {
+      const updated = prev.filter((f) => f.id !== faceId);
+      setQuantity(String(updated.length > 0 ? updated.length : 1));
+      return updated;
+    });
+  }
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    const parsedQuantity = Number(quantity);
+    const parsedQuantity = hasFaces ? faces.length : Number(quantity);
     if (!Number.isFinite(parsedQuantity) || parsedQuantity < 1) {
       toast.error("Cantidad inválida", {
         description: "Debes solicitar al menos 1 cara.",
@@ -126,11 +154,80 @@ export function NewCampaignRequestForm({
       contactName: contactName.trim() || undefined,
       contactEmail: contactEmail.trim() || undefined,
       contactPhone: contactPhone.trim() || undefined,
+      selectedFaceIds: hasFaces ? faces.map((f) => f.id) : undefined,
     });
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Selected faces section */}
+      {hasFaces && (
+        <section className={sectionClassName}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-neutral-900">
+              Caras seleccionadas ({faces.length})
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                setFaces([]);
+                setQuantity("1");
+              }}
+              className="text-xs font-medium text-neutral-500 transition hover:text-neutral-700"
+            >
+              Limpiar todo
+            </button>
+          </div>
+          <p className="mt-1 text-sm text-neutral-500">
+            Estas caras específicas serán incluidas en tu solicitud de cotización.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            {faces.map((face) => (
+              <div
+                key={face.id}
+                className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition hover:border-neutral-300"
+              >
+                <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+                  {face.imageUrl ? (
+                    <Image
+                      src={face.imageUrl}
+                      alt={face.title}
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-[#fcb814]/20 to-[#0359A8]/20">
+                      <span className="text-[8px] font-semibold text-neutral-500">
+                        {face.structureType}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-neutral-900">
+                    {face.title}
+                  </p>
+                  <p className="truncate text-xs text-neutral-500">
+                    {face.location}
+                    {face.priceLabel ? ` · ${face.priceLabel}/día` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeFaceFromForm(face.id)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-neutral-400 transition hover:bg-red-50 hover:text-red-500"
+                  aria-label={`Quitar ${face.title}`}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {hasSearchContext ? (
         <section className={sectionClassName}>
           <h2 className="text-lg font-semibold text-neutral-900">Contexto de búsqueda</h2>
@@ -171,63 +268,78 @@ export function NewCampaignRequestForm({
       <section className={sectionClassName}>
         <h2 className="text-lg font-semibold text-neutral-900">Configuración de campaña</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Define tipo, zona, cantidad y rango de fechas para solicitar asignación de caras.
+          {hasFaces
+            ? "Los detalles de tipo, zona y cantidad se derivarán de las caras seleccionadas."
+            : "Define tipo, zona, cantidad y rango de fechas para solicitar asignación de caras."}
         </p>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="request-structure-type" className="text-neutral-700">
-              Tipo de estructura
-            </Label>
-            <SelectNative
-              id="request-structure-type"
-              value={structureTypeId}
-              onChange={(event) => setStructureTypeId(event.target.value)}
-              className={controlClassName}
-            >
-              <option value="">Cualquier tipo</option>
-              {structureTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </SelectNative>
-          </div>
+          {!hasFaces && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="request-structure-type" className="text-neutral-700">
+                  Tipo de estructura
+                </Label>
+                <SelectNative
+                  id="request-structure-type"
+                  value={structureTypeId}
+                  onChange={(event) => setStructureTypeId(event.target.value)}
+                  className={controlClassName}
+                >
+                  <option value="">Cualquier tipo</option>
+                  {structureTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </SelectNative>
+              </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="request-zone" className="text-neutral-700">
-              Zona
-            </Label>
-            <SelectNative
-              id="request-zone"
-              value={zoneId}
-              onChange={(event) => setZoneId(event.target.value)}
-              className={controlClassName}
-            >
-              <option value="">Todas las zonas</option>
-              {zones.map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.name}, {zone.province.name}
-                </option>
-              ))}
-            </SelectNative>
-          </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="request-zone" className="text-neutral-700">
+                  Zona
+                </Label>
+                <SelectNative
+                  id="request-zone"
+                  value={zoneId}
+                  onChange={(event) => setZoneId(event.target.value)}
+                  className={controlClassName}
+                >
+                  <option value="">Todas las zonas</option>
+                  {zones.map((zone) => (
+                    <option key={zone.id} value={zone.id}>
+                      {zone.name}, {zone.province.name}
+                    </option>
+                  ))}
+                </SelectNative>
+              </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="request-quantity" className="text-neutral-700">
-              Cantidad de caras
-            </Label>
-            <Input
-              id="request-quantity"
-              type="number"
-              min={1}
-              max={500}
-              value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
-              className={controlClassName}
-            />
-            <p className="text-xs text-neutral-500">Mínimo 1, máximo 500.</p>
-          </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="request-quantity" className="text-neutral-700">
+                  Cantidad de caras
+                </Label>
+                <Input
+                  id="request-quantity"
+                  type="number"
+                  min={1}
+                  max={500}
+                  value={quantity}
+                  onChange={(event) => setQuantity(event.target.value)}
+                  className={controlClassName}
+                />
+                <p className="text-xs text-neutral-500">Mínimo 1, máximo 500.</p>
+              </div>
+            </>
+          )}
+
+          {hasFaces && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="text-neutral-700">Cantidad de caras</Label>
+              <p className="text-sm font-semibold text-neutral-900">
+                {faces.length} {faces.length === 1 ? "cara seleccionada" : "caras seleccionadas"}
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3 sm:col-span-2">
             <div className="space-y-1.5">
@@ -335,10 +447,15 @@ export function NewCampaignRequestForm({
             className="h-10 rounded-full bg-[#0359A8] px-5 text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8f]"
           >
             <ListFilter className="h-4 w-4" />
-            {createRequestMutation.isPending ? "Enviando..." : "Enviar solicitud"}
+            {createRequestMutation.isPending
+              ? "Enviando..."
+              : hasFaces
+                ? `Solicitar cotización (${faces.length})`
+                : "Enviar solicitud"}
           </Button>
         </div>
       </section>
     </form>
   );
 }
+

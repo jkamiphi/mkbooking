@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { formatFaceDimensions, formatPrice } from "@/lib/formatters/catalog-face";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
+import { FaceDetailActions } from "./_components/face-detail-actions";
 
 type PageProps = {
   params: Promise<{ faceId: string }>;
@@ -151,11 +152,11 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
   const gallery = dedupeGallery([
     ...(catalogFace.primaryImageUrl
       ? [
-          {
-            url: catalogFace.primaryImageUrl,
-            caption: catalogFace.title || `${face.asset.code}-${face.code}`,
-          },
-        ]
+        {
+          url: catalogFace.primaryImageUrl,
+          caption: catalogFace.title || `${face.asset.code}-${face.code}`,
+        },
+      ]
       : []),
     ...face.images.map((image) => ({
       url: image.image,
@@ -647,14 +648,18 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                     <p>Próximo vencimiento de bloqueo: {formatDateTime(nextHoldExpiration)}</p>
                   </div>
 
-                  <button
-                    type="button"
-                    className="mt-4 w-full rounded-xl bg-[#ff385c] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#e32f52]"
-                  >
-                    Reservar (próximamente)
-                  </button>
+                  <FaceDetailActions
+                    face={{
+                      id: face.id,
+                      title,
+                      location,
+                      imageUrl: catalogFace.primaryImageUrl ?? null,
+                      priceLabel: priceDailyLabel,
+                      structureType: face.asset.structureType.name,
+                    }}
+                  />
                   <p className="mt-2 text-center text-[11px] text-neutral-500">
-                    Solo usuarios autenticados pueden ver precios y reservar.
+                    Selecciona las caras que te interesan y solicita cotización.
                   </p>
                 </>
               ) : (
@@ -692,9 +697,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                 const itemPrice =
                   item.effectivePrice && showPrices
                     ? formatPrice(
-                        Number(item.effectivePrice.priceDaily),
-                        item.effectivePrice.currency ?? "USD"
-                      )
+                      Number(item.effectivePrice.priceDaily),
+                      item.effectivePrice.currency ?? "USD"
+                    )
                     : null;
 
                 return (

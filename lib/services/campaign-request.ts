@@ -27,6 +27,7 @@ export const createCampaignRequestSchema = z
     contactEmail: z.string().trim().email().max(160).optional(),
     contactPhone: z.string().trim().max(40).optional(),
     organizationId: z.string().optional(),
+    selectedFaceIds: z.array(z.string().min(1)).max(200).optional(),
   })
   .refine(
     (value) => {
@@ -120,26 +121,61 @@ export async function createCampaignRequest(
       .trim() || profile?.user?.name || null;
   const profileEmail = profile?.user?.email || null;
 
-  return db.campaignRequest.create({
-    data: {
-      query: input.query || null,
-      zoneId: input.zoneId || null,
-      structureTypeId: input.structureTypeId || null,
-      quantity: input.quantity,
-      fromDate: resolvedDates.fromDate,
-      toDate: resolvedDates.toDate,
-      notes: input.notes || null,
-      contactName: input.contactName || profileName || null,
-      contactEmail: input.contactEmail || profileEmail || null,
-      contactPhone: input.contactPhone || null,
-      organizationId: organizationId || null,
-      createdById: profile?.id || null,
-      status: "NEW",
-    },
+  const uniqueFaceIds = input.selectedFaceIds
+    ? Array.from(new Set(input.selectedFaceIds))
+    : [];
+
+  const result = await db.$transaction(async (tx) => {
+    const request = await tx.campaignRequest.create({
+      data: {
+        query: input.query || null,
+        zoneId: input.zoneId || null,
+        structureTypeId: input.structureTypeId || null,
+        quantity: uniqueFaceIds.length > 0 ? uniqueFaceIds.length : input.quantity,
+        fromDate: resolvedDates.fromDate,
+        toDate: resolvedDates.toDate,
+        notes: input.notes || null,
+        contactName: input.contactName || profileName || null,
+        contactEmail: input.contactEmail || profileEmail || null,
+        contactPhone: input.contactPhone || null,
+        organizationId: organizationId || null,
+        createdById: profile?.id || null,
+        status: "NEW",
+      },
+    });
+
+    if (uniqueFaceIds.length > 0) {
+      await tx.campaignRequestFaceAssignment.createMany({
+        data: uniqueFaceIds.map((faceId) => ({
+          requestId: request.id,
+          faceId,
+        })),
+      });
+    }
+
+    return request;
+  });
+
+  return db.campaignRequest.findUniqueOrThrow({
+    where: { id: result.id },
     include: {
       zone: { include: { province: true } },
       structureType: true,
       organization: true,
+      assignments: {
+        include: {
+          face: {
+            include: {
+              asset: {
+                include: {
+                  structureType: true,
+                  zone: { include: { province: true } },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 }
@@ -261,18 +297,18 @@ function buildCampaignRequestOwnershipFilters(
     profile?.id ? { createdById: profile.id } : null,
     userEmail
       ? {
-          contactEmail: {
-            equals: userEmail,
-            mode: "insensitive" as const,
-          },
-        }
+        contactEmail: {
+          equals: userEmail,
+          mode: "insensitive" as const,
+        },
+      }
       : null,
     activeOrganizationIds.length
       ? {
-          organizationId: {
-            in: activeOrganizationIds,
-          },
-        }
+        organizationId: {
+          in: activeOrganizationIds,
+        },
+      }
       : null,
   ].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 }

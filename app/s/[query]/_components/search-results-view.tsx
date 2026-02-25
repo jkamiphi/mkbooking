@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChevronRight, Grid3X3, List, MapPin } from "lucide-react";
+import { Check, ChevronRight, Grid3X3, List, MapPin, Plus } from "lucide-react";
 import { SearchMap, type SearchMapMarker } from "./search-map";
+import { useFaceSelection, type SelectedFace } from "@/components/face-selection-context";
 
 export type SearchResultCard = {
   id: string;
@@ -36,6 +37,17 @@ type SearchResultsViewProps = {
   searchPath: string;
 };
 
+function toSelectedFace(card: SearchResultCard): SelectedFace {
+  return {
+    id: card.id,
+    title: card.title,
+    location: card.location,
+    imageUrl: card.imageUrl,
+    priceLabel: card.priceLabel,
+    structureType: card.structureType,
+  };
+}
+
 export function SearchResultsView({
   total,
   searchTerm,
@@ -50,8 +62,9 @@ export function SearchResultsView({
   isAuthenticated,
   searchPath,
 }: SearchResultsViewProps) {
-  const [selectedFaceId, setSelectedFaceId] = useState<string | null>(null);
+  const [highlightedFaceId, setHighlightedFaceId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const { toggleFace, isSelected } = useFaceSelection();
 
   const campaignRequestUrl = (() => {
     const params = new URLSearchParams();
@@ -65,13 +78,13 @@ export function SearchResultsView({
   })();
 
   useEffect(() => {
-    if (!selectedFaceId) return;
+    if (!highlightedFaceId) return;
 
-    const card = cardRefs.current.get(selectedFaceId);
+    const card = cardRefs.current.get(highlightedFaceId);
     if (!card) return;
 
     card.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-  }, [selectedFaceId]);
+  }, [highlightedFaceId]);
 
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -118,7 +131,7 @@ export function SearchResultsView({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-20">
           <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
             {results.length === 0 ? (
               <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 py-16 text-center">
@@ -132,7 +145,8 @@ export function SearchResultsView({
               </div>
             ) : (
               results.map((face, index) => {
-                const isSelected = selectedFaceId === face.id;
+                const isHighlighted = highlightedFaceId === face.id;
+                const isFaceSelected = isSelected(face.id);
 
                 return (
                   <article
@@ -148,8 +162,9 @@ export function SearchResultsView({
                     className={`
                       group relative cursor-pointer overflow-hidden rounded-2xl border bg-white transition-all
                       hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-lg
-                      ${
-                        isSelected
+                      ${isFaceSelected
+                        ? "border-[#0359A8] ring-2 ring-[#0359A8]/20"
+                        : isHighlighted
                           ? "border-[#0359A8]/50 ring-2 ring-[#0359A8]/30 shadow-[0_16px_32px_-20px_rgba(3,89,168,0.7)]"
                           : "border-neutral-200/90"
                       }
@@ -165,6 +180,32 @@ export function SearchResultsView({
                       aria-label={`Ver detalles de ${face.title}`}
                       className="absolute inset-0 z-10"
                     />
+
+                    {/* Selection toggle button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFace(toSelectedFace(face));
+                      }}
+                      className={`
+                        absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full
+                        border-2 shadow-md transition-all duration-200
+                        ${isFaceSelected
+                          ? "border-[#0359A8] bg-[#0359A8] text-white scale-110"
+                          : "border-white/90 bg-white/80 text-neutral-500 opacity-0 group-hover:opacity-100 hover:border-[#0359A8] hover:bg-[#0359A8] hover:text-white backdrop-blur-sm"
+                        }
+                      `}
+                      aria-label={isFaceSelected ? `Quitar ${face.title} de selección` : `Agregar ${face.title} a selección`}
+                    >
+                      {isFaceSelected ? (
+                        <Check className="h-4 w-4" strokeWidth={3} />
+                      ) : (
+                        <Plus className="h-4 w-4" strokeWidth={2.5} />
+                      )}
+                    </button>
+
                     <div className="relative">
                       <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-1.5">
                         {face.isDigital && (
@@ -177,14 +218,23 @@ export function SearchResultsView({
                             Iluminado
                           </span>
                         )}
-                        {isSelected && (
+                        {isHighlighted && (
                           <span className="rounded-full border border-[#0359A8]/30 bg-[#0359A8]/15 px-2 py-0.5 text-[10px] font-semibold text-[#0359A8]">
                             Seleccionado en mapa
                           </span>
                         )}
                       </div>
 
-                      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-neutral-100 to-neutral-50">
+                      {/* Selection indicator overlay at bottom of image */}
+                      {isFaceSelected && (
+                        <div className="absolute inset-x-0 bottom-0 z-20 bg-linear-to-t from-[#0359A8]/80 to-transparent px-3 pb-2 pt-6">
+                          <span className="text-[10px] font-semibold text-white">
+                            ✓ En tu selección
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="relative aspect-4/3 overflow-hidden bg-linear-to-br from-neutral-100 to-neutral-50">
                         {face.imageUrl ? (
                           <Image
                             src={face.imageUrl}
@@ -195,7 +245,7 @@ export function SearchResultsView({
                             loading="lazy"
                           />
                         ) : (
-                          <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-[#fcb814]/20 to-[#0359A8]/20 p-4">
+                          <div className="flex h-full w-full flex-col items-center justify-center bg-linear-to-br from-[#fcb814]/20 to-[#0359A8]/20 p-4">
                             <span className="mb-2 rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold text-neutral-700">
                               {face.structureType}
                             </span>
@@ -208,7 +258,7 @@ export function SearchResultsView({
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="line-clamp-1 text-sm font-semibold text-neutral-900">{face.title}</h3>
                         {face.dimensionsLabel && (
-                          <span className="flex-shrink-0 whitespace-nowrap rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
+                          <span className="shrink-0 whitespace-nowrap rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
                             {face.dimensionsLabel}
                           </span>
                         )}
@@ -259,8 +309,8 @@ export function SearchResultsView({
           markers={markers}
           center={center}
           showPrices={showPrices}
-          selectedId={selectedFaceId}
-          onSelect={setSelectedFaceId}
+          selectedId={highlightedFaceId}
+          onSelect={setHighlightedFaceId}
         />
       </div>
 

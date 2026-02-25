@@ -12,6 +12,7 @@ type PageProps = {
     qty?: string | string[];
     from?: string | string[];
     to?: string | string[];
+    faces?: string | string[];
     returnTo?: string | string[];
   }>;
 };
@@ -41,14 +42,59 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
   const params = await searchParams;
   const caller = await createServerTRPCCaller();
 
+  const facesParam = getParam(params.faces) || "";
+  const faceIds = facesParam
+    ? facesParam.split(",").filter((id) => id.trim().length > 0)
+    : [];
+
   const [profile, structureTypes, zones] = await Promise.all([
     caller.userProfile.current(),
     caller.inventory.structureTypes.publicList(),
     caller.inventory.zones.publicList(),
   ]);
 
+  // Fetch selected face details if any
+  let selectedFacesData: Array<{
+    id: string;
+    title: string;
+    location: string;
+    imageUrl: string | null;
+    priceLabel: string | null;
+    structureType: string;
+  }> = [];
+
+  if (faceIds.length > 0) {
+    const organizationId =
+      profile?.organizationRoles?.[0]?.organization?.id || undefined;
+    const catalog = await caller.catalog.faces.publicList({
+      isPublished: true,
+      take: 100,
+      organizationId,
+    });
+
+    const faceIdSet = new Set(faceIds);
+    selectedFacesData = catalog.faces
+      .filter((face) => faceIdSet.has(face.id))
+      .map((face) => ({
+        id: face.id,
+        title:
+          face.catalogFace?.title ||
+          `${face.asset.structureType.name} · Cara ${face.code}`,
+        location: `${face.asset.zone.name}, ${face.asset.zone.province.name}`,
+        imageUrl: face.catalogFace?.primaryImageUrl ?? null,
+        priceLabel: face.effectivePrice
+          ? `$${Number(face.effectivePrice.priceDaily).toFixed(2)}`
+          : null,
+        structureType: face.asset.structureType.name,
+      }));
+  }
+
   const returnToParam = getParam(params.returnTo);
   const returnTo = returnToParam?.startsWith("/") ? returnToParam : "/s/all";
+  const defaultQuantity =
+    selectedFacesData.length > 0
+      ? selectedFacesData.length
+      : quantityFromPreset(getParam(params.qty) || undefined);
 
   return (
     <div className="relative mx-auto max-w-5xl px-6 pb-12">
@@ -60,7 +106,9 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
           <div>
             <h1 className="text-3xl font-bold text-neutral-900">Nueva solicitud de campaña</h1>
             <p className="text-sm text-neutral-500">
-              Solicita múltiples caras por criterio y deja la asignación para el equipo admin.
+              {selectedFacesData.length > 0
+                ? `Cotización para ${selectedFacesData.length} ${selectedFacesData.length === 1 ? "cara seleccionada" : "caras seleccionadas"}.`
+                : "Solicita múltiples caras por criterio y deja la asignación para el equipo admin."}
             </p>
           </div>
         </div>
@@ -82,7 +130,7 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
         query={getParam(params.q) || undefined}
         defaultStructureTypeId={getParam(params.type) || undefined}
         defaultZoneId={getParam(params.zone) || undefined}
-        defaultQuantity={quantityFromPreset(getParam(params.qty) || undefined)}
+        defaultQuantity={defaultQuantity}
         defaultFromDate={getParam(params.from) || undefined}
         defaultToDate={getParam(params.to) || undefined}
         defaultContactName={profile?.firstName || profile?.user?.name || undefined}
@@ -98,6 +146,7 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
           name: zone.name,
           province: { name: zone.province.name },
         }))}
+        selectedFaces={selectedFacesData}
       />
     </div>
   );
