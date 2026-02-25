@@ -21,6 +21,7 @@ import { trpc } from "@/lib/trpc/client";
 const statusOptions = [
   "NEW",
   "IN_REVIEW",
+  "QUOTATION_GENERATED",
   "PROPOSAL_SENT",
   "CONFIRMED",
   "REJECTED",
@@ -29,6 +30,7 @@ const statusOptions = [
 function statusBadgeVariant(status: string) {
   if (status === "NEW") return "info" as const;
   if (status === "IN_REVIEW") return "warning" as const;
+  if (status === "QUOTATION_GENERATED") return "warning" as const;
   if (status === "PROPOSAL_SENT") return "secondary" as const;
   if (status === "CONFIRMED") return "success" as const;
   return "destructive" as const;
@@ -37,6 +39,7 @@ function statusBadgeVariant(status: string) {
 function statusLabel(status: string) {
   if (status === "NEW") return "Nueva";
   if (status === "IN_REVIEW") return "En revisión";
+  if (status === "QUOTATION_GENERATED") return "Cotización generada";
   if (status === "PROPOSAL_SENT") return "Propuesta enviada";
   if (status === "CONFIRMED") return "Confirmada";
   if (status === "REJECTED") return "Rechazada";
@@ -107,6 +110,21 @@ export default function CampaignRequestsPage() {
     },
   });
 
+  const generateOrder = trpc.orders.generateFromRequest.useMutation({
+    onSuccess: (order) => {
+      utils.catalog.requests.list.invalidate();
+      if (selectedRequestId) {
+        utils.catalog.requests.get.invalidate({ requestId: selectedRequestId });
+      }
+      toast.success("Cotización generada", {
+        description: `Se ha creado el borrador de orden ${order.code}.`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Error al generar cotización", { description: error.message });
+    },
+  });
+
   const confirmRequest = trpc.catalog.requests.confirm.useMutation({
     onSuccess: (result) => {
       utils.catalog.requests.list.invalidate();
@@ -122,7 +140,7 @@ export default function CampaignRequestsPage() {
 
   const assignedFaceIds = selectedRequest
     ? draftFaceIdsByRequest[selectedRequest.id] ??
-      selectedRequest.assignments.map((assignment) => assignment.faceId)
+    selectedRequest.assignments.map((assignment) => assignment.faceId)
     : [];
 
   function toggleFace(faceId: string, checked: boolean) {
@@ -280,6 +298,17 @@ export default function CampaignRequestsPage() {
                   >
                     Actualizar estado
                   </Button>
+
+                  {selectedRequest.status === "IN_REVIEW" && assignedFaceIds.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => generateOrder.mutate({ requestId: selectedRequest.id })}
+                      disabled={generateOrder.isPending}
+                    >
+                      Generar Cotización
+                    </Button>
+                  )}
+
                   <Button
                     onClick={() => confirmRequest.mutate({ requestId: selectedRequest.id })}
                     disabled={confirmRequest.isPending || assignedFaceIds.length === 0}

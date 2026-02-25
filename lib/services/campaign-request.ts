@@ -7,6 +7,7 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const campaignRequestStatusValues = [
   "NEW",
   "IN_REVIEW",
+  "QUOTATION_GENERATED",
   "PROPOSAL_SENT",
   "CONFIRMED",
   "REJECTED",
