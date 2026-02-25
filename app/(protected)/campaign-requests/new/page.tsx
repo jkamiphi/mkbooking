@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, ClipboardPlus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { createServerTRPCCaller } from "@/lib/trpc/server";
-import { UserZoneNav } from "@/components/user/user-zone-nav";
 import { NewCampaignRequestForm } from "./new-campaign-request-form";
 
 type PageProps = {
@@ -97,34 +96,24 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
       : quantityFromPreset(getParam(params.qty) || undefined);
 
   return (
-    <div className="relative mx-auto max-w-5xl px-6 pb-12">
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30">
-            <ClipboardPlus className="h-6 w-6" />
-          </span>
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-900">Nueva solicitud de campaña</h1>
-            <p className="text-sm text-neutral-500">
-              {selectedFacesData.length > 0
-                ? `Cotización para ${selectedFacesData.length} ${selectedFacesData.length === 1 ? "cara seleccionada" : "caras seleccionadas"}.`
-                : "Solicita múltiples caras por criterio y deja la asignación para el equipo admin."}
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <Link
-            href={returnTo}
-            className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Volver a resultados
-          </Link>
-        </div>
+    <div>
+      <div className="mb-8">
+        <Link
+          href={returnTo}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-neutral-500 transition hover:text-neutral-700"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Volver
+        </Link>
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+          Nueva solicitud de campaña
+        </h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          {selectedFacesData.length > 0
+            ? `Cotización para ${selectedFacesData.length} ${selectedFacesData.length === 1 ? "cara seleccionada" : "caras seleccionadas"}.`
+            : "Solicita caras por criterio y el equipo preparará una propuesta."}
+        </p>
       </div>
-
-      <UserZoneNav />
 
       <NewCampaignRequestForm
         query={getParam(params.q) || undefined}
