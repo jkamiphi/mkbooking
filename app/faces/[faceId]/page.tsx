@@ -655,6 +655,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                       location,
                       imageUrl: catalogFace.primaryImageUrl ?? null,
                       priceLabel: priceDailyLabel,
+                      priceDaily: effectivePrice ? Number(effectivePrice.priceDaily) : null,
+                      currency: effectivePrice?.currency ?? "USD",
                       structureType: face.asset.structureType.name,
                     }}
                   />

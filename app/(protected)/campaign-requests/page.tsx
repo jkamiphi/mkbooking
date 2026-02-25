@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { CampaignRequestStatusBadge } from "@/components/user/campaign-request-status";
+import { SelectionEstimateBanner } from "./_components/selection-estimate-banner";
 
 function formatDate(value: Date | null) {
   if (!value) return "No definida";
@@ -39,6 +40,9 @@ export default async function CampaignRequestsPage() {
 
   return (
     <div>
+      {/* Selection estimation banner */}
+      <SelectionEstimateBanner />
+
       {/* Header */}
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>

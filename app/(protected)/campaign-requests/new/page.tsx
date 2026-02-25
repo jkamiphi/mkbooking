@@ -59,6 +59,8 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
     location: string;
     imageUrl: string | null;
     priceLabel: string | null;
+    priceDaily: number | null;
+    currency: string;
     structureType: string;
   }> = [];
 
@@ -84,6 +86,8 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
         priceLabel: face.effectivePrice
           ? `$${Number(face.effectivePrice.priceDaily).toFixed(2)}`
           : null,
+        priceDaily: face.effectivePrice ? Number(face.effectivePrice.priceDaily) : null,
+        currency: face.effectivePrice?.currency ?? "USD",
         structureType: face.asset.structureType.name,
       }));
   }

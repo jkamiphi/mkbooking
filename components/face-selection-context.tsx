@@ -17,6 +17,8 @@ export interface SelectedFace {
   location: string;
   imageUrl: string | null;
   priceLabel: string | null;
+  priceDaily: number | null;
+  currency: string;
   structureType: string;
 }
 

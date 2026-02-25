@@ -30,6 +30,8 @@ type SelectedFaceData = {
   location: string;
   imageUrl: string | null;
   priceLabel: string | null;
+  priceDaily: number | null;
+  currency: string;
   structureType: string;
 };
 
@@ -225,6 +227,71 @@ export function NewCampaignRequestForm({
           <p className="mt-1 text-sm text-neutral-500">
             Estas caras específicas serán incluidas en tu solicitud de cotización.
           </p>
+
+          {/* Price estimation */}
+          {(() => {
+            const pricedFaces = faces.filter((f) => f.priceDaily !== null && f.priceDaily > 0);
+            if (pricedFaces.length === 0) return null;
+
+            const dailyTotal = pricedFaces.reduce((sum, f) => sum + (f.priceDaily ?? 0), 0);
+            const currency = pricedFaces[0]?.currency ?? "USD";
+
+            let periodDays: number | null = null;
+            if (fromDate && toDate) {
+              const start = new Date(`${fromDate}T00:00:00`);
+              const end = new Date(`${toDate}T00:00:00`);
+              if (Number.isFinite(start.getTime()) && Number.isFinite(end.getTime())) {
+                periodDays = Math.max(
+                  1,
+                  Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+                );
+              }
+            }
+
+            const fmt = (v: number) => {
+              try {
+                return new Intl.NumberFormat("es-PA", {
+                  style: "currency",
+                  currency,
+                  maximumFractionDigits: 0,
+                }).format(v);
+              } catch {
+                return `$${v.toFixed(0)}`;
+              }
+            };
+
+            return (
+              <div className="mt-4 rounded-2xl border border-[#0359A8]/20 bg-[#0359A8]/5 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#0359A8]/70">
+                  Estimación
+                </p>
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                  <div>
+                    <span className="text-2xl font-bold text-neutral-900">
+                      {fmt(dailyTotal)}
+                    </span>
+                    <span className="ml-1 text-sm text-neutral-500">/día</span>
+                  </div>
+                  {periodDays !== null && (
+                    <div>
+                      <span className="text-lg font-semibold text-neutral-900">
+                        {fmt(dailyTotal * periodDays)}
+                      </span>
+                      <span className="ml-1 text-sm text-neutral-500">
+                        total · {periodDays} {periodDays === 1 ? "día" : "días"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {pricedFaces.length < faces.length && (
+                  <p className="mt-2 text-xs text-neutral-500">
+                    * {faces.length - pricedFaces.length}{" "}
+                    {faces.length - pricedFaces.length === 1 ? "cara" : "caras"} sin precio configurado.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="mt-4 space-y-2">
             {faces.map((face) => (

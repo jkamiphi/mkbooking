@@ -54,9 +54,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   if (zoneId) searchStateParams.set("zone", zoneId);
   if (fromDate) searchStateParams.set("from", fromDate);
   if (toDate) searchStateParams.set("to", toDate);
-  const currentSearchPath = `/s/${encodeURIComponent(decodedQuery)}${
-    searchStateParams.toString() ? `?${searchStateParams.toString()}` : ""
-  }`;
+  const currentSearchPath = `/s/${encodeURIComponent(decodedQuery)}${searchStateParams.toString() ? `?${searchStateParams.toString()}` : ""
+    }`;
 
   const profile = session?.user?.id ? await caller.userProfile.current() : null;
   const organizationId =
@@ -94,9 +93,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     const priceLabel =
       face.effectivePrice && showPrices
         ? formatPrice(
-            Number(face.effectivePrice.priceDaily),
-            face.effectivePrice.currency ?? "USD"
-          )
+          Number(face.effectivePrice.priceDaily),
+          face.effectivePrice.currency ?? "USD"
+        )
         : null;
 
     return {
@@ -111,6 +110,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       dimensionsLabel: dimensions?.label ?? null,
       areaLabel: dimensions?.areaLabel ?? null,
       priceLabel,
+      priceDaily: face.effectivePrice ? Number(face.effectivePrice.priceDaily) : null,
+      currency: face.effectivePrice?.currency ?? "USD",
       structureType: face.asset.structureType.name,
     };
   });
@@ -130,9 +131,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         price:
           face.effectivePrice && showPrices
             ? formatPrice(
-                Number(face.effectivePrice.priceDaily),
-                face.effectivePrice.currency ?? "USD"
-              )
+              Number(face.effectivePrice.priceDaily),
+              face.effectivePrice.currency ?? "USD"
+            )
             : null,
         structureType: face.asset.structureType.name,
         href: `/faces/${face.id}?from=${encodeURIComponent(currentSearchPath)}`,
@@ -145,9 +146,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const mapCenter =
     markers.length > 0
       ? {
-          lat: markers.reduce((sum, m) => sum + m.lat, 0) / markers.length,
-          lng: markers.reduce((sum, m) => sum + m.lng, 0) / markers.length,
-        }
+        lat: markers.reduce((sum, m) => sum + m.lat, 0) / markers.length,
+        lng: markers.reduce((sum, m) => sum + m.lng, 0) / markers.length,
+      }
       : defaultCenter;
 
   return (

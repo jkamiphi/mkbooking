@@ -19,6 +19,8 @@ export type SearchResultCard = {
   dimensionsLabel: string | null;
   areaLabel: string | null;
   priceLabel: string | null;
+  priceDaily: number | null;
+  currency: string;
   structureType: string;
 };
 
@@ -44,6 +46,8 @@ function toSelectedFace(card: SearchResultCard): SelectedFace {
     location: card.location,
     imageUrl: card.imageUrl,
     priceLabel: card.priceLabel,
+    priceDaily: card.priceDaily,
+    currency: card.currency,
     structureType: card.structureType,
   };
 }
