@@ -7,7 +7,6 @@ const navItems = [
   { href: "/admin/catalog/faces", label: "Caras" },
   { href: "/admin/catalog/pricing", label: "Precios" },
   { href: "/admin/catalog/holds", label: "Reservas" },
-  { href: "/admin/catalog/requests", label: "Solicitudes" },
 ];
 
 export function CatalogNav() {

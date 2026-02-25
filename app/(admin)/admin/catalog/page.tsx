@@ -22,11 +22,6 @@ const cards = [
     title: "Reservas",
     description: "Gestionar reservas activas y bloqueos de disponibilidad.",
   },
-  {
-    href: "/admin/catalog/requests",
-    title: "Solicitudes",
-    description: "Revisar solicitudes masivas y asignar caras para confirmar.",
-  },
 ];
 
 export default function CatalogPage() {

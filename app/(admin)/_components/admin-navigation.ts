@@ -6,6 +6,7 @@ import {
   Building2,
   Boxes,
   BookOpen,
+  ClipboardList,
   FileText,
   Settings,
 } from "lucide-react";
@@ -46,6 +47,12 @@ export const adminNavigation: AdminNavigationItem[] = [
     name: "Catálogo",
     href: "/admin/catalog",
     icon: BookOpen,
+    roles: ["SUPERADMIN", "STAFF"],
+  },
+  {
+    name: "Solicitudes",
+    href: "/admin/requests",
+    icon: ClipboardList,
     roles: ["SUPERADMIN", "STAFF"],
   },
   {
