@@ -305,10 +305,10 @@ function mapFacesWithEffectivePrice<T extends FacePricingContext>({
       ...face,
       effectivePrice: rule
         ? {
-            priceDaily: rule.priceDaily,
-            currency: rule.currency,
-            ruleId: rule.id,
-          }
+          priceDaily: rule.priceDaily,
+          currency: rule.currency,
+          ruleId: rule.id,
+        }
         : null,
     };
   });
@@ -571,10 +571,10 @@ export async function getPublicCatalogFaceDetailById(
     relatedFaces,
     effectivePrice: effectiveRule
       ? {
-          priceDaily: effectiveRule.priceDaily,
-          currency: effectiveRule.currency,
-          ruleId: effectiveRule.id,
-        }
+        priceDaily: effectiveRule.priceDaily,
+        currency: effectiveRule.currency,
+        ruleId: effectiveRule.id,
+      }
       : null,
   };
 }
@@ -689,9 +689,9 @@ export async function createHold(
   const expiresAt = new Date(Date.now() + DAY_IN_MS);
   const profile = createdByUserId
     ? await db.userProfile.findUnique({
-        where: { userId: createdByUserId },
-        select: { id: true },
-      })
+      where: { userId: createdByUserId },
+      select: { id: true },
+    })
     : null;
 
   return db.catalogHold.create({
@@ -710,4 +710,143 @@ export async function releaseHold(holdId: string) {
     where: { id: holdId },
     data: { status: "RELEASED", releasedAt: new Date() },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Availability check for pre-reservation
+// ---------------------------------------------------------------------------
+
+export const checkFacesAvailabilitySchema = z.object({
+  faceIds: z.array(z.string().min(1)).min(1).max(200),
+  fromDate: z.coerce.date().optional(),
+  toDate: z.coerce.date().optional(),
+});
+
+export type FaceAvailabilityResult = {
+  faceId: string;
+  code: string;
+  title: string;
+};
+
+export type FaceUnavailableResult = FaceAvailabilityResult & {
+  reason: string;
+};
+
+export async function checkFacesAvailability(
+  input: z.infer<typeof checkFacesAvailabilitySchema>
+) {
+  const now = new Date();
+  const uniqueIds = Array.from(new Set(input.faceIds));
+
+  // Fetch all faces with their related availability data in a single query
+  const faces = await db.assetFace.findMany({
+    where: { id: { in: uniqueIds } },
+    include: {
+      asset: {
+        include: {
+          structureType: true,
+          maintenanceWindows: true,
+        },
+      },
+      catalogFace: {
+        include: {
+          holds: {
+            where: {
+              status: "ACTIVE",
+              expiresAt: { gte: now },
+            },
+          },
+        },
+      },
+      maintenanceWindows: true,
+    },
+  });
+
+  const faceMap = new Map(faces.map((f) => [f.id, f]));
+
+  const available: FaceAvailabilityResult[] = [];
+  const unavailable: FaceUnavailableResult[] = [];
+
+  for (const id of uniqueIds) {
+    const face = faceMap.get(id);
+
+    if (!face) {
+      unavailable.push({
+        faceId: id,
+        code: "—",
+        title: "Cara no encontrada",
+        reason: "La cara ya no existe en el sistema.",
+      });
+      continue;
+    }
+
+    const title =
+      face.catalogFace?.title ||
+      `${face.asset.structureType.name} · Cara ${face.code}`;
+    const base = { faceId: id, code: face.code, title };
+
+    // 1. Face or asset not active
+    if (face.status !== "ACTIVE") {
+      unavailable.push({
+        ...base,
+        reason: `Cara en estado ${face.status.toLowerCase()}.`,
+      });
+      continue;
+    }
+    if (face.asset.status !== "ACTIVE") {
+      unavailable.push({
+        ...base,
+        reason: `Activo en estado ${face.asset.status.toLowerCase()}.`,
+      });
+      continue;
+    }
+
+    // 2. CatalogFace must exist and be published
+    if (!face.catalogFace || !face.catalogFace.isPublished) {
+      unavailable.push({
+        ...base,
+        reason: "Cara no publicada en el catálogo.",
+      });
+      continue;
+    }
+
+    // 3. Active holds
+    if (face.catalogFace.holds.length > 0) {
+      unavailable.push({
+        ...base,
+        reason: "Cara reservada (hold activo).",
+      });
+      continue;
+    }
+
+    // 4. Maintenance windows overlapping requested date range
+    if (input.fromDate || input.toDate) {
+      const rangeStart = input.fromDate ?? input.toDate ?? now;
+      const rangeEnd = input.toDate ?? input.fromDate ?? now;
+
+      const hasOverlappingFaceMaintenance = face.maintenanceWindows.some(
+        (w) => w.startDate <= rangeEnd && w.endDate >= rangeStart
+      );
+
+      const hasOverlappingAssetMaintenance =
+        face.asset.maintenanceWindows.some(
+          (w) =>
+            w.faceId === null &&
+            w.startDate <= rangeEnd &&
+            w.endDate >= rangeStart
+        );
+
+      if (hasOverlappingFaceMaintenance || hasOverlappingAssetMaintenance) {
+        unavailable.push({
+          ...base,
+          reason: "Cara en mantenimiento durante el período solicitado.",
+        });
+        continue;
+      }
+    }
+
+    available.push(base);
+  }
+
+  return { available, unavailable };
 }

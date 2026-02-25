@@ -106,6 +106,9 @@ export function NewCampaignRequestForm({
   const textareaClassName =
     "min-h-24 rounded-2xl border-neutral-200 bg-white px-4 py-3 shadow-none transition focus-visible:border-[#0359A8] focus-visible:ring-2 focus-visible:ring-[#0359A8]/20";
 
+  const trpcUtils = trpc.useUtils();
+  const [isValidating, setIsValidating] = useState(false);
+
   const createRequestMutation = trpc.catalog.requests.create.useMutation({
     onSuccess: () => {
       toast.success("Solicitud enviada", {
@@ -132,7 +135,7 @@ export function NewCampaignRequestForm({
     });
   }
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
     const parsedQuantity = hasFaces ? faces.length : Number(quantity);
@@ -141,6 +144,47 @@ export function NewCampaignRequestForm({
         description: "Debes solicitar al menos 1 cara.",
       });
       return;
+    }
+
+    // --- Final availability revalidation ---
+    if (hasFaces) {
+      setIsValidating(true);
+      try {
+        const result = await trpcUtils.catalog.faces.checkAvailability.fetch({
+          faceIds: faces.map((f) => f.id),
+          fromDate: fromDate ? new Date(`${fromDate}T00:00:00`) : undefined,
+          toDate: toDate ? new Date(`${toDate}T00:00:00`) : undefined,
+        });
+
+        if (result.unavailable.length > 0) {
+          const unavailableIds = new Set(
+            result.unavailable.map((u) => u.faceId)
+          );
+          setFaces((prev) => {
+            const updated = prev.filter((f) => !unavailableIds.has(f.id));
+            setQuantity(String(updated.length > 0 ? updated.length : 1));
+            return updated;
+          });
+
+          const details = result.unavailable
+            .map((u) => `• ${u.title}: ${u.reason}`)
+            .join("\n");
+
+          toast.error("Algunas caras ya no están disponibles", {
+            description: details,
+            duration: 8000,
+          });
+          return;
+        }
+      } catch {
+        toast.error("Error al validar disponibilidad", {
+          description:
+            "No se pudo verificar la disponibilidad. Intenta de nuevo.",
+        });
+        return;
+      } finally {
+        setIsValidating(false);
+      }
     }
 
     createRequestMutation.mutate({
@@ -436,22 +480,24 @@ export function NewCampaignRequestForm({
             type="button"
             variant="outline"
             onClick={() => router.push(returnTo)}
-            disabled={createRequestMutation.isPending}
+            disabled={isValidating || createRequestMutation.isPending}
             className="h-10 rounded-full border-neutral-200 bg-white px-5 text-neutral-700 shadow-none hover:bg-neutral-50"
           >
             Cancelar
           </Button>
           <Button
             type="submit"
-            disabled={createRequestMutation.isPending}
+            disabled={isValidating || createRequestMutation.isPending}
             className="h-10 rounded-full bg-[#0359A8] px-5 text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8f]"
           >
             <ListFilter className="h-4 w-4" />
-            {createRequestMutation.isPending
-              ? "Enviando..."
-              : hasFaces
-                ? `Solicitar cotización (${faces.length})`
-                : "Enviar solicitud"}
+            {isValidating
+              ? "Verificando disponibilidad..."
+              : createRequestMutation.isPending
+                ? "Enviando..."
+                : hasFaces
+                  ? `Solicitar cotización (${faces.length})`
+                  : "Enviar solicitud"}
           </Button>
         </div>
       </section>

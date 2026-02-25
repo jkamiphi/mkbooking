@@ -13,6 +13,8 @@ import {
   createHoldSchema,
   createPromo,
   createPromoSchema,
+  checkFacesAvailability,
+  checkFacesAvailabilitySchema,
   getCatalogFaceByFaceId,
   getPublicCatalogFaceDetailById,
   listCatalogFaces,
@@ -99,6 +101,11 @@ export const catalogRouter = router({
       .input(upsertCatalogFaceSchema)
       .mutation(async ({ input }) => {
         return upsertCatalogFace(input);
+      }),
+    checkAvailability: protectedProcedure
+      .input(checkFacesAvailabilitySchema)
+      .query(async ({ input }) => {
+        return checkFacesAvailability(input);
       }),
   }),
 

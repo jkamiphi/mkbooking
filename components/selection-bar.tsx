@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CheckCircle2, ChevronUp, ShoppingCart, Trash2, X } from "lucide-react";
 import { useFaceSelection } from "@/components/face-selection-context";
 
@@ -10,7 +11,10 @@ export function SelectionBar() {
     const { selectedFaces, selectionCount, removeFace, clearSelection } =
         useFaceSelection();
     const [isExpanded, setIsExpanded] = useState(false);
+    const pathname = usePathname();
 
+    // Hide on campaign-requests pages (the form already shows selected faces)
+    if (pathname.startsWith("/campaign-requests")) return null;
     if (selectionCount === 0) return null;
 
     const faceIdsParam = selectedFaces.map((f) => f.id).join(",");
