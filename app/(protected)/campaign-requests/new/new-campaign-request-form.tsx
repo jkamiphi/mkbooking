@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ListFilter, MapPin, Search, Shapes, Trash2, X } from "lucide-react";
+import { ListFilter, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,11 @@ type SelectedFaceData = {
   structureType: string;
 };
 
+type SelectedServiceState = {
+  quantity: string;
+  notes: string;
+};
+
 type NewCampaignRequestFormProps = {
   query?: string;
   defaultStructureTypeId?: string;
@@ -51,14 +56,16 @@ type NewCampaignRequestFormProps = {
   selectedFaces?: SelectedFaceData[];
 };
 
-function formatDateLabel(value: string) {
-  const parsed = new Date(`${value}T00:00:00`);
-  if (!Number.isFinite(parsed.getTime())) return value;
-  return parsed.toLocaleDateString("es-PA", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+function formatCurrency(value: number, currency = "USD") {
+  try {
+    return new Intl.NumberFormat("es-PA", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `$${value.toFixed(2)}`;
+  }
 }
 
 export function NewCampaignRequestForm({
@@ -91,15 +98,9 @@ export function NewCampaignRequestForm({
   const [contactName, setContactName] = useState(defaultContactName ?? "");
   const [contactEmail, setContactEmail] = useState(defaultContactEmail ?? "");
   const [contactPhone, setContactPhone] = useState(defaultContactPhone ?? "");
-  const selectedStructureType = structureTypes.find((type) => type.id === structureTypeId);
-  const selectedZone = zones.find((zone) => zone.id === zoneId);
-  const hasSearchContext = Boolean(
-    query ||
-    selectedStructureType ||
-    selectedZone ||
-    fromDate ||
-    toDate,
-  );
+  const [selectedServices, setSelectedServices] = useState<
+    Record<string, SelectedServiceState>
+  >({});
 
   const sectionClassName =
     "rounded-3xl border border-neutral-200 bg-white/90 p-6 shadow-lg backdrop-blur-xl";
@@ -110,6 +111,54 @@ export function NewCampaignRequestForm({
 
   const trpcUtils = trpc.useUtils();
   const [isValidating, setIsValidating] = useState(false);
+  const { data: availableServices, isLoading: isServicesLoading } =
+    trpc.catalog.services.publicList.useQuery();
+
+  const pricedFaces = faces.filter((f) => f.priceDaily !== null && f.priceDaily > 0);
+  const rentalCurrency = pricedFaces[0]?.currency ?? "USD";
+  const rentalDailyTotal = pricedFaces.reduce(
+    (sum, face) => sum + (face.priceDaily ?? 0),
+    0
+  );
+  const estimatedDays = (() => {
+    if (!fromDate || !toDate) return null;
+    const start = new Date(`${fromDate}T00:00:00`);
+    const end = new Date(`${toDate}T00:00:00`);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+      return null;
+    }
+
+    return Math.max(
+      1,
+      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    );
+  })();
+  const rentalEstimatedSubtotal =
+    estimatedDays !== null ? rentalDailyTotal * estimatedDays : rentalDailyTotal;
+
+  const selectedServiceRows = (availableServices ?? [])
+    .filter((service) => Boolean(selectedServices[service.id]))
+    .map((service) => {
+      const quantity = Number(selectedServices[service.id]?.quantity || "1");
+      const normalizedQuantity =
+        Number.isFinite(quantity) && quantity > 0 ? Math.floor(quantity) : 1;
+      const unitPrice = Number(service.basePrice);
+      return {
+        serviceId: service.id,
+        name: service.name,
+        quantity: normalizedQuantity,
+        unitPrice,
+        subtotal: normalizedQuantity * unitPrice,
+        notes: selectedServices[service.id]?.notes?.trim() || undefined,
+      };
+    });
+  const servicesSubtotal = selectedServiceRows.reduce(
+    (sum, service) => sum + service.subtotal,
+    0
+  );
+  const combinedSubtotal = rentalEstimatedSubtotal + servicesSubtotal;
+  const combinedTax = combinedSubtotal * 0.07;
+  const combinedTotal = combinedSubtotal + combinedTax;
 
   const createRequestMutation = trpc.catalog.requests.create.useMutation({
     onSuccess: () => {
@@ -201,6 +250,26 @@ export function NewCampaignRequestForm({
       contactEmail: contactEmail.trim() || undefined,
       contactPhone: contactPhone.trim() || undefined,
       selectedFaceIds: hasFaces ? faces.map((f) => f.id) : undefined,
+      selectedServices: selectedServiceRows.map((service) => ({
+        serviceId: service.serviceId,
+        quantity: service.quantity,
+        notes: service.notes,
+      })),
+    });
+  }
+
+  function toggleService(serviceId: string, checked: boolean) {
+    setSelectedServices((prev) => {
+      if (!checked) {
+        const next = { ...prev };
+        delete next[serviceId];
+        return next;
+      }
+
+      return {
+        ...prev,
+        [serviceId]: prev[serviceId] ?? { quantity: "1", notes: "" },
+      };
     });
   }
 
@@ -459,6 +528,151 @@ export function NewCampaignRequestForm({
       </section>
 
       <section className={sectionClassName}>
+        <h2 className="text-lg font-semibold text-neutral-900">
+          Servicios adicionales
+        </h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Selecciona servicios facturables adicionales para esta campaña.
+        </p>
+
+        {isServicesLoading ? (
+          <div className="mt-4 text-sm text-neutral-500">Cargando servicios...</div>
+        ) : !availableServices || availableServices.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">
+            No hay servicios adicionales activos por ahora.
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {availableServices.map((service) => {
+              const serviceState = selectedServices[service.id];
+              const isSelected = Boolean(serviceState);
+              const quantity = Number(serviceState?.quantity || "1");
+              const normalizedQuantity =
+                Number.isFinite(quantity) && quantity > 0 ? Math.floor(quantity) : 1;
+              const unitPrice = Number(service.basePrice);
+              const subtotal = normalizedQuantity * unitPrice;
+
+              return (
+                <div
+                  key={service.id}
+                  className={`rounded-2xl border p-4 transition ${isSelected
+                    ? "border-[#0359A8]/40 bg-[#0359A8]/5"
+                    : "border-neutral-200 bg-white"
+                    }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(event) =>
+                          toggleService(service.id, event.target.checked)
+                        }
+                        className="mt-1 h-4 w-4 rounded border-neutral-300 text-[#0359A8] focus:ring-[#0359A8]"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-900">
+                          {service.name}
+                        </p>
+                        {service.description && (
+                          <p className="mt-0.5 text-xs text-neutral-500">
+                            {service.description}
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                    <div className="text-right text-sm font-semibold text-neutral-900">
+                      {formatCurrency(unitPrice, service.currency)}
+                    </div>
+                  </div>
+
+                  {isSelected && (
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-neutral-600">Cantidad</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={serviceState?.quantity ?? "1"}
+                          onChange={(event) =>
+                            setSelectedServices((prev) => ({
+                              ...prev,
+                              [service.id]: {
+                                quantity: event.target.value,
+                                notes: prev[service.id]?.notes ?? "",
+                              },
+                            }))
+                          }
+                          className={controlClassName}
+                        />
+                      </div>
+                      <div className="space-y-1 sm:col-span-2">
+                        <Label className="text-xs text-neutral-600">
+                          Nota del servicio (opcional)
+                        </Label>
+                        <Input
+                          value={serviceState?.notes ?? ""}
+                          onChange={(event) =>
+                            setSelectedServices((prev) => ({
+                              ...prev,
+                              [service.id]: {
+                                quantity: prev[service.id]?.quantity ?? "1",
+                                notes: event.target.value,
+                              },
+                            }))
+                          }
+                          placeholder="Ej: entrega urgente, instalación nocturna..."
+                          className={controlClassName}
+                        />
+                      </div>
+                      <div className="rounded-xl bg-white px-3 py-2 text-sm text-neutral-700 sm:col-span-3">
+                        Subtotal servicio:{" "}
+                        <span className="font-semibold text-neutral-900">
+                          {formatCurrency(subtotal, service.currency)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+            Resumen estimado
+          </p>
+          <div className="mt-2 space-y-1.5 text-sm">
+            <div className="flex items-center justify-between text-neutral-600">
+              <span>Subtotal renta de caras (estimado)</span>
+              <span>{formatCurrency(rentalEstimatedSubtotal, rentalCurrency)}</span>
+            </div>
+            <div className="flex items-center justify-between text-neutral-600">
+              <span>Subtotal servicios</span>
+              <span>{formatCurrency(servicesSubtotal, rentalCurrency)}</span>
+            </div>
+            <div className="flex items-center justify-between text-neutral-600">
+              <span>ITBMS 7% estimado</span>
+              <span>{formatCurrency(combinedTax, rentalCurrency)}</span>
+            </div>
+            <div className="border-t border-neutral-200 pt-2 text-base font-semibold text-neutral-900">
+              <div className="flex items-center justify-between">
+                <span>Total estimado</span>
+                <span>{formatCurrency(combinedTotal, rentalCurrency)}</span>
+              </div>
+            </div>
+          </div>
+          {estimatedDays !== null && (
+            <p className="mt-2 text-xs text-neutral-500">
+              Estimación de renta calculada para {estimatedDays} día
+              {estimatedDays === 1 ? "" : "s"}.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className={sectionClassName}>
         <h2 className="text-lg font-semibold text-neutral-900">Contacto</h2>
         <p className="mt-1 text-sm text-neutral-500">
           Esta información se usará para coordinar la propuesta comercial.
@@ -535,4 +749,3 @@ export function NewCampaignRequestForm({
     </form>
   );
 }
-

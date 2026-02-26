@@ -717,6 +717,7 @@ model CampaignRequest {
   createdBy     UserProfile?                    @relation("CampaignRequestCreator", fields: [createdById], references: [id], onDelete: SetNull)
   resolvedBy    UserProfile?                    @relation("CampaignRequestResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
   assignments   CampaignRequestFaceAssignment[]
+  services      CampaignRequestService[]
   order         Order?
 
   @@index([status])
@@ -743,6 +744,52 @@ model CampaignRequestFaceAssignment {
   @@index([requestId])
   @@index([faceId])
   @@map("campaign_request_face_assignment")
+}
+
+model CampaignService {
+  id String @id @default(cuid())
+
+  code        String  @unique
+  name        String
+  description String? @db.Text
+  basePrice   Decimal @default(0.0) @db.Decimal(12, 2)
+  currency    String  @default("USD")
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requestServices CampaignRequestService[]
+  orderItems      OrderServiceItem[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("campaign_service")
+}
+
+model CampaignRequestService {
+  id String @id @default(cuid())
+
+  requestId String
+  serviceId String
+
+  quantity  Int     @default(1)
+  unitPrice Decimal @db.Decimal(12, 2)
+  subtotal  Decimal @db.Decimal(12, 2)
+  notes     String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  request    CampaignRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  service    CampaignService   @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  orderItems OrderServiceItem[]
+
+  @@unique([requestId, serviceId])
+  @@index([requestId])
+  @@index([serviceId])
+  @@map("campaign_request_service")
 }
 
 // ============================================================================
@@ -799,6 +846,7 @@ model Order {
   createdBy        UserProfile?     @relation("OrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
   companyConfirmBy UserProfile?     @relation("OrderConfirmer", fields: [companyConfirmedById], references: [id], onDelete: SetNull)
   lineItems        OrderLineItem[]
+  serviceItems     OrderServiceItem[]
   creatives        OrderCreative[]
   purchaseOrders   OrderPurchaseOrder[]
 
@@ -830,6 +878,34 @@ model OrderLineItem {
   @@index([orderId])
   @@index([faceId])
   @@map("order_line_item")
+}
+
+model OrderServiceItem {
+  id String @id @default(cuid())
+
+  orderId          String
+  requestServiceId String?
+  serviceId        String?
+
+  serviceCodeSnapshot String?
+  serviceNameSnapshot String
+
+  quantity  Int     @default(1)
+  unitPrice Decimal @db.Decimal(12, 2)
+  subtotal  Decimal @db.Decimal(12, 2)
+  notes     String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order          Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  requestService CampaignRequestService? @relation(fields: [requestServiceId], references: [id], onDelete: SetNull)
+  service        CampaignService?        @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([requestServiceId])
+  @@index([serviceId])
+  @@map("order_service_item")
 }
 
 // ============================================================================

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
@@ -27,6 +26,13 @@ function formatDate(value: Date | null) {
     month: "short",
     year: "numeric",
   });
+}
+
+function formatCurrency(value: string | number, currency = "USD") {
+  return new Intl.NumberFormat("es-PA", {
+    style: "currency",
+    currency,
+  }).format(Number(value));
 }
 
 const STATUS_STEPS = [
@@ -270,6 +276,50 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
                     +{request.assignments.length - 4} más
                   </p>
                 )}
+              </div>
+            </div>
+          )}
+
+          {request.services.length > 0 && (
+            <div className="mt-5">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                Servicios solicitados ({request.services.length})
+              </h3>
+              <div className="space-y-2">
+                {request.services.map((serviceItem) => (
+                  <div
+                    key={serviceItem.id}
+                    className="rounded-xl border border-neutral-100 bg-white p-3"
+                  >
+                    <p className="text-sm font-medium text-neutral-900">
+                      {serviceItem.service?.name || "Servicio adicional"}
+                    </p>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {serviceItem.quantity} x{" "}
+                      {formatCurrency(
+                        Number(serviceItem.unitPrice),
+                        serviceItem.service?.currency || "USD"
+                      )}{" "}
+                      ={" "}
+                      {formatCurrency(
+                        Number(serviceItem.subtotal),
+                        serviceItem.service?.currency || "USD"
+                      )}
+                    </p>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
+                  <span className="text-neutral-600">Total servicios</span>
+                  <span className="font-semibold text-neutral-900">
+                    {formatCurrency(
+                      request.services.reduce(
+                        (sum, serviceItem) => sum + Number(serviceItem.subtotal),
+                        0
+                      ),
+                      request.services[0]?.service?.currency || "USD"
+                    )}
+                  </span>
+                </div>
               </div>
             </div>
           )}

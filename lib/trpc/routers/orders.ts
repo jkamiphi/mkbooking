@@ -3,6 +3,34 @@ import { router, protectedProcedure } from "../init";
 import { db } from "@/lib/db";
 import { TRPCError } from "@trpc/server";
 import { OrderStatus, CreativeStatus, Prisma } from "@prisma/client";
+import {
+    calculateOrderTotals,
+    recalculateOrderTotals,
+} from "@/lib/services/order-financials";
+
+function resolveOrderDays(fromDate: Date | null, toDate: Date | null) {
+    if (!fromDate || !toDate) return 30;
+
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
+
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+        return 30;
+    }
+
+    return Math.max(
+        1,
+        Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    );
+}
+
+function faceMatchesRequestCriteria(request: { zoneId?: string | null; structureTypeId?: string | null }, face: { asset: { zoneId: string; structureTypeId: string } }) {
+    const matchesZone = !request.zoneId || request.zoneId === face.asset.zoneId;
+    const matchesStructure =
+        !request.structureTypeId || request.structureTypeId === face.asset.structureTypeId;
+
+    return matchesZone && matchesStructure;
+}
 
 export const ordersRouter = router({
     generateFromRequest: protectedProcedure
@@ -33,6 +61,12 @@ export const ordersRouter = router({
                         include: {
                             face: {
                                 include: {
+                                    asset: {
+                                        select: {
+                                            zoneId: true,
+                                            structureTypeId: true,
+                                        },
+                                    },
                                     catalogFace: {
                                         include: {
                                             priceRules: {
@@ -42,6 +76,11 @@ export const ordersRouter = router({
                                     },
                                 },
                             },
+                        },
+                    },
+                    services: {
+                        include: {
+                            service: true,
                         },
                     },
                 },
@@ -61,26 +100,14 @@ export const ordersRouter = router({
                 });
             }
 
-            // Default duration to 30 days if not set
-            let days = 30;
-            if (request.fromDate && request.toDate) {
-                const start = new Date(request.fromDate);
-                const end = new Date(request.toDate);
-                if (Number.isFinite(start.getTime()) && Number.isFinite(end.getTime())) {
-                    days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-                }
-            }
-
-            let subTotal = 0;
+            const days = resolveOrderDays(request.fromDate, request.toDate);
             let currency = "USD";
 
             const lineItemsData = request.assignments.map((assignment) => {
-                // Find price
                 const priceRule = assignment.face.catalogFace?.priceRules[0];
                 const dailyRate = priceRule ? Number(priceRule.priceDaily) : 0;
                 const lineSubtotal = dailyRate * days;
                 if (priceRule?.currency) currency = priceRule.currency;
-                subTotal += lineSubtotal;
 
                 return {
                     faceId: assignment.faceId,
@@ -90,9 +117,53 @@ export const ordersRouter = router({
                 };
             });
 
-            const taxRate = 0.07; // ITBMS or standard tax
-            const tax = subTotal * taxRate;
-            const total = subTotal + tax;
+            if (currency === "USD" && request.services.length > 0) {
+                const serviceCurrency = request.services[0].service?.currency;
+                if (serviceCurrency) {
+                    currency = serviceCurrency;
+                }
+            }
+
+            const serviceItemsData = request.services.map((requestService) => {
+                const quantity = Math.max(1, requestService.quantity);
+                const unitPrice = Number(requestService.unitPrice);
+                return {
+                    requestServiceId: requestService.id,
+                    serviceId: requestService.serviceId,
+                    serviceCodeSnapshot: requestService.service?.code || null,
+                    serviceNameSnapshot:
+                        requestService.service?.name || "Servicio adicional",
+                    quantity,
+                    unitPrice,
+                    subtotal: quantity * unitPrice,
+                    notes: requestService.notes || null,
+                };
+            });
+
+            const lineItemsSubtotal = lineItemsData.reduce(
+                (acc, item) => acc + item.subtotal,
+                0
+            );
+            const serviceItemsSubtotal = serviceItemsData.reduce(
+                (acc, item) => acc + item.subtotal,
+                0
+            );
+            const totals = calculateOrderTotals({
+                lineItemsSubtotal,
+                serviceItemsSubtotal,
+            });
+
+            const assignedCount = request.assignments.length;
+            const requestedCount = request.quantity;
+            const outsideCriteriaCount = request.assignments.filter((assignment) =>
+                !faceMatchesRequestCriteria(request, assignment.face)
+            ).length;
+            const warnings = {
+                partialAssignment: assignedCount < requestedCount,
+                requestedCount,
+                assignedCount,
+                outsideCriteriaCount,
+            };
 
             const order = await db.$transaction(async (tx) => {
                 const newOrder = await tx.order.create({
@@ -103,15 +174,18 @@ export const ordersRouter = router({
                         clientName: request.contactName,
                         clientEmail: request.contactEmail,
                         currency,
-                        subTotal,
-                        tax,
-                        total,
+                        subTotal: totals.subTotal,
+                        tax: totals.tax,
+                        total: totals.total,
                         fromDate: request.fromDate,
                         toDate: request.toDate,
                         status: "DRAFT",
                         notes: "Cotización generada automáticamente desde la solicitud de campaña.",
                         lineItems: {
                             create: lineItemsData,
+                        },
+                        serviceItems: {
+                            create: serviceItemsData,
                         },
                     },
                 });
@@ -124,7 +198,10 @@ export const ordersRouter = router({
                 return newOrder;
             });
 
-            return order;
+            return {
+                order,
+                warnings,
+            };
         }),
 
     list: protectedProcedure
@@ -148,6 +225,7 @@ export const ordersRouter = router({
                             include: { user: true },
                         },
                         lineItems: true,
+                        serviceItems: true,
                     },
                     skip,
                     take,
@@ -180,11 +258,13 @@ export const ordersRouter = router({
 
             const orgIds = userProfile?.organizationRoles.map(r => r.organizationId) || [];
 
-            const where: any = {
-                ...(status ? { status } : { status: { not: "DRAFT" as const } }), // Do not show drafts to clients by default 
+            const where: Prisma.OrderWhereInput = {
+                ...(status
+                    ? { status }
+                    : { status: { not: OrderStatus.DRAFT } }),
             };
 
-            const orConditions = [];
+            const orConditions: Prisma.OrderWhereInput[] = [];
             if (userProfile) orConditions.push({ createdById: userProfile.id });
             if (orgIds.length > 0) orConditions.push({ organizationId: { in: orgIds } });
 
@@ -201,6 +281,7 @@ export const ordersRouter = router({
                     include: {
                         organization: true,
                         lineItems: true,
+                        serviceItems: true,
                     },
                     skip,
                     take,
@@ -233,6 +314,16 @@ export const ordersRouter = router({
                             },
                         },
                     },
+                    serviceItems: {
+                        include: {
+                            service: true,
+                            requestService: {
+                                include: {
+                                    service: true,
+                                },
+                            },
+                        },
+                    },
                     organization: true,
                     campaignRequest: true,
                     companyConfirmBy: true,
@@ -260,7 +351,7 @@ export const ordersRouter = router({
 
             const order = await db.order.findUnique({
                 where: { id: orderId },
-                include: { lineItems: true },
+                select: { id: true, status: true },
             });
 
             if (!order || order.status !== "DRAFT") {
@@ -270,9 +361,18 @@ export const ordersRouter = router({
                 });
             }
 
-            const itemToUpdate = order.lineItems.find(li => li.id === lineItemId);
+            const itemToUpdate = await db.orderLineItem.findUnique({
+                where: { id: lineItemId },
+                select: { id: true, orderId: true },
+            });
             if (!itemToUpdate) {
                 throw new TRPCError({ code: "NOT_FOUND", message: "Item no encontrado" });
+            }
+            if (itemToUpdate.orderId !== orderId) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "El item no pertenece a la orden indicada.",
+                });
             }
 
             const newSubtotal = priceDaily * days;
@@ -287,21 +387,66 @@ export const ordersRouter = router({
                     },
                 });
 
-                // Recalculate order totals
-                const allItems = await tx.orderLineItem.findMany({ where: { orderId } });
-                const orderSubTotal = allItems.reduce((acc: number, curr: any) => acc + Number(curr.subtotal), 0);
-                const taxRate = 0.07;
-                const orderTax = orderSubTotal * taxRate;
-                const orderTotal = orderSubTotal + orderTax;
+                await recalculateOrderTotals(tx, orderId);
+            });
 
-                await tx.order.update({
-                    where: { id: orderId },
+            return { success: true };
+        }),
+
+    updateServiceItem: protectedProcedure
+        .input(
+            z.object({
+                orderId: z.string(),
+                serviceItemId: z.string(),
+                quantity: z.number().int().min(1).max(999),
+                unitPrice: z.number().min(0),
+            })
+        )
+        .mutation(async ({ input }) => {
+            const { orderId, serviceItemId, quantity, unitPrice } = input;
+
+            const order = await db.order.findUnique({
+                where: { id: orderId },
+                select: { id: true, status: true },
+            });
+
+            if (!order || order.status !== "DRAFT") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Solo se pueden editar servicios en órdenes DRAFT.",
+                });
+            }
+
+            const serviceItem = await db.orderServiceItem.findUnique({
+                where: { id: serviceItemId },
+                select: { id: true, orderId: true },
+            });
+
+            if (!serviceItem) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Servicio no encontrado en la orden.",
+                });
+            }
+
+            if (serviceItem.orderId !== orderId) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "El servicio no pertenece a la orden indicada.",
+                });
+            }
+
+            await db.$transaction(async (tx) => {
+                await tx.orderServiceItem.update({
+                    where: { id: serviceItemId },
                     data: {
-                        subTotal: orderSubTotal,
-                        tax: orderTax,
-                        total: orderTotal,
+                        quantity,
+                        unitPrice,
+                        subtotal: quantity * unitPrice,
                     },
                 });
+
+                await recalculateOrderTotals(tx, orderId);
             });
 
             return { success: true };

@@ -148,6 +148,14 @@ export default async function CampaignRequestsPage() {
                         : "asignaciones sugeridas"}
                     </p>
                   )}
+                  {request.services.length > 0 && (
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {request.services.length}{" "}
+                      {request.services.length === 1
+                        ? "servicio adicional"
+                        : "servicios adicionales"}
+                    </p>
+                  )}
                 </div>
 
                 <ChevronRight className="h-5 w-5 shrink-0 text-neutral-300 transition group-hover:text-neutral-500" />

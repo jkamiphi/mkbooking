@@ -15,6 +15,12 @@ const campaignRequestStatusValues = [
 
 export const campaignRequestStatusSchema = z.enum(campaignRequestStatusValues);
 
+const selectedServiceSchema = z.object({
+  serviceId: z.string().min(1),
+  quantity: z.number().int().min(1).max(999).optional(),
+  notes: z.string().trim().max(500).optional(),
+});
+
 export const createCampaignRequestSchema = z
   .object({
     query: z.string().trim().min(1).max(200).optional(),
@@ -29,6 +35,7 @@ export const createCampaignRequestSchema = z
     contactPhone: z.string().trim().max(40).optional(),
     organizationId: z.string().optional(),
     selectedFaceIds: z.array(z.string().min(1)).max(200).optional(),
+    selectedServices: z.array(selectedServiceSchema).max(50).optional(),
   })
   .refine(
     (value) => {
@@ -50,7 +57,12 @@ export const assignCampaignRequestFacesSchema = z.object({
 
 export const suggestCampaignRequestFacesSchema = z.object({
   requestId: z.string().min(1),
-  take: z.number().int().min(1).max(100).default(30),
+  includeOutsideCriteria: z.boolean().optional(),
+  search: z.string().trim().max(200).optional(),
+  zoneId: z.string().optional(),
+  structureTypeId: z.string().optional(),
+  skip: z.number().int().min(0).max(1000).default(0),
+  take: z.number().int().min(1).max(200).default(30),
 });
 
 export const listCampaignRequestsSchema = z.object({
@@ -104,6 +116,36 @@ function normalizeDateRange(fromDate?: Date | null, toDate?: Date | null) {
     : { fromDate: requestedTo, toDate: requestedFrom };
 }
 
+function dedupeSelectedServices(input: CreateCampaignRequestInput["selectedServices"]) {
+  if (!input?.length) {
+    return [];
+  }
+
+  const serviceMap = new Map<
+    string,
+    { serviceId: string; quantity: number; notes: string | null }
+  >();
+
+  for (const selected of input) {
+    if (!selected?.serviceId) continue;
+    serviceMap.set(selected.serviceId, {
+      serviceId: selected.serviceId,
+      quantity: selected.quantity ?? 1,
+      notes: selected.notes?.trim() || null,
+    });
+  }
+
+  return Array.from(serviceMap.values());
+}
+
+function faceMatchesRequestCriteria(request: { zoneId?: string | null; structureTypeId?: string | null }, face: { asset: { zoneId: string; structureTypeId: string } }) {
+  const matchesZone = !request.zoneId || request.zoneId === face.asset.zoneId;
+  const matchesStructure =
+    !request.structureTypeId || request.structureTypeId === face.asset.structureTypeId;
+
+  return matchesZone && matchesStructure;
+}
+
 export async function createCampaignRequest(
   input: CreateCampaignRequestInput,
   options?: { createdByUserId?: string }
@@ -125,6 +167,7 @@ export async function createCampaignRequest(
   const uniqueFaceIds = input.selectedFaceIds
     ? Array.from(new Set(input.selectedFaceIds))
     : [];
+  const selectedServices = dedupeSelectedServices(input.selectedServices);
 
   const result = await db.$transaction(async (tx) => {
     const request = await tx.campaignRequest.create({
@@ -132,7 +175,7 @@ export async function createCampaignRequest(
         query: input.query || null,
         zoneId: input.zoneId || null,
         structureTypeId: input.structureTypeId || null,
-        quantity: uniqueFaceIds.length > 0 ? uniqueFaceIds.length : input.quantity,
+        quantity: input.quantity,
         fromDate: resolvedDates.fromDate,
         toDate: resolvedDates.toDate,
         notes: input.notes || null,
@@ -151,6 +194,50 @@ export async function createCampaignRequest(
           requestId: request.id,
           faceId,
         })),
+      });
+    }
+
+    if (selectedServices.length > 0) {
+      const requestedServiceIds = selectedServices.map((service) => service.serviceId);
+      const availableServices = await tx.campaignService.findMany({
+        where: {
+          id: { in: requestedServiceIds },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          basePrice: true,
+        },
+      });
+      const availableServiceMap = new Map(
+        availableServices.map((service) => [service.id, service])
+      );
+
+      if (availableServices.length !== requestedServiceIds.length) {
+        throw new Error(
+          "Uno o más servicios seleccionados no están disponibles en este momento."
+        );
+      }
+
+      await tx.campaignRequestService.createMany({
+        data: selectedServices.map((selected) => {
+          const service = availableServiceMap.get(selected.serviceId);
+          if (!service) {
+            throw new Error("Servicio inválido en la solicitud.");
+          }
+
+          const quantity = selected.quantity;
+          const unitPrice = Number(service.basePrice);
+
+          return {
+            requestId: request.id,
+            serviceId: selected.serviceId,
+            quantity,
+            unitPrice,
+            subtotal: quantity * unitPrice,
+            notes: selected.notes,
+          };
+        }),
       });
     }
 
@@ -176,6 +263,12 @@ export async function createCampaignRequest(
             },
           },
         },
+      },
+      services: {
+        include: {
+          service: true,
+        },
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -217,6 +310,12 @@ const requestInclude = {
           },
         },
       },
+    },
+    orderBy: { createdAt: "asc" },
+  },
+  services: {
+    include: {
+      service: true,
     },
     orderBy: { createdAt: "asc" },
   },
@@ -367,12 +466,44 @@ export async function assignCampaignRequestFaces(
   input: z.infer<typeof assignCampaignRequestFacesSchema>
 ) {
   const uniqueFaceIds = Array.from(new Set(input.faceIds));
+  let outsideCriteriaCount = 0;
+  let requestedCount = 0;
 
   await db.$transaction(async (tx) => {
-    await tx.campaignRequest.findUniqueOrThrow({
+    const request = await tx.campaignRequest.findUniqueOrThrow({
       where: { id: input.requestId },
-      select: { id: true },
+      select: { id: true, quantity: true, zoneId: true, structureTypeId: true },
     });
+    requestedCount = request.quantity;
+
+    if (uniqueFaceIds.length > request.quantity) {
+      throw new Error(
+        `No puedes asignar más de ${request.quantity} cara(s) para esta solicitud.`
+      );
+    }
+
+    if (uniqueFaceIds.length > 0) {
+      const faces = await tx.assetFace.findMany({
+        where: { id: { in: uniqueFaceIds } },
+        select: {
+          id: true,
+          asset: {
+            select: {
+              zoneId: true,
+              structureTypeId: true,
+            },
+          },
+        },
+      });
+
+      if (faces.length !== uniqueFaceIds.length) {
+        throw new Error("Una o más caras seleccionadas no existen.");
+      }
+
+      outsideCriteriaCount = faces.filter(
+        (face) => !faceMatchesRequestCriteria(request, face)
+      ).length;
+    }
 
     await tx.campaignRequestFaceAssignment.deleteMany({
       where: { requestId: input.requestId },
@@ -385,7 +516,14 @@ export async function assignCampaignRequestFaces(
     }
   });
 
-  return getCampaignRequestById(input.requestId);
+  const request = await getCampaignRequestById(input.requestId);
+
+  return {
+    request,
+    assignedCount: uniqueFaceIds.length,
+    requestedCount,
+    outsideCriteriaCount,
+  };
 }
 
 export async function suggestFacesForCampaignRequest(
@@ -404,30 +542,55 @@ export async function suggestFacesForCampaignRequest(
     throw new Error("Solicitud no encontrada");
   }
 
-  const take = Math.min(Math.max(input.take, request.quantity * 3), 100);
+  const take = Math.min(Math.max(input.take, request.quantity * 3), 200);
+  const includeOutsideCriteria = input.includeOutsideCriteria ?? false;
+  const zoneId =
+    input.zoneId ??
+    (includeOutsideCriteria ? undefined : (request.zoneId ?? undefined));
+  const structureTypeId =
+    input.structureTypeId ??
+    (includeOutsideCriteria ? undefined : (request.structureTypeId ?? undefined));
+
   const catalog = await listCatalogFaces({
-    search: request.query || undefined,
+    search: input.search || request.query || undefined,
     isPublished: true,
-    structureTypeId: request.structureTypeId || undefined,
-    zoneId: request.zoneId || undefined,
+    structureTypeId,
+    zoneId,
     availableFrom: request.fromDate || undefined,
     availableTo: request.toDate || undefined,
+    skip: input.skip,
     take,
-    skip: 0,
   });
 
   const assignedFaceIds = new Set(request.assignments.map((assignment) => assignment.faceId));
 
-  return catalog.faces.slice(0, input.take).map((face) => ({
-    id: face.id,
-    code: face.code,
-    assetCode: face.asset.code,
-    title: face.catalogFace?.title || `${face.asset.structureType.name} · Cara ${face.code}`,
-    zone: face.asset.zone.name,
-    province: face.asset.zone.province.name,
-    structureType: face.asset.structureType.name,
-    isAssigned: assignedFaceIds.has(face.id),
-  }));
+  const normalized = catalog.faces.map((face) => {
+    const matchesCriteria = faceMatchesRequestCriteria(request, {
+      asset: {
+        zoneId: face.asset.zoneId,
+        structureTypeId: face.asset.structureTypeId,
+      },
+    });
+
+    return {
+      id: face.id,
+      code: face.code,
+      assetCode: face.asset.code,
+      title: face.catalogFace?.title || `${face.asset.structureType.name} · Cara ${face.code}`,
+      zone: face.asset.zone.name,
+      province: face.asset.zone.province.name,
+      structureType: face.asset.structureType.name,
+      imageUrl: face.catalogFace?.primaryImageUrl || null,
+      latitude: face.asset.latitude ? Number(face.asset.latitude) : null,
+      longitude: face.asset.longitude ? Number(face.asset.longitude) : null,
+      matchesCriteria,
+      isAssigned: assignedFaceIds.has(face.id),
+    };
+  });
+
+  return normalized
+    .filter((face) => includeOutsideCriteria || face.matchesCriteria)
+    .slice(0, input.take);
 }
 
 export async function confirmCampaignRequest(

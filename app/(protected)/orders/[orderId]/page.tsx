@@ -51,6 +51,14 @@ export default async function OrderDetailPage({ params }: PageProps) {
     });
 
     const config = STATUS_CONFIG[order.status] || STATUS_CONFIG["DRAFT"];
+    const rentalSubtotal = order.lineItems.reduce(
+        (sum, item) => sum + Number(item.subtotal),
+        0
+    );
+    const servicesSubtotal = order.serviceItems.reduce(
+        (sum, item) => sum + Number(item.subtotal),
+        0
+    );
 
     return (
         <div>
@@ -122,6 +130,34 @@ export default async function OrderDetailPage({ params }: PageProps) {
                         </div>
                     </section>
 
+                    <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+                        <h2 className="mb-4 text-sm font-semibold text-neutral-900 border-b border-neutral-100 pb-3">
+                            Servicios facturables ({order.serviceItems.length})
+                        </h2>
+
+                        {order.serviceItems.length === 0 ? (
+                            <p className="text-sm text-neutral-500">Sin servicios adicionales.</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {order.serviceItems.map((item) => (
+                                    <div key={item.id} className="flex items-center justify-between rounded-xl border border-neutral-100 p-3">
+                                        <div>
+                                            <p className="text-sm font-medium text-neutral-900">
+                                                {item.serviceNameSnapshot}
+                                            </p>
+                                            <p className="mt-0.5 text-xs text-neutral-500">
+                                                {item.quantity} x {formatCurrency(String(item.unitPrice))}
+                                            </p>
+                                        </div>
+                                        <p className="text-sm font-semibold text-neutral-900">
+                                            {formatCurrency(String(item.subtotal))}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
                     {order.status === "CONFIRMED" && (
                         <CreativesModule orderId={order.id} lineItems={order.lineItems} />
                     )}
@@ -137,7 +173,15 @@ export default async function OrderDetailPage({ params }: PageProps) {
                         <h2 className="mb-4 text-sm font-semibold text-neutral-900">Resumen Financiero</h2>
                         <dl className="space-y-3 text-sm">
                             <div className="flex items-center justify-between text-neutral-600">
-                                <dt>Subtotal</dt>
+                                <dt>Subtotal renta caras</dt>
+                                <dd>{formatCurrency(rentalSubtotal)}</dd>
+                            </div>
+                            <div className="flex items-center justify-between text-neutral-600">
+                                <dt>Subtotal servicios</dt>
+                                <dd>{formatCurrency(servicesSubtotal)}</dd>
+                            </div>
+                            <div className="flex items-center justify-between text-neutral-600">
+                                <dt>Subtotal general</dt>
                                 <dd>{formatCurrency(String(order.subTotal))}</dd>
                             </div>
                             <div className="flex items-center justify-between text-neutral-600">

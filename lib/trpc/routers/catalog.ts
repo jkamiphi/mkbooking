@@ -42,6 +42,16 @@ import {
   updateCampaignRequestStatus,
   updateCampaignRequestStatusSchema,
 } from "@/lib/services/campaign-request";
+import {
+  createCampaignService,
+  createCampaignServiceSchema,
+  listAdminCampaignServices,
+  listPublicCampaignServices,
+  toggleCampaignServiceActive,
+  toggleCampaignServiceActiveSchema,
+  updateCampaignService,
+  updateCampaignServiceSchema,
+} from "@/lib/services/campaign-services";
 
 const publicFaceListInputSchema = z
   .object({
@@ -247,6 +257,30 @@ export const catalogRouter = router({
       .input(z.object({ requestId: z.string().min(1) }))
       .mutation(async ({ ctx, input }) => {
         return confirmCampaignRequest(input.requestId, ctx.user.id);
+      }),
+  }),
+
+  services: router({
+    publicList: publicProcedure.query(async () => {
+      return listPublicCampaignServices();
+    }),
+    adminList: adminProcedure.query(async () => {
+      return listAdminCampaignServices();
+    }),
+    adminCreate: adminProcedure
+      .input(createCampaignServiceSchema)
+      .mutation(async ({ input }) => {
+        return createCampaignService(input);
+      }),
+    adminUpdate: adminProcedure
+      .input(updateCampaignServiceSchema)
+      .mutation(async ({ input }) => {
+        return updateCampaignService(input);
+      }),
+    adminToggleActive: adminProcedure
+      .input(toggleCampaignServiceActiveSchema)
+      .mutation(async ({ input }) => {
+        return toggleCampaignServiceActive(input);
       }),
   }),
 });
