@@ -37,6 +37,7 @@ const STATUS_STEPS = [
 ] as const;
 
 function getStepIndex(status: string) {
+  if (status === "QUOTATION_GENERATED") return 1; // Maps to "En revisión"
   const idx = STATUS_STEPS.findIndex((s) => s.key === status);
   return idx >= 0 ? idx : 0;
 }
@@ -94,8 +95,8 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
                   <div className="flex flex-col items-center gap-1.5">
                     <div
                       className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${isDone
-                          ? "bg-[#0359A8] text-white"
-                          : "bg-neutral-100 text-neutral-400"
+                        ? "bg-[#0359A8] text-white"
+                        : "bg-neutral-100 text-neutral-400"
                         } ${isCurrent ? "ring-2 ring-[#0359A8]/20 ring-offset-2" : ""}`}
                     >
                       {i + 1}
@@ -196,17 +197,38 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 rounded-xl border border-dashed border-neutral-200 bg-white p-3">
-              <PackageOpen className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
-              <div>
-                <p className="text-sm font-medium text-neutral-900">
-                  Conversión a orden
-                </p>
-                <p className="text-sm text-neutral-500">
-                  Próximamente podrás confirmar y ver esta solicitud como orden.
-                </p>
+            {request.order ? (
+              <div className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-3">
+                <PackageOpen className="mt-0.5 h-4 w-4 shrink-0 text-[#0359A8]" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-neutral-900">
+                    Orden generada
+                  </p>
+                  <p className="mt-0.5 text-xs text-neutral-500">
+                    Se generó la Orden #{request.order.code} para esta solicitud.
+                  </p>
+                  <Link
+                    href={`/orders/${request.order.id}`}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#0359A8] transition hover:text-[#024482]"
+                  >
+                    Ver Orden
+                    <ChevronRight className="h-3 w-3" />
+                  </Link>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-3 rounded-xl border border-dashed border-neutral-200 bg-white p-3">
+                <PackageOpen className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
+                <div>
+                  <p className="text-sm font-medium text-neutral-900">
+                    Conversión a orden
+                  </p>
+                  <p className="text-xs text-neutral-500">
+                    Próximamente podrás confirmar y ver esta solicitud como orden.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Assignments preview */}

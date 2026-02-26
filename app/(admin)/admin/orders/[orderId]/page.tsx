@@ -5,6 +5,7 @@ import { TRPCError } from "@trpc/server";
 import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { Badge } from "@/components/ui/badge";
 import { AdminConfirmButton } from "./_components/admin-confirm-button";
+import { DraftEditor } from "./_components/draft-editor";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
 type PageProps = {
@@ -83,88 +84,92 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                 )}
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-3">
-                {/* Main Content: Line items */}
-                <div className="lg:col-span-2 space-y-5">
-                    <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
-                        <h2 className="mb-4 text-sm font-semibold text-neutral-900 border-b border-neutral-100 pb-3">
-                            Detalle de Espacios Asignados ({order.lineItems.length})
-                        </h2>
+            {order.status === "DRAFT" ? (
+                <DraftEditor orderId={order.id} initialOrder={order} />
+            ) : (
+                <div className="grid gap-5 lg:grid-cols-3">
+                    {/* Main Content: Line items */}
+                    <div className="lg:col-span-2 space-y-5">
+                        <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+                            <h2 className="mb-4 text-sm font-semibold text-neutral-900 border-b border-neutral-100 pb-3">
+                                Detalle de Espacios Asignados ({order.lineItems.length})
+                            </h2>
 
-                        <div className="space-y-4">
-                            {order.lineItems.map((item) => (
-                                <div key={item.id} className="flex gap-4 border-b border-neutral-100 pb-4 last:border-0 last:pb-0">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between gap-2">
-                                            <h3 className="font-medium text-neutral-900 truncate">
-                                                {item.face?.catalogFace?.title || `Cara ${item.face?.code} - ${item.face?.asset?.structureType?.name}`}
-                                            </h3>
-                                            <p className="font-semibold text-neutral-900">{formatCurrency(String(item.subtotal))}</p>
-                                        </div>
-                                        <div className="mt-1 flex flex-wrap gap-2 text-xs text-neutral-500">
-                                            <span className="inline-flex items-center gap-1">
-                                                <MapPin className="h-3 w-3" />
-                                                {item.face?.asset?.zone?.name || "N/D"}
-                                            </span>
-                                            {order.fromDate && order.toDate && (
+                            <div className="space-y-4">
+                                {order.lineItems.map((item: any) => (
+                                    <div key={item.id} className="flex gap-4 border-b border-neutral-100 pb-4 last:border-0 last:pb-0">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between gap-2">
+                                                <h3 className="font-medium text-neutral-900 truncate">
+                                                    {item.face?.catalogFace?.title || `Cara ${item.face?.code} - ${item.face?.asset?.structureType?.name}`}
+                                                </h3>
+                                                <p className="font-semibold text-neutral-900">{formatCurrency(String(item.subtotal))}</p>
+                                            </div>
+                                            <div className="mt-1 flex flex-wrap gap-2 text-xs text-neutral-500">
                                                 <span className="inline-flex items-center gap-1">
-                                                    <CalendarDays className="h-3 w-3" />
-                                                    {formatDate(order.fromDate)} - {formatDate(order.toDate)}
+                                                    <MapPin className="h-3 w-3" />
+                                                    {item.face?.asset?.zone?.name || "N/D"}
                                                 </span>
-                                            )}
+                                                {order.fromDate && order.toDate && (
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <CalendarDays className="h-3 w-3" />
+                                                        {formatDate(order.fromDate)} - {formatDate(order.toDate)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="mt-2 text-xs text-neutral-400">
+                                                Costo unitario: {formatCurrency(String(item.priceDaily))} / día x {item.days} días
+                                            </p>
                                         </div>
-                                        <p className="mt-2 text-xs text-neutral-400">
-                                            Costo unitario: {formatCurrency(String(item.priceDaily))} / día x {item.days} días
-                                        </p>
                                     </div>
+                                ))}
+                            </div>
+                        </section>
+                    </div>
+
+                    {/* Sidebar: Totals & Actions */}
+                    <div className="space-y-5">
+                        <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+                            <h2 className="mb-4 text-sm font-semibold text-neutral-900">Resumen Financiero</h2>
+                            <dl className="space-y-3 text-sm">
+                                <div className="flex items-center justify-between text-neutral-600">
+                                    <dt>Subtotal</dt>
+                                    <dd>{formatCurrency(String(order.subTotal))}</dd>
                                 </div>
-                            ))}
-                        </div>
-                    </section>
+                                <div className="flex items-center justify-between text-neutral-600">
+                                    <dt>Impuestos (ITBMS 7%)</dt>
+                                    <dd>{formatCurrency(String(order.tax))}</dd>
+                                </div>
+                                <div className="my-3 border-t border-neutral-100" />
+                                <div className="flex items-center justify-between font-semibold text-lg text-neutral-900">
+                                    <dt>Total a facturar</dt>
+                                    <dd>{formatCurrency(String(order.total))}</dd>
+                                </div>
+                            </dl>
+
+                            {order.status === "CLIENT_APPROVED" && (
+                                <div className="mt-6 pt-6 border-t border-neutral-100">
+                                    <p className="mb-4 text-xs text-neutral-500 text-center">
+                                        El cliente ya aprobó esta cotización. Al confirmar, se generarán los bloqueos activos en el inventario.
+                                    </p>
+                                    <AdminConfirmButton orderId={order.id} />
+                                </div>
+                            )}
+
+                            {order.status === "CONFIRMED" && (
+                                <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-center">
+                                    <span className="block text-sm font-medium text-green-900">
+                                        Orden Confirmada
+                                    </span>
+                                    <span className="mt-1 block text-xs text-green-700">
+                                        Por {order.companyConfirmBy?.firstName} {order.companyConfirmBy?.lastName} el {formatDate(order.companyConfirmedAt)}
+                                    </span>
+                                </div>
+                            )}
+                        </section>
+                    </div>
                 </div>
-
-                {/* Sidebar: Totals & Actions */}
-                <div className="space-y-5">
-                    <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
-                        <h2 className="mb-4 text-sm font-semibold text-neutral-900">Resumen Financiero</h2>
-                        <dl className="space-y-3 text-sm">
-                            <div className="flex items-center justify-between text-neutral-600">
-                                <dt>Subtotal</dt>
-                                <dd>{formatCurrency(String(order.subTotal))}</dd>
-                            </div>
-                            <div className="flex items-center justify-between text-neutral-600">
-                                <dt>Impuestos (ITBMS 7%)</dt>
-                                <dd>{formatCurrency(String(order.tax))}</dd>
-                            </div>
-                            <div className="my-3 border-t border-neutral-100" />
-                            <div className="flex items-center justify-between font-semibold text-lg text-neutral-900">
-                                <dt>Total a facturar</dt>
-                                <dd>{formatCurrency(String(order.total))}</dd>
-                            </div>
-                        </dl>
-
-                        {order.status === "CLIENT_APPROVED" && (
-                            <div className="mt-6 pt-6 border-t border-neutral-100">
-                                <p className="mb-4 text-xs text-neutral-500 text-center">
-                                    El cliente ya aprobó esta cotización. Al confirmar, se generarán los bloqueos activos en el inventario.
-                                </p>
-                                <AdminConfirmButton orderId={order.id} />
-                            </div>
-                        )}
-
-                        {order.status === "CONFIRMED" && (
-                            <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-center">
-                                <span className="block text-sm font-medium text-green-900">
-                                    Orden Confirmada
-                                </span>
-                                <span className="mt-1 block text-xs text-green-700">
-                                    Por {order.companyConfirmBy?.firstName} {order.companyConfirmBy?.lastName} el {formatDate(order.companyConfirmedAt)}
-                                </span>
-                            </div>
-                        )}
-                    </section>
-                </div>
-            </div>
+            )}
         </AdminPageShell>
     );
 }

@@ -15,6 +15,17 @@ export const ordersRouter = router({
             const { requestId } = input;
             const { user } = ctx;
 
+            const userProfile = await db.userProfile.findUnique({
+                where: { userId: user.id },
+            });
+
+            if (!userProfile) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "User profile not found",
+                });
+            }
+
             const request = await db.campaignRequest.findUnique({
                 where: { id: requestId },
                 include: {
@@ -88,7 +99,7 @@ export const ordersRouter = router({
                     data: {
                         campaignRequestId: request.id,
                         organizationId: request.organizationId,
-                        createdById: user.id,
+                        createdById: userProfile.id,
                         clientName: request.contactName,
                         clientEmail: request.contactEmail,
                         currency,
@@ -163,19 +174,26 @@ export const ordersRouter = router({
             // Fetch based on user's current organization or createdBy
             // Assuming standard flow: The order has the organizationId of the user.
             const userProfile = await db.userProfile.findUnique({
-                where: { id: user.id },
+                where: { userId: user.id },
                 include: { organizationRoles: true },
             });
 
             const orgIds = userProfile?.organizationRoles.map(r => r.organizationId) || [];
 
-            const where = {
-                ...(status ? { status } : {}),
-                OR: [
-                    { createdById: user.id },
-                    ...(orgIds.length > 0 ? [{ organizationId: { in: orgIds } }] : []),
-                ]
+            const where: any = {
+                ...(status ? { status } : { status: { not: "DRAFT" as const } }), // Do not show drafts to clients by default 
             };
+
+            const orConditions = [];
+            if (userProfile) orConditions.push({ createdById: userProfile.id });
+            if (orgIds.length > 0) orConditions.push({ organizationId: { in: orgIds } });
+
+            if (orConditions.length > 0) {
+                where.OR = orConditions;
+            } else {
+                // If user has no profile and no organizations, they can't have orders
+                return { orders: [], total: 0 };
+            }
 
             const [orders, total] = await Promise.all([
                 db.order.findMany({
@@ -228,6 +246,98 @@ export const ordersRouter = router({
             return order;
         }),
 
+    updateLineItem: protectedProcedure
+        .input(
+            z.object({
+                orderId: z.string(),
+                lineItemId: z.string(),
+                priceDaily: z.number().min(0),
+                days: z.number().min(1).int(),
+            })
+        )
+        .mutation(async ({ input }) => {
+            const { orderId, lineItemId, priceDaily, days } = input;
+
+            const order = await db.order.findUnique({
+                where: { id: orderId },
+                include: { lineItems: true },
+            });
+
+            if (!order || order.status !== "DRAFT") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Solo se pueden editar órdenes en estado Borrador (DRAFT).",
+                });
+            }
+
+            const itemToUpdate = order.lineItems.find(li => li.id === lineItemId);
+            if (!itemToUpdate) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Item no encontrado" });
+            }
+
+            const newSubtotal = priceDaily * days;
+
+            await db.$transaction(async (tx) => {
+                await tx.orderLineItem.update({
+                    where: { id: lineItemId },
+                    data: {
+                        priceDaily,
+                        days,
+                        subtotal: newSubtotal,
+                    },
+                });
+
+                // Recalculate order totals
+                const allItems = await tx.orderLineItem.findMany({ where: { orderId } });
+                const orderSubTotal = allItems.reduce((acc: number, curr: any) => acc + Number(curr.subtotal), 0);
+                const taxRate = 0.07;
+                const orderTax = orderSubTotal * taxRate;
+                const orderTotal = orderSubTotal + orderTax;
+
+                await tx.order.update({
+                    where: { id: orderId },
+                    data: {
+                        subTotal: orderSubTotal,
+                        tax: orderTax,
+                        total: orderTotal,
+                    },
+                });
+            });
+
+            return { success: true };
+        }),
+
+    sendQuotation: protectedProcedure
+        .input(z.object({ id: z.string() }))
+        .mutation(async ({ input }) => {
+            const order = await db.order.findUnique({ where: { id: input.id } });
+
+            if (!order || order.status !== "DRAFT") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Solo los borradores pueden ser enviados como cotización.",
+                });
+            }
+
+            return db.$transaction(async (tx) => {
+                const updatedOrder = await tx.order.update({
+                    where: { id: order.id },
+                    data: {
+                        status: "QUOTATION_SENT",
+                    },
+                });
+
+                if (order.campaignRequestId) {
+                    await tx.campaignRequest.update({
+                        where: { id: order.campaignRequestId },
+                        data: { status: "PROPOSAL_SENT" },
+                    });
+                }
+
+                return updatedOrder;
+            });
+        }),
+
     clientApprove: protectedProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input }) => {
@@ -259,6 +369,18 @@ export const ordersRouter = router({
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             const { user } = ctx;
+
+            const userProfile = await db.userProfile.findUnique({
+                where: { userId: user.id },
+            });
+
+            if (!userProfile) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "User profile not found",
+                });
+            }
+
             const order = await db.order.findUnique({
                 where: { id: input.id },
                 include: {
@@ -310,7 +432,7 @@ export const ordersRouter = router({
                         data: {
                             faceId: catalogFace.id,
                             organizationId: order.organizationId,
-                            createdById: user.id,
+                            createdById: userProfile.id,
                             status: "ACTIVE",
                             expiresAt: order.toDate || expiresAt,
                         },
@@ -323,7 +445,7 @@ export const ordersRouter = router({
                     data: {
                         status: "CONFIRMED",
                         companyConfirmedAt: now,
-                        companyConfirmedById: user.id,
+                        companyConfirmedById: userProfile.id,
                     },
                 });
 

@@ -10,7 +10,7 @@ const CAMPAIGN_REQUEST_STATUS_CONFIG: Record<
 > = {
   NEW: { label: "Nueva", variant: "info" },
   IN_REVIEW: { label: "En revisión", variant: "warning" },
-  QUOTATION_GENERATED: { label: "Cotización enviada", variant: "warning" },
+  QUOTATION_GENERATED: { label: "Cotización en preparación", variant: "warning" },
   PROPOSAL_SENT: { label: "Propuesta enviada", variant: "info" },
   CONFIRMED: { label: "Confirmada", variant: "success" },
   REJECTED: { label: "Rechazada", variant: "destructive" },
