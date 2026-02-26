@@ -18,6 +18,11 @@ const cards = [
     description: "Precios globales, promociones y precios especiales.",
   },
   {
+    href: "/admin/catalog/services",
+    title: "Servicios",
+    description: "Configurar servicios adicionales facturables por campaña.",
+  },
+  {
     href: "/admin/catalog/holds",
     title: "Reservas",
     description: "Gestionar reservas activas y bloqueos de disponibilidad.",

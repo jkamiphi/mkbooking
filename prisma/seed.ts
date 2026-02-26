@@ -87,6 +87,105 @@ const restrictionTags = [
   { code: "LIMITE_LUMINOSIDAD", label: "Límite de luminosidad" },
 ];
 
+const campaignServices = [
+  {
+    code: "DISENO_ARTE",
+    name: "Diseño de arte",
+    description: "Diseño base de pieza gráfica para campaña OOH.",
+    basePrice: 180,
+    currency: "USD",
+    sortOrder: 10,
+  },
+  {
+    code: "ADAPTACION_FORMATOS",
+    name: "Adaptación de formatos",
+    description: "Adaptación del arte a múltiples medidas y formatos.",
+    basePrice: 120,
+    currency: "USD",
+    sortOrder: 20,
+  },
+  {
+    code: "PRODUCCION_LONA",
+    name: "Producción de lona",
+    description: "Impresión y acabado de lona publicitaria.",
+    basePrice: 250,
+    currency: "USD",
+    sortOrder: 30,
+  },
+  {
+    code: "VINIL_MICROPERFORADO",
+    name: "Vinil microperforado",
+    description: "Producción de vinil para superficies específicas.",
+    basePrice: 220,
+    currency: "USD",
+    sortOrder: 40,
+  },
+  {
+    code: "INSTALACION_ARTE",
+    name: "Instalación de arte",
+    description: "Montaje del arte en caras asignadas.",
+    basePrice: 200,
+    currency: "USD",
+    sortOrder: 50,
+  },
+  {
+    code: "DESINSTALACION_ARTE",
+    name: "Desinstalación de arte",
+    description: "Retiro del arte al finalizar campaña.",
+    basePrice: 120,
+    currency: "USD",
+    sortOrder: 60,
+  },
+  {
+    code: "TRANSPORTE_LOGISTICA",
+    name: "Transporte y logística",
+    description: "Movimiento de material entre bodega y ubicaciones.",
+    basePrice: 90,
+    currency: "USD",
+    sortOrder: 70,
+  },
+  {
+    code: "INSTALACION_NOCTURNA",
+    name: "Instalación nocturna",
+    description: "Recargo por instalación en horario nocturno.",
+    basePrice: 150,
+    currency: "USD",
+    sortOrder: 80,
+  },
+  {
+    code: "PERMISOS_MUNICIPALES",
+    name: "Gestión de permisos",
+    description: "Trámite administrativo de permisos de instalación.",
+    basePrice: 140,
+    currency: "USD",
+    sortOrder: 90,
+  },
+  {
+    code: "REPORTE_FOTOGRAFICO",
+    name: "Reporte fotográfico",
+    description: "Evidencia de instalación y estado por campaña.",
+    basePrice: 75,
+    currency: "USD",
+    sortOrder: 100,
+  },
+  {
+    code: "MONITOREO_CAMPANA",
+    name: "Monitoreo de campaña",
+    description: "Seguimiento operativo durante la vigencia.",
+    basePrice: 110,
+    currency: "USD",
+    sortOrder: 110,
+  },
+  {
+    code: "MANTENIMIENTO_BASICO",
+    name: "Mantenimiento básico",
+    description: "Ajustes menores y limpieza durante campaña.",
+    basePrice: 95,
+    currency: "USD",
+    sortOrder: 120,
+  },
+];
+
 const structureSizes: Record<string, { width: number; height: number }> = {
   "Mupi Giant": { width: 4.0, height: 3.0 },
   Bastidor: { width: 6.0, height: 3.0 },
@@ -431,6 +530,31 @@ async function upsertPromo() {
   });
 }
 
+async function upsertCampaignServices() {
+  for (const service of campaignServices) {
+    await prisma.campaignService.upsert({
+      where: { code: service.code },
+      update: {
+        name: service.name,
+        description: service.description,
+        basePrice: service.basePrice,
+        currency: service.currency,
+        sortOrder: service.sortOrder,
+        isActive: true,
+      },
+      create: {
+        code: service.code,
+        name: service.name,
+        description: service.description,
+        basePrice: service.basePrice,
+        currency: service.currency,
+        sortOrder: service.sortOrder,
+        isActive: true,
+      },
+    });
+  }
+}
+
 async function upsertProductionSpecs(faces: any[], mountingTypeList: any[]) {
   for (const [index, face] of faces.entries()) {
     const isDigital = face.asset.digital;
@@ -680,6 +804,7 @@ async function main() {
   await upsertCatalogFaces(seededFaces);
   await upsertCatalogPriceRules(structureTypesList, zones);
   await upsertPromo();
+  await upsertCampaignServices();
 
   console.log("Seeding specs and extras...");
   await upsertProductionSpecs(seededFaces, mountingTypeList);
