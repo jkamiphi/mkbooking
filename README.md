@@ -72,6 +72,8 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 | `pnpm prisma:studio` | Open Prisma Studio |
 | `pnpm prisma:migrate` | Run database migrations |
 | `pnpm prisma:seed` | Seed database |
+| `pnpm storage:migrate:blob-to-s3 -- --dry-run` | Preview Vercel Blob to S3 URL migration |
+| `pnpm storage:migrate:blob-to-s3 -- --execute` | Execute Vercel Blob to S3 migration and persist URLs |
 
 ## Project Structure
 

@@ -38,6 +38,16 @@ services:
         sync: false
       - key: NEXT_PUBLIC_GOOGLE_MAP_ID
         sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_S3_BUCKET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_PUBLIC_BASE_URL
+        sync: false
     healthCheckPath: /
 
 databases:

@@ -14,9 +14,11 @@
     "db:seed": "prisma db seed",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "admin:create": "tsx scripts/create-admin.ts"
+    "admin:create": "tsx scripts/create-admin.ts",
+    "storage:migrate:blob-to-s3": "tsx scripts/migrate-blob-to-s3.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.998.0",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -34,7 +36,6 @@
     "@trpc/next": "^11.9.0",
     "@trpc/react-query": "^11.9.0",
     "@trpc/server": "^11.9.0",
-    "@vercel/blob": "^2.0.1",
     "@vis.gl/react-google-maps": "^1.7.1",
     "better-auth": "^1.4.17",
     "class-variance-authority": "^0.7.1",

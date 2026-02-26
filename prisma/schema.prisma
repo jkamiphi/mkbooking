@@ -1018,7 +1018,7 @@ model OrderCreative {
   id String @id @default(cuid())
 
   orderId      String
-  lineItemId   String
+  lineItemId   String?
 
   fileUrl      String
   fileName     String
@@ -1035,7 +1035,7 @@ model OrderCreative {
   uploadedById String?
 
   order        Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  lineItem     OrderLineItem  @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+  lineItem     OrderLineItem? @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
   uploadedBy   UserProfile?   @relation("CreativeUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([orderId])

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../init";
 import { db } from "@/lib/db";
 import { TRPCError } from "@trpc/server";
-import { OrderStatus, CampaignRequestStatus, CreativeStatus } from "@prisma/client";
+import { OrderStatus, CreativeStatus, Prisma } from "@prisma/client";
 
 export const ordersRouter = router({
     generateFromRequest: protectedProcedure
@@ -496,7 +496,7 @@ export const ordersRouter = router({
         .input(
             z.object({
                 orderId: z.string(),
-                lineItemId: z.string(),
+                lineItemId: z.string().optional().nullable(),
                 fileUrl: z.string(),
                 fileName: z.string(),
                 fileType: z.string(),
@@ -519,28 +519,84 @@ export const ordersRouter = router({
                 });
             }
 
-            const existingCreatives = await db.orderCreative.findMany({
-                where: { lineItemId: input.lineItemId },
+            const order = await db.order.findUnique({
+                where: { id: input.orderId },
+                select: { id: true },
+            });
+
+            if (!order) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Order not found",
+                });
+            }
+
+            const targetLineItemId = input.lineItemId ?? null;
+
+            if (targetLineItemId) {
+                const lineItem = await db.orderLineItem.findUnique({
+                    where: { id: targetLineItemId },
+                    select: { id: true, orderId: true },
+                });
+
+                if (!lineItem || lineItem.orderId !== input.orderId) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Line item does not belong to the order",
+                    });
+                }
+
+                const existingCreativeForLineItem = await db.orderCreative.findFirst({
+                    where: { lineItemId: targetLineItemId },
+                    select: { id: true },
+                });
+
+                if (existingCreativeForLineItem) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Esta cara ya tiene un arte asociado.",
+                    });
+                }
+            }
+
+            const latestCreative = await db.orderCreative.findFirst({
+                where: { orderId: input.orderId, lineItemId: targetLineItemId },
                 orderBy: { version: "desc" },
-                take: 1,
+                select: { version: true },
             });
 
-            const nextVersion = existingCreatives.length > 0 ? existingCreatives[0].version + 1 : 1;
+            const nextVersion = (latestCreative?.version ?? 0) + 1;
 
-            const creative = await db.orderCreative.create({
-                data: {
-                    orderId: input.orderId,
-                    lineItemId: input.lineItemId,
-                    fileUrl: input.fileUrl,
-                    fileName: input.fileName,
-                    fileType: input.fileType,
-                    fileSize: input.fileSize,
-                    version: nextVersion,
-                    metadata: input.metadata || null,
-                    notes: input.notes,
-                    uploadedById: userProfile.id,
-                },
-            });
+            let creative;
+            try {
+                creative = await db.orderCreative.create({
+                    data: {
+                        orderId: input.orderId,
+                        lineItemId: targetLineItemId,
+                        fileUrl: input.fileUrl,
+                        fileName: input.fileName,
+                        fileType: input.fileType,
+                        fileSize: input.fileSize,
+                        version: nextVersion,
+                        metadata: input.metadata || null,
+                        notes: input.notes,
+                        uploadedById: userProfile.id,
+                    },
+                });
+            } catch (error) {
+                if (
+                    targetLineItemId &&
+                    error instanceof Prisma.PrismaClientKnownRequestError &&
+                    error.code === "P2002"
+                ) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Esta cara ya tiene un arte asociado.",
+                    });
+                }
+
+                throw error;
+            }
 
             return creative;
         }),

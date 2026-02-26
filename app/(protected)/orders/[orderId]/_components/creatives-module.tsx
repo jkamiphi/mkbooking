@@ -1,13 +1,25 @@
 "use client";
 
 import { useState, useRef } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
 import { Upload, FileIcon, X, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import type { AppRouter } from "@/lib/trpc/routers";
 
-export function CreativesModule({ orderId, lineItems }: { orderId: string; lineItems: any[] }) {
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type CreativeItem = RouterOutputs["orders"]["getCreatives"][number];
+type OrderLineItem = RouterOutputs["orders"]["get"]["lineItems"][number];
+
+const ORDER_GENERAL_UPLOAD_TARGET = "order-general";
+
+function formatCreativeDate(value: CreativeItem["createdAt"]) {
+    return new Date(value).toLocaleDateString();
+}
+
+export function CreativesModule({ orderId, lineItems }: { orderId: string; lineItems: OrderLineItem[] }) {
     const utils = trpc.useUtils();
     const creativesQuery = trpc.orders.getCreatives.useQuery({ orderId });
     const addCreative = trpc.orders.addCreative.useMutation({
@@ -24,10 +36,11 @@ export function CreativesModule({ orderId, lineItems }: { orderId: string; lineI
         }
     });
 
-    const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
+    const [uploadingTargetId, setUploadingTargetId] = useState<string | null>(null);
 
-    async function handleFileUpload(file: File, lineItemId: string) {
-        setUploadingItemId(lineItemId);
+    async function handleFileUpload(file: File, lineItemId?: string) {
+        const targetId = lineItemId || ORDER_GENERAL_UPLOAD_TARGET;
+        setUploadingTargetId(targetId);
         try {
             const formData = new FormData();
             formData.append("file", file);
@@ -42,21 +55,23 @@ export function CreativesModule({ orderId, lineItems }: { orderId: string; lineI
 
             await addCreative.mutateAsync({
                 orderId,
-                lineItemId,
+                lineItemId: lineItemId || null,
                 fileUrl: blob.url,
                 fileName: file.name,
                 fileType: file.type,
                 fileSize: file.size,
             });
-        } catch (error) {
+        } catch {
             toast.error("Error al subir el archivo");
         } finally {
-            setUploadingItemId(null);
+            setUploadingTargetId(null);
         }
     }
 
     const creativesData = creativesQuery.data || [];
-    const creativesByLineItem = creativesData.reduce<Record<string, any[]>>((acc: Record<string, any[]>, creative: any) => {
+    const generalCreatives = creativesData.filter((creative) => !creative.lineItemId);
+    const creativesByLineItem = creativesData.reduce<Record<string, CreativeItem[]>>((acc, creative) => {
+        if (!creative.lineItemId) return acc;
         if (!acc[creative.lineItemId]) acc[creative.lineItemId] = [];
         acc[creative.lineItemId].push(creative);
         return acc;
@@ -68,9 +83,80 @@ export function CreativesModule({ orderId, lineItems }: { orderId: string; lineI
                 Materiales Creativos (Artes)
             </h2>
             <div className="space-y-6">
+                <div className="border border-neutral-200/80 rounded-xl p-4 bg-neutral-50/50">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                        <div>
+                            <h3 className="font-medium text-sm text-neutral-900">Artes generales de la orden</h3>
+                            <p className="text-xs text-neutral-500 mt-0.5">
+                                Puedes subir uno o varios artes que aplican a toda la orden.
+                            </p>
+                        </div>
+                        <UploadButton
+                            onUpload={(file) => handleFileUpload(file)}
+                            isUploading={uploadingTargetId === ORDER_GENERAL_UPLOAD_TARGET}
+                            label={generalCreatives.length > 0 ? "Subir otro arte" : "Subir arte general"}
+                        />
+                    </div>
+
+                    {generalCreatives.length > 0 ? (
+                        <div className="space-y-3">
+                            {generalCreatives.map((creative, idx: number) => {
+                                const isLatest = idx === 0;
+                                return (
+                                    <div
+                                        key={creative.id}
+                                        className={`flex flex-wrap items-center justify-between gap-4 p-3 rounded-lg border ${isLatest
+                                            ? "border-primary/20 bg-primary/5"
+                                            : "border-neutral-200 bg-white"
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <div className="h-8 w-8 rounded bg-white flex shrink-0 items-center justify-center border border-neutral-200">
+                                                <FileIcon className="h-4 w-4 text-neutral-500" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-medium text-neutral-900 truncate">
+                                                    {creative.fileName}
+                                                </p>
+                                                <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-neutral-500 flex-wrap">
+                                                    <span className="font-semibold text-primary/80">v{creative.version}</span>
+                                                    <span>•</span>
+                                                    <span>{(creative.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                                                    <span>•</span>
+                                                    <span>{formatCreativeDate(creative.createdAt)}</span>
+                                                    {creative.uploadedBy?.user?.name && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span>Por {creative.uploadedBy.user.name}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="shrink-0 flex items-center gap-2">
+                                            <CreativeStatusBadge status={creative.status} />
+                                            <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" asChild>
+                                                <a href={creative.fileUrl} target="_blank" rel="noopener noreferrer">
+                                                    Ver
+                                                </a>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6 bg-white rounded-lg border border-dashed border-neutral-200">
+                            <p className="text-sm text-neutral-500 mb-1">Aún no hay artes generales subidos.</p>
+                            <p className="text-xs text-neutral-400">Sube piezas que aplican a toda la orden.</p>
+                        </div>
+                    )}
+                </div>
+
                 {lineItems.map((item) => {
                     const itemCreatives = creativesByLineItem[item.id] || [];
-                    const hasCreatives = itemCreatives.length > 0;
+                    const itemCreative = itemCreatives[0];
+                    const hasCreative = Boolean(itemCreative);
 
                     return (
                         <div key={item.id} className="border border-neutral-200/80 rounded-xl p-4 bg-neutral-50/50">
@@ -85,64 +171,50 @@ export function CreativesModule({ orderId, lineItems }: { orderId: string; lineI
                                 </div>
                                 <UploadButton
                                     onUpload={(file) => handleFileUpload(file, item.id)}
-                                    isUploading={uploadingItemId === item.id}
-                                    label={hasCreatives ? "Subir nueva versión" : "Subir arte"}
+                                    isUploading={uploadingTargetId === item.id}
+                                    disabled={hasCreative}
+                                    label={hasCreative ? "Arte cargado" : "Subir arte"}
                                 />
                             </div>
 
-                            {hasCreatives ? (
+                            {hasCreative ? (
                                 <div className="space-y-3">
-                                    {itemCreatives.map((creative: any, idx: number) => {
-                                        const isLatest = idx === 0;
-                                        return (
-                                            <div
-                                                key={creative.id}
-                                                className={`flex flex-wrap items-center justify-between gap-4 p-3 rounded-lg border ${isLatest
-                                                    ? 'border-primary/20 bg-primary/5'
-                                                    : 'border-neutral-200 bg-white opacity-70'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-3 overflow-hidden">
-                                                    <div className="h-8 w-8 rounded bg-white flex shrink-0 items-center justify-center border border-neutral-200">
-                                                        <FileIcon className="h-4 w-4 text-neutral-500" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-xs font-medium text-neutral-900 truncate">
-                                                            {creative.fileName}
-                                                        </p>
-                                                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-neutral-500 flex-wrap">
-                                                            <span className="font-semibold text-primary/80">v{creative.version}</span>
+                                    <div className="flex flex-wrap items-center justify-between gap-4 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <div className="h-8 w-8 rounded bg-white flex shrink-0 items-center justify-center border border-neutral-200">
+                                                <FileIcon className="h-4 w-4 text-neutral-500" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-medium text-neutral-900 truncate">
+                                                    {itemCreative.fileName}
+                                                </p>
+                                                <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-neutral-500 flex-wrap">
+                                                    <span>{(itemCreative.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                                                    <span>•</span>
+                                                    <span>{formatCreativeDate(itemCreative.createdAt)}</span>
+                                                    {itemCreative.uploadedBy?.user?.name && (
+                                                        <>
                                                             <span>•</span>
-                                                            <span>{(creative.fileSize / 1024 / 1024).toFixed(2)} MB</span>
-                                                            <span>•</span>
-                                                            <span>{new Date(creative.createdAt).toLocaleDateString()}</span>
-                                                            {creative.uploadedBy?.user?.name && (
-                                                                <>
-                                                                    <span>•</span>
-                                                                    <span>Por {creative.uploadedBy.user.name}</span>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="shrink-0 flex items-center gap-2">
-                                                    <CreativeStatusBadge status={creative.status} />
-                                                    {isLatest && (
-                                                        <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" asChild>
-                                                            <a href={creative.fileUrl} target="_blank" rel="noopener noreferrer">
-                                                                Ver
-                                                            </a>
-                                                        </Button>
+                                                            <span>Por {itemCreative.uploadedBy.user.name}</span>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                        <div className="shrink-0 flex items-center gap-2">
+                                            <CreativeStatusBadge status={itemCreative.status} />
+                                            <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" asChild>
+                                                <a href={itemCreative.fileUrl} target="_blank" rel="noopener noreferrer">
+                                                    Ver
+                                                </a>
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="text-center py-6 bg-white rounded-lg border border-dashed border-neutral-200">
                                     <p className="text-sm text-neutral-500 mb-1">Aún no hay artes subidos para este espacio.</p>
-                                    <p className="text-xs text-neutral-400">Sube tus diseños en formato de imagen o documento.</p>
+                                    <p className="text-xs text-neutral-400">Puedes subir solo un arte para esta cara específica.</p>
                                 </div>
                             )}
                         </div>
@@ -153,7 +225,17 @@ export function CreativesModule({ orderId, lineItems }: { orderId: string; lineI
     );
 }
 
-function UploadButton({ onUpload, isUploading, label }: { onUpload: (f: File) => void, isUploading: boolean, label: string }) {
+function UploadButton({
+    onUpload,
+    isUploading,
+    label,
+    disabled = false,
+}: {
+    onUpload: (f: File) => void;
+    isUploading: boolean;
+    label: string;
+    disabled?: boolean;
+}) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     return (
@@ -176,7 +258,7 @@ function UploadButton({ onUpload, isUploading, label }: { onUpload: (f: File) =>
                 variant="outline"
                 className="h-8 text-xs shrink-0 bg-white"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
+                disabled={isUploading || disabled}
             >
                 <Upload className="h-3.5 w-3.5 mr-1.5" />
                 {isUploading ? "Subiendo..." : label}
