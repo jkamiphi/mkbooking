@@ -220,6 +220,7 @@ const requestInclude = {
     },
     orderBy: { createdAt: "asc" },
   },
+  order: true,
 } as const;
 
 export async function listCampaignRequests(
