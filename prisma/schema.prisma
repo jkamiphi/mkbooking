@@ -128,6 +128,7 @@ model UserProfile {
   createdOrders            Order[]              @relation("OrderCreator")
   confirmedOrders          Order[]              @relation("OrderConfirmer")
   uploadedCreatives        OrderCreative[]      @relation("CreativeUploader")
+  uploadedPurchaseOrders   OrderPurchaseOrder[] @relation("PurchaseOrderUploader")
 
   @@index([userId])
   @@index([isActive])
@@ -799,6 +800,7 @@ model Order {
   companyConfirmBy UserProfile?     @relation("OrderConfirmer", fields: [companyConfirmedById], references: [id], onDelete: SetNull)
   lineItems        OrderLineItem[]
   creatives        OrderCreative[]
+  purchaseOrders   OrderPurchaseOrder[]
 
   @@index([status])
   @@index([organizationId])
@@ -1041,4 +1043,29 @@ model OrderCreative {
   @@index([orderId])
   @@index([lineItemId])
   @@map("order_creative")
+}
+
+model OrderPurchaseOrder {
+  id String @id @default(cuid())
+
+  orderId String
+
+  fileUrl  String
+  fileName String
+  fileType String
+  fileSize Int
+
+  version Int      @default(1)
+  metadata Json?
+  notes    String? @db.Text
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  uploadedById String?
+
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  uploadedBy UserProfile? @relation("PurchaseOrderUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@map("order_purchase_order")
 }

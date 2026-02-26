@@ -492,6 +492,81 @@ export const ordersRouter = router({
             return creatives;
         }),
 
+    getPurchaseOrders: protectedProcedure
+        .input(z.object({ orderId: z.string() }))
+        .query(async ({ input }) => {
+            const purchaseOrders = await db.orderPurchaseOrder.findMany({
+                where: { orderId: input.orderId },
+                include: { uploadedBy: { include: { user: true } } },
+                orderBy: { createdAt: "desc" },
+            });
+
+            return purchaseOrders;
+        }),
+
+    addPurchaseOrder: protectedProcedure
+        .input(
+            z.object({
+                orderId: z.string(),
+                fileUrl: z.string(),
+                fileName: z.string(),
+                fileType: z.string(),
+                fileSize: z.number(),
+                metadata: z.any().optional(),
+                notes: z.string().optional(),
+            })
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { user } = ctx;
+
+            const userProfile = await db.userProfile.findUnique({
+                where: { userId: user.id },
+            });
+
+            if (!userProfile) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "User profile not found",
+                });
+            }
+
+            const order = await db.order.findUnique({
+                where: { id: input.orderId },
+                select: { id: true },
+            });
+
+            if (!order) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Order not found",
+                });
+            }
+
+            const latestPurchaseOrder = await db.orderPurchaseOrder.findFirst({
+                where: { orderId: input.orderId },
+                orderBy: { version: "desc" },
+                select: { version: true },
+            });
+
+            const nextVersion = (latestPurchaseOrder?.version ?? 0) + 1;
+
+            const purchaseOrder = await db.orderPurchaseOrder.create({
+                data: {
+                    orderId: input.orderId,
+                    fileUrl: input.fileUrl,
+                    fileName: input.fileName,
+                    fileType: input.fileType,
+                    fileSize: input.fileSize,
+                    version: nextVersion,
+                    metadata: input.metadata || null,
+                    notes: input.notes,
+                    uploadedById: userProfile.id,
+                },
+            });
+
+            return purchaseOrder;
+        }),
+
     addCreative: protectedProcedure
         .input(
             z.object({

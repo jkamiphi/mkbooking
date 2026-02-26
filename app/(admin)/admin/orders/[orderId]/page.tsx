@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { AdminConfirmButton } from "./_components/admin-confirm-button";
 import { DraftEditor } from "./_components/draft-editor";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+import { CreativesModule } from "@/components/orders/creatives-module";
+import { PurchaseOrderModule } from "@/components/orders/purchase-order-module";
 
 type PageProps = {
     params: Promise<{ orderId: string }>;
@@ -125,6 +127,12 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                                 ))}
                             </div>
                         </section>
+
+                        {order.status === "CONFIRMED" && (
+                            <CreativesModule orderId={order.id} lineItems={order.lineItems} readOnly />
+                        )}
+
+                        <PurchaseOrderModule orderId={order.id} readOnly />
                     </div>
 
                     {/* Sidebar: Totals & Actions */}

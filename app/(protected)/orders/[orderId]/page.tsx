@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, FileText, Hash, MapPin, Package, Shapes } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, Package } from "lucide-react";
 import { TRPCError } from "@trpc/server";
 import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { Badge } from "@/components/ui/badge";
 import { ClientApprovalButton } from "./_components/client-approval-button";
-import { CreativesModule } from "./_components/creatives-module";
+import { CreativesModule } from "@/components/orders/creatives-module";
+import { PurchaseOrderModule } from "@/components/orders/purchase-order-module";
 
 type PageProps = {
     params: Promise<{ orderId: string }>;
@@ -123,6 +124,10 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
                     {order.status === "CONFIRMED" && (
                         <CreativesModule orderId={order.id} lineItems={order.lineItems} />
+                    )}
+
+                    {order.status !== "DRAFT" && order.status !== "CANCELLED" && (
+                        <PurchaseOrderModule orderId={order.id} />
                     )}
                 </div>
 
