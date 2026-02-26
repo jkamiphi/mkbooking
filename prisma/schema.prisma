@@ -127,6 +127,7 @@ model UserProfile {
   resolvedCampaignRequests CampaignRequest[]    @relation("CampaignRequestResolver")
   createdOrders            Order[]              @relation("OrderCreator")
   confirmedOrders          Order[]              @relation("OrderConfirmer")
+  uploadedCreatives        OrderCreative[]      @relation("CreativeUploader")
 
   @@index([userId])
   @@index([isActive])
@@ -797,6 +798,7 @@ model Order {
   createdBy        UserProfile?     @relation("OrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
   companyConfirmBy UserProfile?     @relation("OrderConfirmer", fields: [companyConfirmedById], references: [id], onDelete: SetNull)
   lineItems        OrderLineItem[]
+  creatives        OrderCreative[]
 
   @@index([status])
   @@index([organizationId])
@@ -821,6 +823,7 @@ model OrderLineItem {
   // Relations
   order Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   face  AssetFace @relation(fields: [faceId], references: [id], onDelete: Restrict)
+  creatives OrderCreative[]
 
   @@index([orderId])
   @@index([faceId])
@@ -997,4 +1000,45 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_log")
+}
+
+// ============================================================================
+// CREATIVES MODULE
+// ============================================================================
+
+enum CreativeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("creative_status")
+}
+
+model OrderCreative {
+  id String @id @default(cuid())
+
+  orderId      String
+  lineItemId   String
+
+  fileUrl      String
+  fileName     String
+  fileType     String
+  fileSize     Int
+
+  version      Int            @default(1)
+  status       CreativeStatus @default(PENDING)
+  metadata     Json?
+  notes        String?        @db.Text
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  uploadedById String?
+
+  order        Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  lineItem     OrderLineItem  @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+  uploadedBy   UserProfile?   @relation("CreativeUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([lineItemId])
+  @@map("order_creative")
 }

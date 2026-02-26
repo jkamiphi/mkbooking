@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../init";
 import { db } from "@/lib/db";
 import { TRPCError } from "@trpc/server";
-import { OrderStatus, CampaignRequestStatus } from "@prisma/client";
+import { OrderStatus, CampaignRequestStatus, CreativeStatus } from "@prisma/client";
 
 export const ordersRouter = router({
     generateFromRequest: protectedProcedure
@@ -476,6 +476,84 @@ export const ordersRouter = router({
         .mutation(async ({ input }) => {
             // Basic status update. Deeper flow (like confirming -> creating holds) needs more complex logic
             return db.order.update({
+                where: { id: input.id },
+                data: { status: input.status },
+            });
+        }),
+
+    getCreatives: protectedProcedure
+        .input(z.object({ orderId: z.string() }))
+        .query(async ({ input }) => {
+            const creatives = await db.orderCreative.findMany({
+                where: { orderId: input.orderId },
+                include: { uploadedBy: { include: { user: true } } },
+                orderBy: { createdAt: "desc" },
+            });
+            return creatives;
+        }),
+
+    addCreative: protectedProcedure
+        .input(
+            z.object({
+                orderId: z.string(),
+                lineItemId: z.string(),
+                fileUrl: z.string(),
+                fileName: z.string(),
+                fileType: z.string(),
+                fileSize: z.number(),
+                metadata: z.any().optional(),
+                notes: z.string().optional(),
+            })
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { user } = ctx;
+
+            const userProfile = await db.userProfile.findUnique({
+                where: { userId: user.id },
+            });
+
+            if (!userProfile) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "User profile not found",
+                });
+            }
+
+            const existingCreatives = await db.orderCreative.findMany({
+                where: { lineItemId: input.lineItemId },
+                orderBy: { version: "desc" },
+                take: 1,
+            });
+
+            const nextVersion = existingCreatives.length > 0 ? existingCreatives[0].version + 1 : 1;
+
+            const creative = await db.orderCreative.create({
+                data: {
+                    orderId: input.orderId,
+                    lineItemId: input.lineItemId,
+                    fileUrl: input.fileUrl,
+                    fileName: input.fileName,
+                    fileType: input.fileType,
+                    fileSize: input.fileSize,
+                    version: nextVersion,
+                    metadata: input.metadata || null,
+                    notes: input.notes,
+                    uploadedById: userProfile.id,
+                },
+            });
+
+            return creative;
+        }),
+
+    updateCreativeStatus: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                status: z.nativeEnum(CreativeStatus),
+            })
+        )
+        .mutation(async ({ input }) => {
+            return db.orderCreative.update({
                 where: { id: input.id },
                 data: { status: input.status },
             });

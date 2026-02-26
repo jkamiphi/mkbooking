@@ -5,6 +5,7 @@ import { TRPCError } from "@trpc/server";
 import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { Badge } from "@/components/ui/badge";
 import { ClientApprovalButton } from "./_components/client-approval-button";
+import { CreativesModule } from "./_components/creatives-module";
 
 type PageProps = {
     params: Promise<{ orderId: string }>;
@@ -119,6 +120,10 @@ export default async function OrderDetailPage({ params }: PageProps) {
                             ))}
                         </div>
                     </section>
+
+                    {order.status === "CONFIRMED" && (
+                        <CreativesModule orderId={order.id} lineItems={order.lineItems} />
+                    )}
                 </div>
 
                 {/* Sidebar: Totals & Actions */}
