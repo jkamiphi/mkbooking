@@ -52,7 +52,7 @@ MK Booking is an Out-of-Home (OOH) advertising rental and booking platform for P
 - **API Layer**: tRPC for end-to-end type safety
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: Better Auth (email/password + OAuth ready)
-- **File Storage**: Vercel Blob for document storage
+- **File Storage**: S3-compatible for document storage
 
 ### Key Libraries
 

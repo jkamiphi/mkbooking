@@ -30,7 +30,7 @@ An Out-of-Home (OOH) advertising rental and booking platform for Panama. Similar
 - **tRPC 11** for end-to-end type-safe APIs
 - **PostgreSQL** with Prisma ORM
 - **Better Auth** for authentication
-- **Vercel Blob** for file storage
+- **AWS S3** for file storage
 
 ## Getting Started
 
