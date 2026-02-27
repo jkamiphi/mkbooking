@@ -8,6 +8,12 @@ import {
   formatShortDateLabel,
 } from "@/components/campaign/campaign-date-range-picker";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   clampDate,
   parseDateInputValue,
   sanitizeDateRangeStrings,
@@ -35,6 +41,7 @@ type HomeSearchBarProps = {
 };
 
 type PanelKey = "destination" | "dates" | "type" | null;
+type MobilePanelKey = Exclude<PanelKey, null>;
 
 export function HomeSearchBar({
   query,
@@ -48,6 +55,9 @@ export function HomeSearchBar({
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [activePanel, setActivePanel] = useState<PanelKey>(null);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [mobileActiveSection, setMobileActiveSection] =
+    useState<PanelKey>("destination");
   const [queryValue, setQueryValue] = useState(query ?? "");
   const [selectedTypeId, setSelectedTypeId] = useState(typeId ?? "");
   const [fromDate, setFromDate] = useState<string | undefined>();
@@ -55,8 +65,7 @@ export function HomeSearchBar({
   const minimumStartDateValue =
     parseDateInputValue(minimumStartDate) ?? clampDate(new Date());
 
-  function handleSearch(event: React.FormEvent) {
-    event.preventDefault();
+  function executeSearch() {
     const params = new URLSearchParams();
     if (selectedTypeId) params.set("type", selectedTypeId);
     const sanitizedDateRange = sanitizeDateRangeStrings({
@@ -75,6 +84,13 @@ export function HomeSearchBar({
     const queryString = params.toString();
     const url = `/s/${encodeURIComponent(searchTerm)}${queryString ? `?${queryString}` : ""}`;
     router.push(url);
+    setActivePanel(null);
+    setIsMobileSearchOpen(false);
+  }
+
+  function handleSearch(event: React.FormEvent) {
+    event.preventDefault();
+    executeSearch();
   }
 
   useEffect(() => {
@@ -115,16 +131,271 @@ export function HomeSearchBar({
     return "Agregar fechas";
   }
 
+  function getInitialMobileSection(): MobilePanelKey {
+    if (!queryValue.trim()) {
+      return "destination";
+    }
+    if (!fromDate || !toDate) {
+      return "dates";
+    }
+    if (!selectedTypeId) {
+      return "type";
+    }
+    return "destination";
+  }
+
+  function openMobileSearch() {
+    setMobileActiveSection(getInitialMobileSection());
+    setIsMobileSearchOpen(true);
+  }
+
+  function clearMobileFilters() {
+    setQueryValue("");
+    setFromDate(undefined);
+    setToDate(undefined);
+    setSelectedTypeId("");
+    setMobileActiveSection("destination");
+  }
+
+  const mobileSummary = `${queryValue.trim() || "Zona"} · ${
+    fromDate || toDate ? rangeLabel() : "Fechas"
+  } · ${selectedType?.name ?? "Formato"}`;
+
   const segmentBase =
     "flex cursor-pointer flex-col rounded-3xl px-6 py-3 text-[11px] font-semibold text-neutral-500 transition";
   const segmentActive = "bg-white shadow-lg shadow-neutral-200/60";
 
   return (
     <section className="relative mx-auto w-full max-w-min px-6 pb-12 pt-4">
-      <form onSubmit={handleSearch} className="mt-8">
+      <div className="mt-4 md:hidden">
+        <button
+          type="button"
+          onClick={openMobileSearch}
+          className="w-[min(100vw-3rem,30rem)] rounded-full border border-white/80 bg-white/95 px-5 py-3 text-left shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl"
+        >
+          <span className="flex items-center gap-2 text-base font-semibold text-neutral-900">
+            <Search className="h-4 w-4 text-neutral-500" />
+            Empieza tu búsqueda
+          </span>
+          <span className="mt-1 block truncate text-xs font-medium text-neutral-500">
+            {mobileSummary}
+          </span>
+        </button>
+      </div>
+
+      <Dialog open={isMobileSearchOpen} onOpenChange={setIsMobileSearchOpen}>
+        <DialogContent
+          showCloseButton={false}
+          className="!top-0 !left-0 !h-dvh !w-full !max-w-none !translate-x-0 !translate-y-0 !gap-0 !rounded-none !border-0 !p-0 data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right"
+        >
+          <div className="flex h-full flex-col bg-neutral-100">
+            <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-5 py-4">
+              <div>
+                <DialogTitle className="text-base font-semibold text-neutral-900">
+                  Busca tu espacio
+                </DialogTitle>
+                <DialogDescription className="mt-1 text-xs text-neutral-500">
+                  Define destino, fechas y formato para continuar.
+                </DialogDescription>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileSearchOpen(false)}
+                className="rounded-full border border-neutral-200 bg-white p-2 text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700"
+                aria-label="Cerrar buscador"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-6">
+              <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMobileActiveSection((current) =>
+                      current === "destination" ? null : "destination",
+                    )
+                  }
+                  className="flex w-full items-center justify-between px-4 py-4 text-left"
+                >
+                  <span>
+                    <span className="block text-sm font-semibold text-neutral-900">
+                      ¿Dónde?
+                    </span>
+                    <span className="mt-1 block text-sm text-neutral-500">
+                      {queryValue.trim() || "Buscar por zona o provincia"}
+                    </span>
+                  </span>
+                  {mobileActiveSection !== "destination" ? (
+                    <ChevronRight className="h-4 w-4 text-neutral-400" />
+                  ) : null}
+                </button>
+
+                {mobileActiveSection === "destination" ? (
+                  <div className="space-y-3 border-t border-neutral-200 px-4 pb-4 pt-3">
+                    <label className="flex items-center gap-2 rounded-2xl border border-neutral-200 px-3 py-3">
+                      <Search className="h-4 w-4 text-neutral-500" />
+                      <input
+                        value={queryValue}
+                        onChange={(event) => setQueryValue(event.target.value)}
+                        placeholder="Ciudad de Panamá, Vía España, Albrook..."
+                        className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none"
+                      />
+                    </label>
+
+                    <div className="space-y-2">
+                      {filteredZones.length > 0 ? (
+                        filteredZones.map((zone) => (
+                          <button
+                            key={zone.id}
+                            type="button"
+                            onClick={() => {
+                              setQueryValue(`${zone.name}, ${zone.province.name}`);
+                              setMobileActiveSection("dates");
+                            }}
+                            className="flex w-full items-center gap-3 rounded-2xl border border-neutral-200 px-3 py-2.5 text-left transition hover:border-neutral-300"
+                          >
+                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
+                              <MapPin className="h-4 w-4" />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-semibold text-neutral-900">
+                                {zone.name}
+                              </span>
+                              <span className="block truncate text-xs text-neutral-500">
+                                {zone.province.name}
+                              </span>
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="rounded-2xl border border-dashed border-neutral-200 px-3 py-3 text-xs text-neutral-500">
+                          No encontramos coincidencias para tu búsqueda.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+
+              <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMobileActiveSection((current) =>
+                      current === "dates" ? null : "dates",
+                    )
+                  }
+                  className="flex w-full items-center justify-between px-4 py-4 text-left"
+                >
+                  <span>
+                    <span className="block text-sm font-semibold text-neutral-900">
+                      ¿Cuándo?
+                    </span>
+                    <span className="mt-1 block text-sm text-neutral-500">
+                      {fromDate || toDate ? rangeLabel() : "Agregar fechas"}
+                    </span>
+                  </span>
+                  {mobileActiveSection !== "dates" ? (
+                    <ChevronRight className="h-4 w-4 text-neutral-400" />
+                  ) : null}
+                </button>
+
+                {mobileActiveSection === "dates" ? (
+                  <div className="max-h-[52dvh] overflow-auto border-t border-neutral-200 p-3">
+                    <CampaignDateRangePicker
+                      variant="calendar"
+                      fromDate={fromDate}
+                      toDate={toDate}
+                      minimumStartDate={minimumStartDate}
+                      minimumDurationDays={1}
+                      onChange={(nextFromDate, nextToDate) => {
+                        setFromDate(nextFromDate);
+                        setToDate(nextToDate);
+                        if (nextFromDate && nextToDate) {
+                          setMobileActiveSection("type");
+                        }
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </section>
+
+              <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMobileActiveSection((current) =>
+                      current === "type" ? null : "type",
+                    )
+                  }
+                  className="flex w-full items-center justify-between px-4 py-4 text-left"
+                >
+                  <span>
+                    <span className="block text-sm font-semibold text-neutral-900">
+                      ¿Qué formato?
+                    </span>
+                    <span className="mt-1 block text-sm text-neutral-500">
+                      {selectedType?.name ?? "Agregar tipo de estructura"}
+                    </span>
+                  </span>
+                  {mobileActiveSection !== "type" ? (
+                    <ChevronRight className="h-4 w-4 text-neutral-400" />
+                  ) : null}
+                </button>
+
+                {mobileActiveSection === "type" ? (
+                  <div className="flex flex-wrap gap-2 border-t border-neutral-200 px-4 pb-4 pt-3">
+                    {structureTypes.map((type) => {
+                      const selected = type.id === selectedTypeId;
+                      return (
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() => setSelectedTypeId(selected ? "" : type.id)}
+                          className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                            selected
+                              ? "border-neutral-900 bg-neutral-900 text-white"
+                              : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
+                          }`}
+                        >
+                          {type.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </section>
+            </div>
+
+            <div className="border-t border-neutral-200 bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={clearMobileFilters}
+                  className="text-sm font-semibold text-neutral-700 underline underline-offset-2 transition hover:text-neutral-900"
+                >
+                  Limpiar todo
+                </button>
+                <button
+                  type="button"
+                  onClick={executeSearch}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#E91E63] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#E91E63]/30 transition hover:bg-[#d91857]"
+                >
+                  <Search className="h-4 w-4" />
+                  Buscar
+                </button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <form onSubmit={handleSearch} className="mt-8 hidden md:block">
         <div ref={containerRef} className="relative">
           <div className="rounded-full border border-white/70 bg-white/90 shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl">
-            <div className="flex flex-nowrap justify-center items-center gap-2 overflow-x-auto p-2 md:gap-0 md:overflow-visible">
+            <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto p-2 md:gap-0 md:overflow-visible">
               <div
                 className={`${segmentBase} min-w-[260px] md:rounded-none md:rounded-l-full ${
                   activePanel === "destination" ? segmentActive : ""
@@ -283,11 +554,9 @@ export function HomeSearchBar({
                   </div>
                 </div>
               ) : null}
-
             </div>
           ) : null}
         </div>
-
       </form>
 
       {showPromo ? (
