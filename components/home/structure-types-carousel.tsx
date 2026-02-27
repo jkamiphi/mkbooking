@@ -59,22 +59,23 @@ export function StructureTypesCarousel({
               style={{ width: 160 }}
             >
               {typeImageUrl ? (
-                <div className="relative aspect-[4/3] w-full overflow-hidden">
-                  <Image
-                    src={typeImageUrl}
-                    alt={type.name}
-                    fill
-                    sizes="160px"
-                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-2 left-3 right-3">
-                    <span className="text-sm font-semibold text-white block">
+                <div className="bg-white">
+                  <div className="relative aspect-[4/3] w-full overflow-hidden">
+                    <Image
+                      src={typeImageUrl}
+                      alt={type.name}
+                      fill
+                      sizes="160px"
+                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="px-3 py-2.5">
+                    <span className="block text-sm font-semibold text-neutral-900">
                       {type.name}
                     </span>
                     {structureTypeHints[type.name] ? (
-                      <span className="text-xs text-white/80">
+                      <span className="block text-[11px] text-neutral-600">
                         {structureTypeHints[type.name]}
                       </span>
                     ) : null}
