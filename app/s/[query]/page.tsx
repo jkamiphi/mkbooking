@@ -14,6 +14,7 @@ import {
 import { getCampaignRequestStartGapDays } from "@/lib/server-config";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 import { UserHeaderActions } from "@/components/layout/user-header-actions";
+import { HomeFooter } from "@/components/home/home-footer";
 import { SearchFilters } from "./_components/search-filters";
 import { SearchResultsView } from "./_components/search-results-view";
 import Image from "next/image";
@@ -168,10 +169,10 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       : defaultCenter;
 
   return (
-    <div className="flex h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-white">
       {/* Header */}
-      <header className="z-20 flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4">
-        <div className="flex items-center gap-4">
+      <header className="z-20 flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-4 sm:px-6">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link
             href="/"
             className="flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
@@ -189,7 +190,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {searchContextLabel ? (
             <div className="hidden items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 md:flex">
               <MapPin className="h-4 w-4 text-neutral-400" />
@@ -214,7 +215,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           ) : (
             <Link
               href="/login"
-              className="rounded-full bg-[#0359A8] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[#0359A8]/20 transition hover:bg-[#024a8c]"
+              className="rounded-full bg-[#0359A8] px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-[#0359A8]/20 transition hover:bg-[#024a8c] sm:px-4 sm:text-sm"
             >
               Iniciar sesión
             </Link>
@@ -235,20 +236,24 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         query={decodedQuery}
       />
 
-      <SearchResultsView
-        total={visibleTotal}
-        searchTerm={searchTerm}
-        results={results}
-        markers={markers}
-        center={mapCenter}
-        showPrices={showPrices}
-        selectedTypeId={typeId}
-        selectedZoneId={zoneId}
-        selectedFromDate={fromDate}
-        selectedToDate={toDate}
-        isAuthenticated={Boolean(session)}
-        searchPath={currentSearchPath}
-      />
+      <div className="flex flex-1 min-h-0 flex-col">
+        <SearchResultsView
+          total={visibleTotal}
+          searchTerm={searchTerm}
+          results={results}
+          markers={markers}
+          center={mapCenter}
+          showPrices={showPrices}
+          selectedTypeId={typeId}
+          selectedZoneId={zoneId}
+          selectedFromDate={fromDate}
+          selectedToDate={toDate}
+          isAuthenticated={Boolean(session)}
+          searchPath={currentSearchPath}
+        />
+      </div>
+
+      <HomeFooter showPrices={showPrices} />
     </div>
   );
 }

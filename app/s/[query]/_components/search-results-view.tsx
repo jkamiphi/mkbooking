@@ -93,7 +93,7 @@ export function SearchResultsView({
   return (
     <div className="flex flex-1 overflow-hidden">
       <div className="flex w-full flex-col overflow-hidden lg:w-[55%] xl:w-[60%]">
-        <div className="flex items-center justify-between border-b border-neutral-100 bg-neutral-50/50 px-6 py-3">
+        <div className="flex flex-col gap-3 border-b border-neutral-100 bg-neutral-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p className="text-sm text-neutral-600">
             <span className="font-semibold text-neutral-900">{total}</span>{" "}
             {total === 1 ? "espacio disponible" : "espacios disponibles"}
@@ -104,31 +104,31 @@ export function SearchResultsView({
               </span>
             )}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
             {isAuthenticated ? (
               <Link
                 href={campaignRequestUrl}
-                className="rounded-full border border-[#0359A8]/30 bg-[#0359A8]/10 px-3 py-1.5 text-xs font-semibold text-[#0359A8] transition hover:bg-[#0359A8]/15"
+                className="whitespace-nowrap rounded-full border border-[#0359A8]/30 bg-[#0359A8]/10 px-3 py-1.5 text-xs font-semibold text-[#0359A8] transition hover:bg-[#0359A8]/15"
               >
                 Solicitar campaña
               </Link>
             ) : (
               <Link
                 href="/login"
-                className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50"
+                className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50"
               >
                 Inicia sesión para solicitar
               </Link>
             )}
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition hover:border-neutral-300"
+              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition hover:border-neutral-300 sm:flex"
             >
               <Grid3X3 className="h-4 w-4" />
             </button>
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-neutral-400 transition hover:bg-neutral-100"
+              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-transparent text-neutral-400 transition hover:bg-neutral-100 sm:flex"
             >
               <List className="h-4 w-4" />
             </button>
@@ -136,7 +136,7 @@ export function SearchResultsView({
         </div>
 
         <div className="flex-1 overflow-y-auto pb-20">
-          <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
             {results.length === 0 ? (
               <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 py-16 text-center">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-200">
@@ -198,7 +198,7 @@ export function SearchResultsView({
                         border-2 shadow-md transition-all duration-200
                         ${isFaceSelected
                           ? "border-[#0359A8] bg-[#0359A8] text-white scale-110"
-                          : "border-white/90 bg-white/80 text-neutral-500 opacity-0 group-hover:opacity-100 hover:border-[#0359A8] hover:bg-[#0359A8] hover:text-white backdrop-blur-sm"
+                          : "border-white/90 bg-white/85 text-neutral-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:border-[#0359A8] hover:bg-[#0359A8] hover:text-white backdrop-blur-sm"
                         }
                       `}
                       aria-label={isFaceSelected ? `Quitar ${face.title} de selección` : `Agregar ${face.title} a selección`}
