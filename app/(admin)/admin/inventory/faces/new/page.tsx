@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { NewFaceForm } from "./new-face-form";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
@@ -13,7 +14,9 @@ export default function NewFacePage() {
         title="Nueva cara"
         description="Crear una nueva cara vendible para un activo."
       />
-      <NewFaceForm />
+      <Suspense fallback={null}>
+        <NewFaceForm />
+      </Suspense>
     </AdminPageShell>
   );
 }

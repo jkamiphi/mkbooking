@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { UsersContent } from "./users-content";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
@@ -13,7 +14,9 @@ export default function UsersPage() {
         title="Gestión de usuarios"
         description="Administrar acceso, estado y roles de todas las cuentas."
       />
-      <UsersContent />
+      <Suspense fallback={null}>
+        <UsersContent />
+      </Suspense>
     </AdminPageShell>
   );
 }
