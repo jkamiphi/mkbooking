@@ -4,6 +4,10 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin, SlidersHorizontal, X } from "lucide-react";
 import {
+  CampaignDateRangePicker,
+  formatShortDateLabel,
+} from "@/components/campaign/campaign-date-range-picker";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -29,18 +33,9 @@ type SearchFiltersProps = {
   selectedZoneId?: string;
   selectedFromDate?: string;
   selectedToDate?: string;
+  minimumStartDate: string;
   query: string;
 };
-
-function formatDateLabel(value?: string) {
-  if (!value) return "";
-  const date = new Date(`${value}T00:00:00`);
-  if (!Number.isFinite(date.getTime())) return value;
-  return new Intl.DateTimeFormat("es-PA", {
-    day: "2-digit",
-    month: "short",
-  }).format(date);
-}
 
 export function SearchFilters({
   structureTypes,
@@ -49,6 +44,7 @@ export function SearchFilters({
   selectedZoneId,
   selectedFromDate,
   selectedToDate,
+  minimumStartDate,
   query,
 }: SearchFiltersProps) {
   const router = useRouter();
@@ -119,10 +115,10 @@ export function SearchFilters({
   const dateBadgeLabel = useMemo(() => {
     if (!selectedFromDate && !selectedToDate) return null;
     if (selectedFromDate && selectedToDate) {
-      return `${formatDateLabel(selectedFromDate)} - ${formatDateLabel(selectedToDate)}`;
+      return `${formatShortDateLabel(selectedFromDate)} - ${formatShortDateLabel(selectedToDate)}`;
     }
-    if (selectedFromDate) return formatDateLabel(selectedFromDate);
-    return selectedToDate ? formatDateLabel(selectedToDate) : null;
+    if (selectedFromDate) return formatShortDateLabel(selectedFromDate);
+    return selectedToDate ? formatShortDateLabel(selectedToDate) : null;
   }, [selectedFromDate, selectedToDate]);
 
   return (
@@ -233,25 +229,26 @@ export function SearchFilters({
                 </select>
               </label>
 
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-neutral-600">Desde</span>
-                <input
-                  type="date"
-                  value={draftFromDate}
-                  onChange={(event) => setDraftFromDate(event.target.value)}
-                  className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none"
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-2 gap-3">
+                  <span className="text-xs font-semibold text-neutral-600">Desde</span>
+                  <span className="text-xs font-semibold text-neutral-600">Hasta</span>
+                </div>
+                <CampaignDateRangePicker
+                  variant="inputs"
+                  fromDate={draftFromDate || undefined}
+                  toDate={draftToDate || undefined}
+                  minimumStartDate={minimumStartDate}
+                  minimumDurationDays={1}
+                  onChange={(from, to) => {
+                    setDraftFromDate(from ?? "");
+                    setDraftToDate(to ?? "");
+                  }}
                 />
-              </label>
-
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-neutral-600">Hasta</span>
-                <input
-                  type="date"
-                  value={draftToDate}
-                  onChange={(event) => setDraftToDate(event.target.value)}
-                  className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none"
-                />
-              </label>
+                <p className="text-xs text-neutral-500">
+                  Inicio disponible desde {formatShortDateLabel(minimumStartDate)}.
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-neutral-200 px-5 py-4">

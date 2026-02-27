@@ -3,22 +3,97 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { CheckCircle2, ChevronUp, ShoppingCart, Trash2, X } from "lucide-react";
 import { useFaceSelection } from "@/components/face-selection-context";
+
+type SearchContext = {
+    returnTo: string;
+    query?: string;
+    type?: string;
+    zone?: string;
+    from?: string;
+    to?: string;
+};
+
+function decodePathParam(value: string) {
+    try {
+        return decodeURIComponent(value);
+    } catch {
+        return value;
+    }
+}
+
+function extractSearchContextFromPath(path: string) {
+    const url = new URL(path, "http://localhost");
+    if (!url.pathname.startsWith("/s/")) {
+        return null;
+    }
+
+    const encodedQuery = url.pathname.slice(3);
+    const decodedQuery = decodePathParam(encodedQuery);
+    const query = decodedQuery && decodedQuery !== "all" ? decodedQuery : undefined;
+
+    return {
+        query,
+        type: url.searchParams.get("type") || undefined,
+        zone: url.searchParams.get("zone") || undefined,
+        from: url.searchParams.get("from") || undefined,
+        to: url.searchParams.get("to") || undefined,
+        returnTo: `${url.pathname}${url.search ? url.search : ""}`,
+    };
+}
 
 export function SelectionBar() {
     const { selectedFaces, selectionCount, removeFace, clearSelection } =
         useFaceSelection();
     const [isExpanded, setIsExpanded] = useState(false);
     const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     // Hide on campaign-requests pages (the form already shows selected faces)
     if (pathname.startsWith("/campaign-requests")) return null;
     if (selectionCount === 0) return null;
 
     const faceIdsParam = selectedFaces.map((f) => f.id).join(",");
-    const quoteUrl = `/campaign-requests/new?faces=${encodeURIComponent(faceIdsParam)}&returnTo=${encodeURIComponent("/s/all")}`;
+    const activePath = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+    const searchContext: SearchContext | null = (() => {
+        if (pathname.startsWith("/s/")) {
+            return extractSearchContextFromPath(activePath);
+        }
+
+        if (pathname.startsWith("/faces/")) {
+            const fromParam = searchParams.get("from");
+            if (!fromParam) return null;
+
+            const decodedFromPath = decodePathParam(fromParam);
+            if (!decodedFromPath.startsWith("/")) {
+                return null;
+            }
+
+            const parsedFromSearch = extractSearchContextFromPath(decodedFromPath);
+            if (!parsedFromSearch) {
+                return {
+                    returnTo: decodedFromPath,
+                };
+            }
+
+            return parsedFromSearch;
+        }
+
+        return null;
+    })();
+
+    const quoteParams = new URLSearchParams();
+    quoteParams.set("faces", faceIdsParam);
+    quoteParams.set("returnTo", searchContext?.returnTo || "/s/all");
+    if (searchContext?.query) quoteParams.set("q", searchContext.query);
+    if (searchContext?.type) quoteParams.set("type", searchContext.type);
+    if (searchContext?.zone) quoteParams.set("zone", searchContext.zone);
+    if (searchContext?.from) quoteParams.set("from", searchContext.from);
+    if (searchContext?.to) quoteParams.set("to", searchContext.to);
+
+    const quoteUrl = `/campaign-requests/new?${quoteParams.toString()}`;
 
     return (
         <>

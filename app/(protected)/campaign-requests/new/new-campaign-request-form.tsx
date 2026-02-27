@@ -10,6 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
 import { Textarea } from "@/components/ui/textarea";
+import { CampaignDateRangePicker } from "@/components/campaign/campaign-date-range-picker";
+import {
+  calculateDateDifferenceInDays,
+  clampDate,
+  isRangeValid,
+  parseDateInputValue,
+  sanitizeDateRangeStrings,
+  toDateInputValue,
+} from "@/lib/date/campaign-date-range";
 import { trpc } from "@/lib/trpc/client";
 import { useFaceSelection } from "@/components/face-selection-context";
 
@@ -50,6 +59,8 @@ type NewCampaignRequestFormProps = {
   defaultContactName?: string;
   defaultContactEmail?: string;
   defaultContactPhone?: string;
+  minimumStartDate: string;
+  minimumDurationDays: number;
   returnTo: string;
   structureTypes: StructureTypeOption[];
   zones: ZoneOption[];
@@ -78,6 +89,8 @@ export function NewCampaignRequestForm({
   defaultContactName,
   defaultContactEmail,
   defaultContactPhone,
+  minimumStartDate,
+  minimumDurationDays,
   returnTo,
   structureTypes,
   zones,
@@ -101,6 +114,16 @@ export function NewCampaignRequestForm({
   const [selectedServices, setSelectedServices] = useState<
     Record<string, SelectedServiceState>
   >({});
+  const minimumStartDateValue =
+    parseDateInputValue(minimumStartDate) ?? clampDate(new Date());
+  const parsedFromDate = parseDateInputValue(fromDate);
+  const parsedToDate = parseDateInputValue(toDate);
+  const hasValidDateRange = isRangeValid({
+    fromDate: parsedFromDate,
+    toDate: parsedToDate,
+    minimumStartDate: minimumStartDateValue,
+    minimumDurationDays,
+  });
 
   const sectionClassName =
     "rounded-3xl border border-neutral-200 bg-white/90 p-6 shadow-lg backdrop-blur-xl";
@@ -121,17 +144,11 @@ export function NewCampaignRequestForm({
     0
   );
   const estimatedDays = (() => {
-    if (!fromDate || !toDate) return null;
-    const start = new Date(`${fromDate}T00:00:00`);
-    const end = new Date(`${toDate}T00:00:00`);
-    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+    if (!parsedFromDate || !parsedToDate) {
       return null;
     }
 
-    return Math.max(
-      1,
-      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-    );
+    return calculateDateDifferenceInDays(parsedFromDate, parsedToDate) + 1;
   })();
   const rentalEstimatedSubtotal =
     estimatedDays !== null ? rentalDailyTotal * estimatedDays : rentalDailyTotal;
@@ -188,6 +205,22 @@ export function NewCampaignRequestForm({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    const sanitizedDateRange = sanitizeDateRangeStrings({
+      fromDate,
+      toDate,
+      minimumStartDate: minimumStartDateValue,
+      minimumDurationDays,
+      mode: "drop-invalid",
+    });
+
+    if (!sanitizedDateRange.fromDate || !sanitizedDateRange.toDate) {
+      toast.error("Rango de fechas inválido", {
+        description: `Selecciona fechas válidas a partir de ${toDateInputValue(
+          minimumStartDateValue,
+        )} y con al menos ${minimumDurationDays} día de diferencia.`,
+      });
+      return;
+    }
 
     const parsedQuantity = hasFaces ? faces.length : Number(quantity);
     if (!Number.isFinite(parsedQuantity) || parsedQuantity < 1) {
@@ -203,8 +236,8 @@ export function NewCampaignRequestForm({
       try {
         const result = await trpcUtils.catalog.faces.checkAvailability.fetch({
           faceIds: faces.map((f) => f.id),
-          fromDate: fromDate ? new Date(`${fromDate}T00:00:00`) : undefined,
-          toDate: toDate ? new Date(`${toDate}T00:00:00`) : undefined,
+          fromDate: new Date(`${sanitizedDateRange.fromDate}T00:00:00`),
+          toDate: new Date(`${sanitizedDateRange.toDate}T00:00:00`),
         });
 
         if (result.unavailable.length > 0) {
@@ -243,8 +276,8 @@ export function NewCampaignRequestForm({
       structureTypeId: structureTypeId || undefined,
       zoneId: zoneId || undefined,
       quantity: parsedQuantity,
-      fromDate: fromDate || undefined,
-      toDate: toDate || undefined,
+      fromDate: sanitizedDateRange.fromDate,
+      toDate: sanitizedDateRange.toDate,
       notes: notes.trim() || undefined,
       contactName: contactName.trim() || undefined,
       contactEmail: contactEmail.trim() || undefined,
@@ -305,17 +338,7 @@ export function NewCampaignRequestForm({
             const dailyTotal = pricedFaces.reduce((sum, f) => sum + (f.priceDaily ?? 0), 0);
             const currency = pricedFaces[0]?.currency ?? "USD";
 
-            let periodDays: number | null = null;
-            if (fromDate && toDate) {
-              const start = new Date(`${fromDate}T00:00:00`);
-              const end = new Date(`${toDate}T00:00:00`);
-              if (Number.isFinite(start.getTime()) && Number.isFinite(end.getTime())) {
-                periodDays = Math.max(
-                  1,
-                  Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-                );
-              }
-            }
+            const periodDays = estimatedDays;
 
             const fmt = (v: number) => {
               try {
@@ -485,31 +508,32 @@ export function NewCampaignRequestForm({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 sm:col-span-2">
-            <div className="space-y-1.5">
+          <div className="space-y-1.5 sm:col-span-2">
+            <div className="grid grid-cols-2 gap-3">
               <Label htmlFor="request-from" className="text-neutral-700">
                 Desde
               </Label>
-              <Input
-                id="request-from"
-                type="date"
-                value={fromDate}
-                onChange={(event) => setFromDate(event.target.value)}
-                className={controlClassName}
-              />
-            </div>
-            <div className="space-y-1.5">
               <Label htmlFor="request-to" className="text-neutral-700">
                 Hasta
               </Label>
-              <Input
-                id="request-to"
-                type="date"
-                value={toDate}
-                onChange={(event) => setToDate(event.target.value)}
-                className={controlClassName}
-              />
             </div>
+            <CampaignDateRangePicker
+              variant="inputs"
+              fromDate={fromDate || undefined}
+              toDate={toDate || undefined}
+              minimumStartDate={toDateInputValue(minimumStartDateValue)}
+              minimumDurationDays={minimumDurationDays}
+              fromInputId="request-from"
+              toInputId="request-to"
+              inputClassName={controlClassName}
+              onChange={(nextFromDate, nextToDate) => {
+                setFromDate(nextFromDate ?? "");
+                setToDate(nextToDate ?? "");
+              }}
+            />
+            <p className="text-xs text-neutral-500">
+              Inicio disponible desde {toDateInputValue(minimumStartDateValue)}.
+            </p>
           </div>
         </div>
 
@@ -732,7 +756,9 @@ export function NewCampaignRequestForm({
           </Button>
           <Button
             type="submit"
-            disabled={isValidating || createRequestMutation.isPending}
+            disabled={
+              isValidating || createRequestMutation.isPending || !hasValidDateRange
+            }
             className="h-10 rounded-full bg-[#0359A8] px-5 text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8f]"
           >
             <ListFilter className="h-4 w-4" />

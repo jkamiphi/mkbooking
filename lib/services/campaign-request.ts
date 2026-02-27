@@ -1,6 +1,12 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { listCatalogFaces } from "@/lib/services/catalog";
+import { getCampaignRequestStartGapDays } from "@/lib/server-config";
+import {
+  addDays,
+  clampDate,
+  computeMinimumStartDate,
+} from "@/lib/date/campaign-date-range";
 import {
   notifySalesReviewReopened,
   reopenOrderSalesReview,
@@ -32,8 +38,8 @@ export const createCampaignRequestSchema = z
     zoneId: z.string().optional(),
     structureTypeId: z.string().optional(),
     quantity: z.number().int().min(1).max(500),
-    fromDate: z.coerce.date().optional(),
-    toDate: z.coerce.date().optional(),
+    fromDate: z.coerce.date(),
+    toDate: z.coerce.date(),
     notes: z.string().trim().max(2000).optional(),
     contactName: z.string().trim().max(120).optional(),
     contactEmail: z.string().trim().email().max(160).optional(),
@@ -42,13 +48,30 @@ export const createCampaignRequestSchema = z
     selectedFaceIds: z.array(z.string().min(1)).max(200).optional(),
     selectedServices: z.array(selectedServiceSchema).max(50).optional(),
   })
-  .refine(
-    (value) => {
-      if (!value.fromDate || !value.toDate) return true;
-      return value.toDate >= value.fromDate;
-    },
-    { message: "La fecha final debe ser mayor o igual a la fecha inicial", path: ["toDate"] }
-  );
+  .superRefine((value, ctx) => {
+    const minimumStartDate = computeMinimumStartDate(
+      getCampaignRequestStartGapDays(),
+    );
+    const normalizedFromDate = clampDate(value.fromDate);
+    const normalizedToDate = clampDate(value.toDate);
+
+    if (normalizedFromDate < minimumStartDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La fecha inicial no puede ser anterior al inicio permitido.",
+        path: ["fromDate"],
+      });
+    }
+
+    if (normalizedToDate < addDays(normalizedFromDate, 1)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "La fecha final debe ser al menos 1 día posterior a la fecha inicial.",
+        path: ["toDate"],
+      });
+    }
+  });
 
 export const updateCampaignRequestStatusSchema = z.object({
   requestId: z.string().min(1),

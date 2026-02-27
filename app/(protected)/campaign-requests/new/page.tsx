@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import {
+  computeMinimumStartDate,
+  sanitizeDateRangeStrings,
+  toDateInputValue,
+} from "@/lib/date/campaign-date-range";
+import { getCampaignRequestStartGapDays } from "@/lib/server-config";
 import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { NewCampaignRequestForm } from "./new-campaign-request-form";
 
@@ -40,6 +46,16 @@ export const metadata = {
 export default async function NewCampaignRequestPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const caller = await createServerTRPCCaller();
+  const minimumStartDate = computeMinimumStartDate(
+    getCampaignRequestStartGapDays(),
+  );
+  const sanitizedRange = sanitizeDateRangeStrings({
+    fromDate: getParam(params.from),
+    toDate: getParam(params.to),
+    minimumStartDate,
+    minimumDurationDays: 1,
+    mode: "drop-invalid",
+  });
 
   const facesParam = getParam(params.faces) || "";
   const faceIds = facesParam
@@ -124,8 +140,10 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
         defaultStructureTypeId={getParam(params.type) || undefined}
         defaultZoneId={getParam(params.zone) || undefined}
         defaultQuantity={defaultQuantity}
-        defaultFromDate={getParam(params.from) || undefined}
-        defaultToDate={getParam(params.to) || undefined}
+        defaultFromDate={sanitizedRange.fromDate}
+        defaultToDate={sanitizedRange.toDate}
+        minimumStartDate={toDateInputValue(minimumStartDate)}
+        minimumDurationDays={1}
         defaultContactName={profile?.firstName || profile?.user?.name || undefined}
         defaultContactEmail={profile?.user?.email || undefined}
         defaultContactPhone={profile?.phone || undefined}

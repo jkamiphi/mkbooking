@@ -2,13 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Calendar, ChevronRight, MapPin, Search, X } from "lucide-react";
 import {
-  Calendar,
-  ChevronRight,
-  MapPin,
-  Search,
-  X,
-} from "lucide-react";
+  CampaignDateRangePicker,
+  formatShortDateLabel,
+} from "@/components/campaign/campaign-date-range-picker";
+import {
+  clampDate,
+  parseDateInputValue,
+  sanitizeDateRangeStrings,
+} from "@/lib/date/campaign-date-range";
 
 type StructureTypeOption = {
   id: string;
@@ -24,6 +27,7 @@ type ZoneOption = {
 type HomeSearchBarProps = {
   query?: string;
   typeId?: string;
+  minimumStartDate: string;
   zones: ZoneOption[];
   structureTypes: StructureTypeOption[];
   showPromo: boolean;
@@ -32,48 +36,10 @@ type HomeSearchBarProps = {
 
 type PanelKey = "destination" | "dates" | "type" | null;
 
-type DateRange = {
-  from?: Date;
-  to?: Date;
-};
-
-function isSameDay(left: Date, right: Date) {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
-}
-
-function clampDate(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function formatShortDate(date: Date) {
-  try {
-    return new Intl.DateTimeFormat("es-PA", {
-      day: "numeric",
-      month: "short",
-    }).format(date);
-  } catch {
-    return date.toLocaleDateString();
-  }
-}
-
-function getMonthLabel(date: Date) {
-  try {
-    return new Intl.DateTimeFormat("es-PA", {
-      month: "long",
-      year: "numeric",
-    }).format(date);
-  } catch {
-    return `${date.getMonth() + 1}/${date.getFullYear()}`;
-  }
-}
-
 export function HomeSearchBar({
   query,
   typeId,
+  minimumStartDate,
   zones,
   structureTypes,
   showPromo,
@@ -84,24 +50,26 @@ export function HomeSearchBar({
   const [activePanel, setActivePanel] = useState<PanelKey>(null);
   const [queryValue, setQueryValue] = useState(query ?? "");
   const [selectedTypeId, setSelectedTypeId] = useState(typeId ?? "");
-  const [dateRange, setDateRange] = useState<DateRange>({});
-  const [visibleMonth, setVisibleMonth] = useState(() => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), 1);
-  });
-  const todayDate = useMemo(() => clampDate(new Date()), []);
-  const tomorrowDate = useMemo(() => {
-    const tomorrow = new Date(todayDate);
-    tomorrow.setDate(todayDate.getDate() + 1);
-    return tomorrow;
-  }, [todayDate]);
+  const [fromDate, setFromDate] = useState<string | undefined>();
+  const [toDate, setToDate] = useState<string | undefined>();
+  const minimumStartDateValue =
+    parseDateInputValue(minimumStartDate) ?? clampDate(new Date());
 
   function handleSearch(event: React.FormEvent) {
     event.preventDefault();
     const params = new URLSearchParams();
     if (selectedTypeId) params.set("type", selectedTypeId);
-    if (dateRange.from) params.set("from", dateRange.from.toISOString().split("T")[0]);
-    if (dateRange.to) params.set("to", dateRange.to.toISOString().split("T")[0]);
+    const sanitizedDateRange = sanitizeDateRangeStrings({
+      fromDate,
+      toDate,
+      minimumStartDate: minimumStartDateValue,
+      minimumDurationDays: 1,
+      mode: "drop-invalid",
+    });
+    if (sanitizedDateRange.fromDate && sanitizedDateRange.toDate) {
+      params.set("from", sanitizedDateRange.fromDate);
+      params.set("to", sanitizedDateRange.toDate);
+    }
 
     const searchTerm = queryValue.trim() || "all";
     const queryString = params.toString();
@@ -137,67 +105,12 @@ export function HomeSearchBar({
     return data.slice(0, 6);
   }, [zones, queryValue]);
 
-  const monthData = useMemo(() => {
-    const year = visibleMonth.getFullYear();
-    const month = visibleMonth.getMonth();
-    const monthStart = new Date(year, month, 1);
-    const monthEnd = new Date(year, month + 1, 0);
-    const startWeekday = monthStart.getDay();
-    const daysInMonth = monthEnd.getDate();
-    const days: Array<Date | null> = [];
-
-    for (let i = 0; i < startWeekday; i += 1) {
-      days.push(null);
-    }
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      days.push(new Date(year, month, day));
-    }
-    return days;
-  }, [visibleMonth]);
-
-  function handleRangeSelect(date: Date) {
-    const selectedDate = clampDate(date);
-
-    if (!dateRange.from || dateRange.to) {
-      setDateRange({ from: selectedDate, to: undefined });
-      return;
-    }
-
-    if (selectedDate < dateRange.from) {
-      setDateRange({ from: selectedDate, to: dateRange.from });
-      return;
-    }
-
-    setDateRange({ from: dateRange.from, to: selectedDate });
-  }
-
-  function setQuickRange(type: "today" | "tomorrow" | "weekend") {
-    const today = clampDate(new Date());
-    if (type === "today") {
-      setDateRange({ from: today, to: today });
-      return;
-    }
-    if (type === "tomorrow") {
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      setDateRange({ from: tomorrow, to: tomorrow });
-      return;
-    }
-    const nextSaturday = new Date(today);
-    const dayOfWeek = today.getDay();
-    const diff = (6 - dayOfWeek + 7) % 7;
-    nextSaturday.setDate(today.getDate() + diff);
-    const nextSunday = new Date(nextSaturday);
-    nextSunday.setDate(nextSaturday.getDate() + 1);
-    setDateRange({ from: nextSaturday, to: nextSunday });
-  }
-
   function rangeLabel() {
-    if (dateRange.from && dateRange.to) {
-      return `${formatShortDate(dateRange.from)} - ${formatShortDate(dateRange.to)}`;
+    if (fromDate && toDate) {
+      return `${formatShortDateLabel(fromDate)} - ${formatShortDateLabel(toDate)}`;
     }
-    if (dateRange.from) {
-      return formatShortDate(dateRange.from);
+    if (fromDate) {
+      return formatShortDateLabel(fromDate);
     }
     return "Agregar fechas";
   }
@@ -328,124 +241,17 @@ export function HomeSearchBar({
               ) : null}
 
               {activePanel === "dates" ? (
-                <div className="grid gap-6 md:grid-cols-[220px_1fr]">
-                  <div className="space-y-3">
-                    <p className="text-sm font-semibold text-neutral-900">
-                      Selecciones rápidas
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setQuickRange("today")}
-                      className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-lg font-semibold text-neutral-900 hover:border-neutral-300 aspect-[7/3]"
-                    >
-                      Hoy
-                      <span className="block text-xs font-normal text-neutral-500">
-                        {formatShortDate(todayDate)}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickRange("tomorrow")}
-                      className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-lg font-semibold text-neutral-900 hover:border-neutral-300 aspect-[7/3]"
-                    >
-                      Mañana
-                      <span className="block text-xs font-normal text-neutral-500">
-                        {formatShortDate(tomorrowDate)}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickRange("weekend")}
-                      className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-lg font-semibold text-neutral-900 hover:border-neutral-300 aspect-[7/3]"
-                    >
-                      Este fin de semana
-                      <span className="block text-xs font-normal text-neutral-500">
-                        Próximo sábado y domingo
-                      </span>
-                    </button>
-                  </div>
-
-                  <div className="rounded-3xl border border-neutral-200 p-4">
-                    <div className="mb-4 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setVisibleMonth(
-                            new Date(
-                              visibleMonth.getFullYear(),
-                              visibleMonth.getMonth() - 1,
-                              1,
-                            ),
-                          )
-                        }
-                        className="rounded-full border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600 aspect-square"
-                      >
-                        ←
-                      </button>
-                      <span className="text-sm font-semibold text-neutral-900">
-                        {getMonthLabel(visibleMonth)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setVisibleMonth(
-                            new Date(
-                              visibleMonth.getFullYear(),
-                              visibleMonth.getMonth() + 1,
-                              1,
-                            ),
-                          )
-                        }
-                        className="rounded-full border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600 aspect-square"
-                      >
-                        →
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-7 text-[11px] font-semibold text-neutral-400">
-                      {["D", "L", "M", "M", "J", "V", "S"].map((label) => (
-                        <span key={label} className="pb-2 text-center">
-                          {label}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1 text-sm">
-                      {monthData.map((day, index) => {
-                        if (!day) {
-                          return <div key={`empty-${index}`} />;
-                        }
-
-                        const from = dateRange.from
-                          ? clampDate(dateRange.from)
-                          : undefined;
-                        const to = dateRange.to
-                          ? clampDate(dateRange.to)
-                          : undefined;
-                        const isStart = from ? isSameDay(day, from) : false;
-                        const isEnd = to ? isSameDay(day, to) : false;
-                        const inRange = from && to && day >= from && day <= to;
-
-                        return (
-                          <button
-                            key={day.toISOString()}
-                            type="button"
-                            onClick={() => handleRangeSelect(day)}
-                            className={`flex h-10 w-10 items-center justify-center rounded-full aspect-square font-semibold transition ${
-                              isStart || isEnd
-                                ? "bg-neutral-900 text-white"
-                                : inRange
-                                  ? "bg-neutral-100 text-neutral-900"
-                                  : "text-neutral-700 hover:bg-neutral-100"
-                            }`}
-                          >
-                            {day.getDate()}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
+                <CampaignDateRangePicker
+                  variant="calendar"
+                  fromDate={fromDate}
+                  toDate={toDate}
+                  minimumStartDate={minimumStartDate}
+                  minimumDurationDays={1}
+                  onChange={(nextFromDate, nextToDate) => {
+                    setFromDate(nextFromDate);
+                    setToDate(nextToDate);
+                  }}
+                />
               ) : null}
 
               {activePanel === "type" ? (

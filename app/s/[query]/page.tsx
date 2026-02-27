@@ -1,10 +1,17 @@
 import Link from "next/link";
-import { ArrowLeft, MapPin, Sparkles } from "lucide-react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import {
   formatFaceDimensions,
   formatPrice,
   getTrafficLabel,
 } from "@/lib/formatters/catalog-face";
+import {
+  computeMinimumStartDate,
+  parseDateInputValue,
+  sanitizeDateRangeStrings,
+  toDateInputValue,
+} from "@/lib/date/campaign-date-range";
+import { getCampaignRequestStartGapDays } from "@/lib/server-config";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 import { UserHeaderActions } from "@/components/layout/user-header-actions";
 import { SearchFilters } from "./_components/search-filters";
@@ -26,13 +33,6 @@ function getParam(value?: string | string[]) {
   return value;
 }
 
-function parseDateParam(value?: string) {
-  if (!value) return undefined;
-  const parsed = new Date(`${value}T00:00:00`);
-  if (!Number.isFinite(parsed.getTime())) return undefined;
-  return parsed;
-}
-
 export default async function SearchPage({ params, searchParams }: PageProps) {
   const { query } = await params;
   const awaitedSearchParams = await searchParams;
@@ -45,10 +45,20 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const searchTerm = decodedQuery === "all" ? undefined : decodedQuery;
   const typeId = getParam(awaitedSearchParams?.type) || undefined;
   const zoneId = getParam(awaitedSearchParams?.zone) || undefined;
-  const fromDate = getParam(awaitedSearchParams?.from) || undefined;
-  const toDate = getParam(awaitedSearchParams?.to) || undefined;
-  const availableFrom = parseDateParam(fromDate);
-  const availableTo = parseDateParam(toDate);
+  const minimumStartDate = computeMinimumStartDate(
+    getCampaignRequestStartGapDays(),
+  );
+  const sanitizedRange = sanitizeDateRangeStrings({
+    fromDate: getParam(awaitedSearchParams?.from),
+    toDate: getParam(awaitedSearchParams?.to),
+    minimumStartDate,
+    minimumDurationDays: 1,
+    mode: "drop-invalid",
+  });
+  const fromDate = sanitizedRange.fromDate;
+  const toDate = sanitizedRange.toDate;
+  const availableFrom = parseDateInputValue(fromDate);
+  const availableTo = parseDateInputValue(toDate);
 
   const searchStateParams = new URLSearchParams();
   if (typeId) searchStateParams.set("type", typeId);
@@ -221,6 +231,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         selectedZoneId={zoneId}
         selectedFromDate={fromDate}
         selectedToDate={toDate}
+        minimumStartDate={toDateInputValue(minimumStartDate)}
         query={decodedQuery}
       />
 

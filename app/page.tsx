@@ -1,11 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRight, MapPin, Sparkles } from "lucide-react";
+import { ChevronRight, MapPin } from "lucide-react";
 import {
   formatFaceDimensions,
   formatPrice,
   getTrafficLabel,
 } from "@/lib/formatters/catalog-face";
+import {
+  computeMinimumStartDate,
+  toDateInputValue,
+} from "@/lib/date/campaign-date-range";
+import { getCampaignRequestStartGapDays } from "@/lib/server-config";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 import { HomeSearchBar } from "@/components/home/home-search";
 import { ScrollNavigation } from "@/components/home/scroll-navigation";
@@ -80,6 +85,9 @@ export default async function Home({
     getServerSession(),
     createServerTRPCCaller(),
   ]);
+  const minimumStartDate = toDateInputValue(
+    computeMinimumStartDate(getCampaignRequestStartGapDays()),
+  );
 
   const query = getParam(searchParams?.q)?.trim() || undefined;
   const zoneId = getParam(searchParams?.zone) || undefined;
@@ -191,6 +199,7 @@ export default async function Home({
         key={`${query ?? ""}-${typeId ?? ""}-${zoneId ?? ""}`}
         query={query}
         typeId={typeId}
+        minimumStartDate={minimumStartDate}
         zones={zones}
         structureTypes={structureTypes}
         showPromo={showPromo}
