@@ -6,6 +6,7 @@ import {
   addDays,
   clampDate,
   computeMinimumStartDate,
+  parseDateInputValue,
 } from "@/lib/date/campaign-date-range";
 import {
   notifySalesReviewReopened,
@@ -32,14 +33,41 @@ const selectedServiceSchema = z.object({
   notes: z.string().trim().max(500).optional(),
 });
 
+const campaignDateFieldSchema = z
+  .union([z.string(), z.date()])
+  .transform((value, ctx) => {
+    if (value instanceof Date) {
+      if (!Number.isFinite(value.getTime())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Fecha inválida.",
+        });
+        return z.NEVER;
+      }
+
+      return clampDate(value);
+    }
+
+    const parsed = parseDateInputValue(value);
+    if (!parsed) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Fecha inválida.",
+      });
+      return z.NEVER;
+    }
+
+    return parsed;
+  });
+
 export const createCampaignRequestSchema = z
   .object({
     query: z.string().trim().min(1).max(200).optional(),
     zoneId: z.string().optional(),
     structureTypeId: z.string().optional(),
     quantity: z.number().int().min(1).max(500),
-    fromDate: z.coerce.date(),
-    toDate: z.coerce.date(),
+    fromDate: campaignDateFieldSchema,
+    toDate: campaignDateFieldSchema,
     notes: z.string().trim().max(2000).optional(),
     contactName: z.string().trim().max(120).optional(),
     contactEmail: z.string().trim().email().max(160).optional(),
