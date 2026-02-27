@@ -35,6 +35,7 @@ export interface HomeCatalogFace {
     address: string;
     structureType: {
       name: string;
+      imageUrl?: string | null;
     };
     zone: {
       name: string;

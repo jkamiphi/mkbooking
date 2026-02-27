@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { isExpectedS3PublicUrl } from "@/lib/storage/s3";
 import {
   formatFaceDimensions,
   formatPrice,
@@ -33,6 +34,12 @@ export function CatalogFacesGrid({
             `${face.asset.structureType.name} · Cara ${face.code}`;
           const location = `${face.asset.zone.name}, ${face.asset.zone.province.name}`;
           const imageUrl = face.resolvedImageUrl ?? null;
+          const structureTypeImageUrl =
+            !imageUrl &&
+            face.asset.structureType.imageUrl &&
+            isExpectedS3PublicUrl(face.asset.structureType.imageUrl)
+              ? face.asset.structureType.imageUrl
+              : null;
           const priceLabel =
             face.effectivePrice && showPrices
               ? formatPrice(
@@ -88,6 +95,27 @@ export function CatalogFacesGrid({
                       className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       loading="lazy"
                     />
+                  ) : structureTypeImageUrl ? (
+                    <>
+                      <Image
+                        src={structureTypeImageUrl}
+                        alt={face.asset.structureType.name}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-neutral-950/35" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Image
+                          src="/images/logo/b-mkm-white.png"
+                          alt="MKM"
+                          width={96}
+                          height={49}
+                          className="opacity-70"
+                        />
+                      </div>
+                    </>
                   ) : (
                     <div className="flex h-full w-full flex-col items-start justify-end gap-3 bg-[linear-gradient(140deg,_#fef3c7,_#fde68a_40%,_#fca5a5)] p-6 text-neutral-900">
                       <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold">
