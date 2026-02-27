@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useRef } from "react";
 import { ImagePlus, Pencil, X, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
@@ -13,6 +14,7 @@ export default function StructureTypesPage() {
   const [name, setName] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editImageUrl, setEditImageUrl] = useState("");
@@ -26,17 +28,32 @@ export default function StructureTypesPage() {
       utils.inventory.structureTypes.list.invalidate();
       setName("");
       setImageUrl("");
+      setUploadError(null);
+      toast.success("Tipo de estructura creado.");
+    },
+    onError: (error) => {
+      toast.error("No se pudo crear el tipo", {
+        description: error.message,
+      });
     },
   });
   const updateType = trpc.inventory.structureTypes.update.useMutation({
     onSuccess: () => {
       utils.inventory.structureTypes.list.invalidate();
       setEditingId(null);
+      setUploadError(null);
+      toast.success("Tipo de estructura actualizado.");
+    },
+    onError: (error) => {
+      toast.error("No se pudo actualizar el tipo", {
+        description: error.message,
+      });
     },
   });
 
   async function uploadFile(file: File): Promise<string | null> {
     setIsUploading(true);
+    setUploadError(null);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -45,10 +62,21 @@ export default function StructureTypesPage() {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(payload?.error || "Upload failed");
+      }
       const blob = await response.json();
       return blob.url;
-    } catch {
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "No se pudo subir la imagen";
+      setUploadError(message);
+      toast.error("Error al subir imagen", {
+        description: message,
+      });
       return null;
     } finally {
       setIsUploading(false);
@@ -147,6 +175,11 @@ export default function StructureTypesPage() {
               </div>
             )}
           </div>
+          {uploadError ? (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {uploadError}
+            </p>
+          ) : null}
         </form>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6">
