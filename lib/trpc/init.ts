@@ -29,6 +29,21 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 export const createCallerFactory = t.createCallerFactory;
 
+type AllowedSystemRole = "SUPERADMIN" | "STAFF" | "SALES";
+
+async function resolveUserSystemRole(ctx: Context): Promise<AllowedSystemRole | "CUSTOMER" | null> {
+  if (!ctx.user) {
+    return null;
+  }
+
+  const profile = await ctx.db.userProfile.findUnique({
+    where: { userId: ctx.user.id },
+    select: { systemRole: true },
+  });
+
+  return profile?.systemRole ?? null;
+}
+
 // Middleware to check if user is authenticated
 const isAuthed = t.middleware(({ ctx, next }) => {
   if (!ctx.session || !ctx.user) {
@@ -48,12 +63,9 @@ const isAdmin = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const profile = await ctx.db.userProfile.findUnique({
-    where: { userId: ctx.user.id },
-    select: { systemRole: true },
-  });
+  const systemRole = await resolveUserSystemRole(ctx);
 
-  if (!profile || !["SUPERADMIN", "STAFF"].includes(profile.systemRole)) {
+  if (!systemRole || !["SUPERADMIN", "STAFF"].includes(systemRole)) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Admin access required",
@@ -64,7 +76,55 @@ const isAdmin = t.middleware(async ({ ctx, next }) => {
     ctx: {
       session: ctx.session,
       user: ctx.user,
-      systemRole: profile.systemRole,
+      systemRole,
+    },
+  });
+});
+
+// Middleware for commercial surfaces (/admin/orders and /admin/requests)
+const isCommercial = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.session || !ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const systemRole = await resolveUserSystemRole(ctx);
+
+  if (!systemRole || !["SUPERADMIN", "STAFF", "SALES"].includes(systemRole)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Commercial access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      session: ctx.session,
+      user: ctx.user,
+      systemRole,
+    },
+  });
+});
+
+// Middleware for sales validation actions
+const isSalesReviewer = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.session || !ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const systemRole = await resolveUserSystemRole(ctx);
+
+  if (!systemRole || !["SUPERADMIN", "SALES"].includes(systemRole)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Sales review access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      session: ctx.session,
+      user: ctx.user,
+      systemRole,
     },
   });
 });
@@ -75,12 +135,9 @@ const isSuperAdmin = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const profile = await ctx.db.userProfile.findUnique({
-    where: { userId: ctx.user.id },
-    select: { systemRole: true },
-  });
+  const systemRole = await resolveUserSystemRole(ctx);
 
-  if (!profile || profile.systemRole !== "SUPERADMIN") {
+  if (!systemRole || systemRole !== "SUPERADMIN") {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Superadmin access required",
@@ -91,11 +148,13 @@ const isSuperAdmin = t.middleware(async ({ ctx, next }) => {
     ctx: {
       session: ctx.session,
       user: ctx.user,
-      systemRole: profile.systemRole,
+      systemRole,
     },
   });
 });
 
 export const protectedProcedure = t.procedure.use(isAuthed);
 export const adminProcedure = t.procedure.use(isAdmin);
+export const commercialProcedure = t.procedure.use(isCommercial);
+export const salesReviewProcedure = t.procedure.use(isSalesReviewer);
 export const superAdminProcedure = t.procedure.use(isSuperAdmin);

@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import {
   router,
   adminProcedure,
+  commercialProcedure,
   protectedProcedure,
   publicProcedure,
 } from "../init";
@@ -193,7 +194,7 @@ export const catalogRouter = router({
         );
       }),
 
-    list: adminProcedure
+    list: commercialProcedure
       .input(listCampaignRequestsSchema.optional())
       .query(async ({ input }) => {
         return listCampaignRequests(
@@ -201,7 +202,7 @@ export const catalogRouter = router({
         );
       }),
 
-    get: adminProcedure
+    get: commercialProcedure
       .input(z.object({ requestId: z.string().min(1) }))
       .query(async ({ input }) => {
         return getCampaignRequestById(input.requestId);
@@ -235,25 +236,25 @@ export const catalogRouter = router({
         return request;
       }),
 
-    suggestFaces: adminProcedure
+    suggestFaces: commercialProcedure
       .input(suggestCampaignRequestFacesSchema)
       .query(async ({ input }) => {
         return suggestFacesForCampaignRequest(input);
       }),
 
-    assignFaces: adminProcedure
+    assignFaces: commercialProcedure
       .input(assignCampaignRequestFacesSchema)
-      .mutation(async ({ input }) => {
-        return assignCampaignRequestFaces(input);
+      .mutation(async ({ input, ctx }) => {
+        return assignCampaignRequestFaces(input, { actorUserId: ctx.user.id });
       }),
 
-    updateStatus: adminProcedure
+    updateStatus: commercialProcedure
       .input(updateCampaignRequestStatusSchema)
       .mutation(async ({ ctx, input }) => {
         return updateCampaignRequestStatus(input, ctx.user.id);
       }),
 
-    confirm: adminProcedure
+    confirm: commercialProcedure
       .input(z.object({ requestId: z.string().min(1) }))
       .mutation(async ({ ctx, input }) => {
         return confirmCampaignRequest(input.requestId, ctx.user.id);

@@ -167,6 +167,12 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
           description: `${result.outsideCriteriaCount} cara(s) asignadas fuera del criterio inicial.`,
         });
       }
+
+      if (result.salesReviewReopenedForOrder) {
+        toast("Revisión comercial reabierta", {
+          description: `La orden ${result.salesReviewReopenedForOrder.orderCode} volvió a revisión de Ventas.`,
+        });
+      }
     },
     onError: (error) => {
       toast.error("No se pudieron guardar las asignaciones", { description: error.message });

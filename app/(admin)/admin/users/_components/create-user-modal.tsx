@@ -45,6 +45,7 @@ const defaultFormState: CreateUserFormState = {
 const roleLabels: Record<SystemRole, string> = {
   CUSTOMER: "Cliente",
   STAFF: "Staff",
+  SALES: "Ventas",
   SUPERADMIN: "Superadmin",
 };
 
@@ -74,7 +75,7 @@ export function CreateUserModal({ onCreated }: CreateUserModalProps) {
 
   const canCreateUsers = me?.systemRole === "SUPERADMIN";
   const availableRoles = useMemo<SystemRole[]>(
-    () => ["CUSTOMER", "STAFF", "SUPERADMIN"],
+    () => ["CUSTOMER", "STAFF", "SALES", "SUPERADMIN"],
     []
   );
 

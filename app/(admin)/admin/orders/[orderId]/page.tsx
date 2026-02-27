@@ -6,6 +6,7 @@ import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { Badge } from "@/components/ui/badge";
 import { AdminConfirmButton } from "./_components/admin-confirm-button";
 import { DraftEditor } from "./_components/draft-editor";
+import { SalesReviewPanel } from "./_components/sales-review-panel";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 import { CreativesModule } from "@/components/orders/creatives-module";
 import { PurchaseOrderModule } from "@/components/orders/purchase-order-module";
@@ -165,14 +166,21 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                         </section>
 
                         {order.status === "CONFIRMED" && (
-                            <CreativesModule orderId={order.id} lineItems={order.lineItems} readOnly />
+                            <CreativesModule
+                                orderId={order.id}
+                                lineItems={order.lineItems}
+                                readOnly
+                                allowReviewActions
+                            />
                         )}
 
-                        <PurchaseOrderModule orderId={order.id} readOnly />
+                        <PurchaseOrderModule orderId={order.id} readOnly allowReviewActions />
                     </div>
 
                     {/* Sidebar: Totals & Actions */}
                     <div className="space-y-5">
+                        <SalesReviewPanel orderId={order.id} />
+
                         <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
                             <h2 className="mb-4 text-sm font-semibold text-neutral-900">Resumen Financiero</h2>
                             <dl className="space-y-3 text-sm">
@@ -201,6 +209,11 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
                             {order.status === "CLIENT_APPROVED" && (
                                 <div className="mt-6 pt-6 border-t border-neutral-100">
+                                    {order.salesReviewStatus !== "APPROVED" && (
+                                        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                                            La validación de Ventas aún no está aprobada. Puedes confirmar la orden, pero se registrará advertencia.
+                                        </div>
+                                    )}
                                     <p className="mb-4 text-xs text-neutral-500 text-center">
                                         El cliente ya aprobó esta cotización. Al confirmar, se generarán los bloqueos activos en el inventario.
                                     </p>

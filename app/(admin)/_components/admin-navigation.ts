@@ -54,13 +54,13 @@ export const adminNavigation: AdminNavigationItem[] = [
     name: "Solicitudes",
     href: "/admin/requests",
     icon: ClipboardList,
-    roles: ["SUPERADMIN", "STAFF"],
+    roles: ["SUPERADMIN", "STAFF", "SALES"],
   },
   {
     name: "Órdenes",
     href: "/admin/orders",
     icon: PackageCheck,
-    roles: ["SUPERADMIN", "STAFF"],
+    roles: ["SUPERADMIN", "STAFF", "SALES"],
   },
   {
     name: "Registros de Auditoría",
@@ -86,6 +86,9 @@ export function getSystemRoleLabel(systemRole: SystemRole): string {
   }
   if (systemRole === "STAFF") {
     return "Personal";
+  }
+  if (systemRole === "SALES") {
+    return "Ventas";
   }
   return "Cliente";
 }

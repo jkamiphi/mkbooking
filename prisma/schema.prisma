@@ -83,6 +83,7 @@ model verification {
 enum SystemRole {
   SUPERADMIN // Full platform access
   STAFF // Platform employee with limited admin access
+  SALES // Commercial validation role for orders and requests
   CUSTOMER // Regular users (advertisers, agencies) - default
 
   @@map("system_role")
@@ -118,17 +119,21 @@ model UserProfile {
   updatedBy String?
 
   // Relations
-  user                     user                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                     user                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   organizationRoles        OrganizationMember[]
-  createdOrganizations     Organization[]       @relation("OrganizationCreator")
-  auditLogs                AuditLog[]           @relation("AuditLogActor")
-  catalogHolds             CatalogHold[]        @relation("CatalogHoldCreator")
-  createdCampaignRequests  CampaignRequest[]    @relation("CampaignRequestCreator")
-  resolvedCampaignRequests CampaignRequest[]    @relation("CampaignRequestResolver")
-  createdOrders            Order[]              @relation("OrderCreator")
-  confirmedOrders          Order[]              @relation("OrderConfirmer")
-  uploadedCreatives        OrderCreative[]      @relation("CreativeUploader")
-  uploadedPurchaseOrders   OrderPurchaseOrder[] @relation("PurchaseOrderUploader")
+  createdOrganizations     Organization[]          @relation("OrganizationCreator")
+  auditLogs                AuditLog[]              @relation("AuditLogActor")
+  catalogHolds             CatalogHold[]           @relation("CatalogHoldCreator")
+  createdCampaignRequests  CampaignRequest[]       @relation("CampaignRequestCreator")
+  resolvedCampaignRequests CampaignRequest[]       @relation("CampaignRequestResolver")
+  createdOrders            Order[]                 @relation("OrderCreator")
+  confirmedOrders          Order[]                 @relation("OrderConfirmer")
+  salesReviewedOrders      Order[]                 @relation("OrderSalesReviewer")
+  uploadedCreatives        OrderCreative[]         @relation("CreativeUploader")
+  reviewedCreatives        OrderCreative[]         @relation("CreativeReviewer")
+  uploadedPurchaseOrders   OrderPurchaseOrder[]    @relation("PurchaseOrderUploader")
+  reviewedPurchaseOrders   OrderPurchaseOrder[]    @relation("PurchaseOrderReviewer")
+  salesReviewEvents        OrderSalesReviewEvent[] @relation("OrderSalesReviewEventActor")
 
   @@index([userId])
   @@index([isActive])
@@ -782,8 +787,8 @@ model CampaignRequestService {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  request    CampaignRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  service    CampaignService   @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  request    CampaignRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  service    CampaignService    @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   orderItems OrderServiceItem[]
 
   @@unique([requestId, serviceId])
@@ -804,6 +809,50 @@ enum OrderStatus {
   CANCELLED       @map("cancelled")
 
   @@map("order_status")
+}
+
+enum SalesReviewStatus {
+  NOT_STARTED
+  PENDING_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
+
+  @@map("sales_review_status")
+}
+
+enum PurchaseOrderReviewStatus {
+  PENDING_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
+
+  @@map("purchase_order_review_status")
+}
+
+enum SalesReviewEventType {
+  REVIEW_REQUIRED
+  DOCUMENT_APPROVED
+  DOCUMENT_CHANGES_REQUESTED
+  ORDER_APPROVED
+  ORDER_CHANGES_REQUESTED
+  CRITICAL_CHANGE
+  ORDER_CONFIRMED_WITHOUT_SALES_APPROVAL
+
+  @@map("sales_review_event_type")
+}
+
+enum SalesReviewTargetType {
+  ORDER
+  CREATIVE
+  PURCHASE_ORDER
+
+  @@map("sales_review_target_type")
+}
+
+enum SalesReviewResult {
+  APPROVED
+  CHANGES_REQUESTED
+
+  @@map("sales_review_result")
 }
 
 model Order {
@@ -836,24 +885,33 @@ model Order {
   clientApprovedAt     DateTime?
   companyConfirmedAt   DateTime?
   companyConfirmedById String?
+  salesReviewStatus    SalesReviewStatus @default(NOT_STARTED)
+  salesReviewUpdatedAt DateTime?
+  salesReviewById      String?
+  salesReviewNotes     String?           @db.Text
+  salesReviewVersion   Int               @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  campaignRequest  CampaignRequest? @relation(fields: [campaignRequestId], references: [id], onDelete: SetNull)
-  organization     Organization?    @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  createdBy        UserProfile?     @relation("OrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  companyConfirmBy UserProfile?     @relation("OrderConfirmer", fields: [companyConfirmedById], references: [id], onDelete: SetNull)
-  lineItems        OrderLineItem[]
-  serviceItems     OrderServiceItem[]
-  creatives        OrderCreative[]
-  purchaseOrders   OrderPurchaseOrder[]
+  campaignRequest   CampaignRequest?        @relation(fields: [campaignRequestId], references: [id], onDelete: SetNull)
+  organization      Organization?           @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdBy         UserProfile?            @relation("OrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  companyConfirmBy  UserProfile?            @relation("OrderConfirmer", fields: [companyConfirmedById], references: [id], onDelete: SetNull)
+  salesReviewBy     UserProfile?            @relation("OrderSalesReviewer", fields: [salesReviewById], references: [id], onDelete: SetNull)
+  lineItems         OrderLineItem[]
+  serviceItems      OrderServiceItem[]
+  creatives         OrderCreative[]
+  purchaseOrders    OrderPurchaseOrder[]
+  salesReviewEvents OrderSalesReviewEvent[]
 
   @@index([status])
   @@index([organizationId])
   @@index([createdById])
   @@index([campaignRequestId])
+  @@index([salesReviewStatus])
+  @@index([salesReviewById])
   @@map("order")
 }
 
@@ -871,8 +929,8 @@ model OrderLineItem {
   createdAt DateTime @default(now())
 
   // Relations
-  order Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  face  AssetFace @relation(fields: [faceId], references: [id], onDelete: Restrict)
+  order     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  face      AssetFace       @relation(fields: [faceId], references: [id], onDelete: Restrict)
   creatives OrderCreative[]
 
   @@index([orderId])
@@ -1095,29 +1153,34 @@ enum CreativeStatus {
 model OrderCreative {
   id String @id @default(cuid())
 
-  orderId      String
-  lineItemId   String?
+  orderId    String
+  lineItemId String?
 
-  fileUrl      String
-  fileName     String
-  fileType     String
-  fileSize     Int
+  fileUrl  String
+  fileName String
+  fileType String
+  fileSize Int
 
   version      Int            @default(1)
   status       CreativeStatus @default(PENDING)
   metadata     Json?
   notes        String?        @db.Text
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewNotes  String?        @db.Text
 
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   uploadedById String?
 
-  order        Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  lineItem     OrderLineItem? @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
-  uploadedBy   UserProfile?   @relation("CreativeUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  lineItem   OrderLineItem? @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+  uploadedBy UserProfile?   @relation("CreativeUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  reviewedBy UserProfile?   @relation("CreativeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([lineItemId])
+  @@index([reviewedById])
   @@map("order_creative")
 }
 
@@ -1131,17 +1194,46 @@ model OrderPurchaseOrder {
   fileType String
   fileSize Int
 
-  version Int      @default(1)
-  metadata Json?
-  notes    String? @db.Text
+  version      Int                       @default(1)
+  reviewStatus PurchaseOrderReviewStatus @default(PENDING_REVIEW)
+  metadata     Json?
+  notes        String?                   @db.Text
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewNotes  String?                   @db.Text
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   uploadedById String?
 
-  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   uploadedBy UserProfile? @relation("PurchaseOrderUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  reviewedBy UserProfile? @relation("PurchaseOrderReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([orderId])
+  @@index([reviewedById])
   @@map("order_purchase_order")
+}
+
+model OrderSalesReviewEvent {
+  id String @id @default(cuid())
+
+  orderId    String
+  eventType  SalesReviewEventType
+  targetType SalesReviewTargetType
+  targetId   String?
+  result     SalesReviewResult?
+  notes      String?               @db.Text
+  metadata   Json?
+  actorId    String?
+  createdAt  DateTime              @default(now())
+
+  order Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor UserProfile? @relation("OrderSalesReviewEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([actorId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("order_sales_review_event")
 }

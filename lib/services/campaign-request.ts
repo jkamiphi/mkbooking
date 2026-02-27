@@ -1,6 +1,11 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { listCatalogFaces } from "@/lib/services/catalog";
+import {
+  notifySalesReviewReopened,
+  reopenOrderSalesReview,
+  resolveSalesReviewActor,
+} from "@/lib/services/sales-review";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -463,11 +468,16 @@ export async function updateCampaignRequestStatus(
 }
 
 export async function assignCampaignRequestFaces(
-  input: z.infer<typeof assignCampaignRequestFacesSchema>
+  input: z.infer<typeof assignCampaignRequestFacesSchema>,
+  options?: { actorUserId?: string }
 ) {
   const uniqueFaceIds = Array.from(new Set(input.faceIds));
   let outsideCriteriaCount = 0;
   let requestedCount = 0;
+
+  const actor = options?.actorUserId
+    ? await resolveSalesReviewActor(options.actorUserId)
+    : null;
 
   await db.$transaction(async (tx) => {
     const request = await tx.campaignRequest.findUniqueOrThrow({
@@ -514,15 +524,57 @@ export async function assignCampaignRequestFaces(
         data: uniqueFaceIds.map((faceId) => ({ requestId: input.requestId, faceId })),
       });
     }
+
+    const linkedOrder = await tx.order.findUnique({
+      where: { campaignRequestId: input.requestId },
+      select: { id: true, code: true },
+    });
+
+    if (linkedOrder) {
+      await reopenOrderSalesReview(tx, {
+        orderId: linkedOrder.id,
+        actorId: actor?.profileId ?? null,
+        notes: "Asignación de caras actualizada desde la solicitud.",
+        eventType: "CRITICAL_CHANGE",
+        targetType: "ORDER",
+        metadata: {
+          requestId: input.requestId,
+          assignedCount: uniqueFaceIds.length,
+          requestedCount: request.quantity,
+          outsideCriteriaCount,
+        },
+      });
+    }
   });
 
   const request = await getCampaignRequestById(input.requestId);
+  const linkedOrder = await db.order.findUnique({
+    where: { campaignRequestId: input.requestId },
+    select: { id: true, code: true },
+  });
+
+  if (linkedOrder) {
+    await notifySalesReviewReopened({
+      orderId: linkedOrder.id,
+      orderCode: linkedOrder.code,
+      eventType: "CRITICAL_CHANGE",
+      actorName: actor?.fullName || "Sistema",
+      reason: "Se modificaron las caras asignadas en la solicitud.",
+      notes: `Asignadas ${uniqueFaceIds.length} de ${requestedCount}.`,
+    });
+  }
 
   return {
     request,
     assignedCount: uniqueFaceIds.length,
     requestedCount,
     outsideCriteriaCount,
+    salesReviewReopenedForOrder: linkedOrder
+      ? {
+          orderId: linkedOrder.id,
+          orderCode: linkedOrder.code,
+        }
+      : null,
   };
 }
 

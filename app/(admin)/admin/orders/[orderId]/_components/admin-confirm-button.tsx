@@ -20,6 +20,11 @@ export function AdminConfirmButton({ orderId }: AdminConfirmButtonProps) {
             toast.success("Orden Confirmada", {
                 description: `Se han configurado ${data.createdHolds} bloqueos nuevos (saltados: ${data.skippedActiveHolds}).`,
             });
+            if (data.warnings?.salesReviewNotApproved) {
+                toast("Advertencia comercial", {
+                    description: "La orden se confirmó sin aprobación final de Ventas.",
+                });
+            }
             router.refresh();
         },
         onError: (error) => {

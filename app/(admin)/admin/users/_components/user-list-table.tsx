@@ -297,15 +297,17 @@ export function UserListTable({
 }
 
 function RoleBadge({ role }: { role: SystemRole }) {
-  const variants: Record<SystemRole, "destructive" | "info" | "secondary"> = {
+  const variants: Record<SystemRole, "destructive" | "info" | "warning" | "secondary"> = {
     SUPERADMIN: "destructive",
     STAFF: "info",
+    SALES: "warning",
     CUSTOMER: "secondary",
   };
 
   const labels: Record<SystemRole, string> = {
     SUPERADMIN: "Superadmin",
     STAFF: "Personal",
+    SALES: "Ventas",
     CUSTOMER: "Cliente",
   };
 

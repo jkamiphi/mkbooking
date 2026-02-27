@@ -39,6 +39,16 @@ const STATUS_CONFIG: Record<
     CANCELLED: { label: "Cancelada", variant: "destructive", description: "Orden cancelada." },
 };
 
+const SALES_REVIEW_STATUS_CONFIG: Record<
+    string,
+    { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }
+> = {
+    NOT_STARTED: { label: "Sin revisión", variant: "secondary" },
+    PENDING_REVIEW: { label: "Pendiente de ventas", variant: "warning" },
+    APPROVED: { label: "Aprobada por ventas", variant: "success" },
+    CHANGES_REQUESTED: { label: "Requiere cambios", variant: "destructive" },
+};
+
 export default async function OrderDetailPage({ params }: PageProps) {
     const { orderId } = await params;
     const caller = await createServerTRPCCaller();
@@ -51,6 +61,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
     });
 
     const config = STATUS_CONFIG[order.status] || STATUS_CONFIG["DRAFT"];
+    const salesReviewConfig =
+        SALES_REVIEW_STATUS_CONFIG[order.salesReviewStatus] ||
+        SALES_REVIEW_STATUS_CONFIG["NOT_STARTED"];
     const rentalSubtotal = order.lineItems.reduce(
         (sum, item) => sum + Number(item.subtotal),
         0
@@ -225,6 +238,19 @@ export default async function OrderDetailPage({ params }: PageProps) {
                                 <p className="mt-1 text-xs text-neutral-500">
                                     Tu campaña está confirmada y bloqueada en inventario.
                                 </p>
+                            </div>
+                        )}
+                    </section>
+
+                    <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+                        <h2 className="mb-3 text-sm font-semibold text-neutral-900">Validación de Ventas</h2>
+                        <Badge variant={salesReviewConfig.variant}>{salesReviewConfig.label}</Badge>
+                        <p className="mt-2 text-xs text-neutral-500">
+                            Última actualización: {formatDate(order.salesReviewUpdatedAt)}
+                        </p>
+                        {order.salesReviewNotes && (
+                            <div className="mt-3 rounded-xl border border-neutral-100 bg-neutral-50 p-3 text-xs text-neutral-700">
+                                {order.salesReviewNotes}
                             </div>
                         )}
                     </section>

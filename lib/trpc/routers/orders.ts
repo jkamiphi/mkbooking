@@ -1,12 +1,33 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../init";
+import {
+    router,
+    protectedProcedure,
+    commercialProcedure,
+    salesReviewProcedure,
+} from "../init";
 import { db } from "@/lib/db";
 import { TRPCError } from "@trpc/server";
-import { OrderStatus, CreativeStatus, Prisma } from "@prisma/client";
+import {
+    OrderStatus,
+    CreativeStatus,
+    Prisma,
+    SalesReviewResult,
+    SalesReviewStatus,
+    PurchaseOrderReviewStatus,
+} from "@prisma/client";
 import {
     calculateOrderTotals,
     recalculateOrderTotals,
 } from "@/lib/services/order-financials";
+import {
+    createSalesReviewEvent,
+    isSalesReviewApproved,
+    notifySalesReviewReopened,
+    reopenOrderSalesReview,
+    resolveDocumentEventType,
+    resolveOrderEventType,
+    resolveSalesReviewActor,
+} from "@/lib/services/sales-review";
 
 function resolveOrderDays(fromDate: Date | null, toDate: Date | null) {
     if (!fromDate || !toDate) return 30;
@@ -33,7 +54,7 @@ function faceMatchesRequestCriteria(request: { zoneId?: string | null; structure
 }
 
 export const ordersRouter = router({
-    generateFromRequest: protectedProcedure
+    generateFromRequest: commercialProcedure
         .input(
             z.object({
                 requestId: z.string(),
@@ -204,7 +225,7 @@ export const ordersRouter = router({
             };
         }),
 
-    list: protectedProcedure
+    list: commercialProcedure
         .input(
             z.object({
                 status: z.nativeEnum(OrderStatus).optional(),
@@ -327,6 +348,16 @@ export const ordersRouter = router({
                     organization: true,
                     campaignRequest: true,
                     companyConfirmBy: true,
+                    salesReviewBy: {
+                        include: {
+                            user: {
+                                select: {
+                                    name: true,
+                                    email: true,
+                                },
+                            },
+                        },
+                    },
                 },
             });
 
@@ -337,7 +368,7 @@ export const ordersRouter = router({
             return order;
         }),
 
-    updateLineItem: protectedProcedure
+    updateLineItem: commercialProcedure
         .input(
             z.object({
                 orderId: z.string(),
@@ -346,12 +377,13 @@ export const ordersRouter = router({
                 days: z.number().min(1).int(),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
             const { orderId, lineItemId, priceDaily, days } = input;
+            const actor = await resolveSalesReviewActor(ctx.user.id);
 
             const order = await db.order.findUnique({
                 where: { id: orderId },
-                select: { id: true, status: true },
+                select: { id: true, code: true, status: true },
             });
 
             if (!order || order.status !== "DRAFT") {
@@ -376,6 +408,7 @@ export const ordersRouter = router({
             }
 
             const newSubtotal = priceDaily * days;
+            let reopenedOrderCode = order.code;
 
             await db.$transaction(async (tx) => {
                 await tx.orderLineItem.update({
@@ -388,12 +421,34 @@ export const ordersRouter = router({
                 });
 
                 await recalculateOrderTotals(tx, orderId);
+
+                const reopened = await reopenOrderSalesReview(tx, {
+                    orderId,
+                    actorId: actor.profileId,
+                    notes: "Se actualizaron montos de renta en el borrador.",
+                    eventType: "CRITICAL_CHANGE",
+                    targetType: "ORDER",
+                    metadata: {
+                        lineItemId,
+                        priceDaily,
+                        days,
+                    },
+                });
+                reopenedOrderCode = reopened.code;
+            });
+
+            await notifySalesReviewReopened({
+                orderId,
+                orderCode: reopenedOrderCode,
+                eventType: "CRITICAL_CHANGE",
+                actorName: actor.fullName,
+                reason: "Cambio en montos o días de una cara en borrador.",
             });
 
             return { success: true };
         }),
 
-    updateServiceItem: protectedProcedure
+    updateServiceItem: commercialProcedure
         .input(
             z.object({
                 orderId: z.string(),
@@ -402,12 +457,13 @@ export const ordersRouter = router({
                 unitPrice: z.number().min(0),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
             const { orderId, serviceItemId, quantity, unitPrice } = input;
+            const actor = await resolveSalesReviewActor(ctx.user.id);
 
             const order = await db.order.findUnique({
                 where: { id: orderId },
-                select: { id: true, status: true },
+                select: { id: true, code: true, status: true },
             });
 
             if (!order || order.status !== "DRAFT") {
@@ -436,6 +492,8 @@ export const ordersRouter = router({
                 });
             }
 
+            let reopenedOrderCode = order.code;
+
             await db.$transaction(async (tx) => {
                 await tx.orderServiceItem.update({
                     where: { id: serviceItemId },
@@ -447,12 +505,34 @@ export const ordersRouter = router({
                 });
 
                 await recalculateOrderTotals(tx, orderId);
+
+                const reopened = await reopenOrderSalesReview(tx, {
+                    orderId,
+                    actorId: actor.profileId,
+                    notes: "Se actualizaron servicios facturables en el borrador.",
+                    eventType: "CRITICAL_CHANGE",
+                    targetType: "ORDER",
+                    metadata: {
+                        serviceItemId,
+                        quantity,
+                        unitPrice,
+                    },
+                });
+                reopenedOrderCode = reopened.code;
+            });
+
+            await notifySalesReviewReopened({
+                orderId,
+                orderCode: reopenedOrderCode,
+                eventType: "CRITICAL_CHANGE",
+                actorName: actor.fullName,
+                reason: "Cambio en cantidad o precio de servicio facturable.",
             });
 
             return { success: true };
         }),
 
-    sendQuotation: protectedProcedure
+    sendQuotation: commercialProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input }) => {
             const order = await db.order.findUnique({ where: { id: input.id } });
@@ -510,7 +590,7 @@ export const ordersRouter = router({
             });
         }),
 
-    companyConfirm: protectedProcedure
+    companyConfirm: commercialProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             const { user } = ctx;
@@ -543,6 +623,9 @@ export const ordersRouter = router({
                     message: "La orden debe ser aprobada por el cliente primero",
                 });
             }
+            const salesReviewNotApproved = !isSalesReviewApproved(
+                order.salesReviewStatus
+            );
 
             const now = new Date();
             // Default 30 days hold if order has no explicit dates
@@ -594,6 +677,20 @@ export const ordersRouter = router({
                     },
                 });
 
+                if (salesReviewNotApproved) {
+                    await createSalesReviewEvent(tx, {
+                        orderId: order.id,
+                        eventType: "ORDER_CONFIRMED_WITHOUT_SALES_APPROVAL",
+                        targetType: "ORDER",
+                        notes:
+                            "Orden confirmada sin aprobación comercial final.",
+                        metadata: {
+                            salesReviewStatus: order.salesReviewStatus,
+                        },
+                        actorId: userProfile.id,
+                    });
+                }
+
                 if (order.campaignRequestId) {
                     await tx.campaignRequest.update({
                         where: { id: order.campaignRequestId },
@@ -605,13 +702,17 @@ export const ordersRouter = router({
                     order: confirmedOrder,
                     createdHolds,
                     skippedActiveHolds,
+                    warnings: {
+                        salesReviewNotApproved,
+                        salesReviewStatus: order.salesReviewStatus,
+                    },
                 };
             });
 
             return result;
         }),
 
-    updateStatus: protectedProcedure
+    updateStatus: commercialProcedure
         .input(
             z.object({
                 id: z.string(),
@@ -631,7 +732,10 @@ export const ordersRouter = router({
         .query(async ({ input }) => {
             const creatives = await db.orderCreative.findMany({
                 where: { orderId: input.orderId },
-                include: { uploadedBy: { include: { user: true } } },
+                include: {
+                    uploadedBy: { include: { user: true } },
+                    reviewedBy: { include: { user: true } },
+                },
                 orderBy: { createdAt: "desc" },
             });
             return creatives;
@@ -642,7 +746,10 @@ export const ordersRouter = router({
         .query(async ({ input }) => {
             const purchaseOrders = await db.orderPurchaseOrder.findMany({
                 where: { orderId: input.orderId },
-                include: { uploadedBy: { include: { user: true } } },
+                include: {
+                    uploadedBy: { include: { user: true } },
+                    reviewedBy: { include: { user: true } },
+                },
                 orderBy: { createdAt: "desc" },
             });
 
@@ -662,22 +769,11 @@ export const ordersRouter = router({
             })
         )
         .mutation(async ({ input, ctx }) => {
-            const { user } = ctx;
-
-            const userProfile = await db.userProfile.findUnique({
-                where: { userId: user.id },
-            });
-
-            if (!userProfile) {
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "User profile not found",
-                });
-            }
+            const actor = await resolveSalesReviewActor(ctx.user.id);
 
             const order = await db.order.findUnique({
                 where: { id: input.orderId },
-                select: { id: true },
+                select: { id: true, code: true },
             });
 
             if (!order) {
@@ -694,19 +790,56 @@ export const ordersRouter = router({
             });
 
             const nextVersion = (latestPurchaseOrder?.version ?? 0) + 1;
+            let purchaseOrderId: string | null = null;
 
-            const purchaseOrder = await db.orderPurchaseOrder.create({
-                data: {
+            await db.$transaction(async (tx) => {
+                const createdPurchaseOrder = await tx.orderPurchaseOrder.create({
+                    data: {
+                        orderId: input.orderId,
+                        fileUrl: input.fileUrl,
+                        fileName: input.fileName,
+                        fileType: input.fileType,
+                        fileSize: input.fileSize,
+                        version: nextVersion,
+                        metadata: input.metadata || null,
+                        notes: input.notes,
+                        uploadedById: actor.profileId,
+                    },
+                });
+                purchaseOrderId = createdPurchaseOrder.id;
+
+                await reopenOrderSalesReview(tx, {
                     orderId: input.orderId,
-                    fileUrl: input.fileUrl,
-                    fileName: input.fileName,
-                    fileType: input.fileType,
-                    fileSize: input.fileSize,
-                    version: nextVersion,
-                    metadata: input.metadata || null,
-                    notes: input.notes,
-                    uploadedById: userProfile.id,
-                },
+                    actorId: actor.profileId,
+                    notes: "Se subió una nueva OC del cliente.",
+                    eventType: "REVIEW_REQUIRED",
+                    targetType: "PURCHASE_ORDER",
+                    targetId: createdPurchaseOrder.id,
+                    metadata: {
+                        version: nextVersion,
+                        fileName: input.fileName,
+                    },
+                });
+            });
+
+            await notifySalesReviewReopened({
+                orderId: input.orderId,
+                orderCode: order.code,
+                eventType: "REVIEW_REQUIRED",
+                actorName: actor.fullName,
+                reason: "Se cargó una nueva Orden de Compra (OC).",
+                notes: input.notes ?? null,
+            });
+
+            if (!purchaseOrderId) {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "No se pudo guardar la OC.",
+                });
+            }
+
+            const purchaseOrder = await db.orderPurchaseOrder.findUniqueOrThrow({
+                where: { id: purchaseOrderId },
             });
 
             return purchaseOrder;
@@ -726,22 +859,11 @@ export const ordersRouter = router({
             })
         )
         .mutation(async ({ input, ctx }) => {
-            const { user } = ctx;
-
-            const userProfile = await db.userProfile.findUnique({
-                where: { userId: user.id },
-            });
-
-            if (!userProfile) {
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "User profile not found",
-                });
-            }
+            const actor = await resolveSalesReviewActor(ctx.user.id);
 
             const order = await db.order.findUnique({
                 where: { id: input.orderId },
-                select: { id: true },
+                select: { id: true, code: true },
             });
 
             if (!order) {
@@ -787,21 +909,38 @@ export const ordersRouter = router({
 
             const nextVersion = (latestCreative?.version ?? 0) + 1;
 
-            let creative;
+            let creativeId: string | null = null;
             try {
-                creative = await db.orderCreative.create({
-                    data: {
+                await db.$transaction(async (tx) => {
+                    const createdCreative = await tx.orderCreative.create({
+                        data: {
+                            orderId: input.orderId,
+                            lineItemId: targetLineItemId,
+                            fileUrl: input.fileUrl,
+                            fileName: input.fileName,
+                            fileType: input.fileType,
+                            fileSize: input.fileSize,
+                            version: nextVersion,
+                            metadata: input.metadata || null,
+                            notes: input.notes,
+                            uploadedById: actor.profileId,
+                        },
+                    });
+                    creativeId = createdCreative.id;
+
+                    await reopenOrderSalesReview(tx, {
                         orderId: input.orderId,
-                        lineItemId: targetLineItemId,
-                        fileUrl: input.fileUrl,
-                        fileName: input.fileName,
-                        fileType: input.fileType,
-                        fileSize: input.fileSize,
-                        version: nextVersion,
-                        metadata: input.metadata || null,
-                        notes: input.notes,
-                        uploadedById: userProfile.id,
-                    },
+                        actorId: actor.profileId,
+                        notes: "Se subió un nuevo arte para revisión.",
+                        eventType: "REVIEW_REQUIRED",
+                        targetType: "CREATIVE",
+                        targetId: createdCreative.id,
+                        metadata: {
+                            lineItemId: targetLineItemId,
+                            version: nextVersion,
+                            fileName: input.fileName,
+                        },
+                    });
                 });
             } catch (error) {
                 if (
@@ -818,10 +957,244 @@ export const ordersRouter = router({
                 throw error;
             }
 
+            await notifySalesReviewReopened({
+                orderId: input.orderId,
+                orderCode: order.code,
+                eventType: "REVIEW_REQUIRED",
+                actorName: actor.fullName,
+                reason: targetLineItemId
+                    ? "Se cargó un arte por cara específica."
+                    : "Se cargó un arte general de la orden.",
+                notes: input.notes ?? null,
+            });
+
+            if (!creativeId) {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "No se pudo guardar el arte.",
+                });
+            }
+
+            const creative = await db.orderCreative.findUniqueOrThrow({
+                where: { id: creativeId },
+            });
+
             return creative;
         }),
 
-    updateCreativeStatus: protectedProcedure
+    getSalesReviewTimeline: commercialProcedure
+        .input(z.object({ orderId: z.string() }))
+        .query(async ({ input }) => {
+            const timeline = await db.orderSalesReviewEvent.findMany({
+                where: { orderId: input.orderId },
+                include: {
+                    actor: {
+                        include: {
+                            user: {
+                                select: {
+                                    name: true,
+                                    email: true,
+                                },
+                            },
+                        },
+                    },
+                },
+                orderBy: { createdAt: "desc" },
+            });
+
+            return timeline;
+        }),
+
+    reviewCreative: salesReviewProcedure
+        .input(
+            z.object({
+                creativeId: z.string(),
+                result: z.nativeEnum(SalesReviewResult),
+                notes: z.string().trim().max(2000).optional(),
+            })
+        )
+        .mutation(async ({ input, ctx }) => {
+            if (input.result === SalesReviewResult.CHANGES_REQUESTED && !input.notes?.trim()) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Debes incluir notas cuando el resultado requiere cambios.",
+                });
+            }
+
+            const actor = await resolveSalesReviewActor(ctx.user.id);
+            const creative = await db.orderCreative.findUnique({
+                where: { id: input.creativeId },
+                select: {
+                    id: true,
+                    orderId: true,
+                },
+            });
+
+            if (!creative) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Arte no encontrado.",
+                });
+            }
+
+            const status =
+                input.result === SalesReviewResult.APPROVED
+                    ? CreativeStatus.APPROVED
+                    : CreativeStatus.REJECTED;
+
+            const updated = await db.$transaction(async (tx) => {
+                const updatedCreative = await tx.orderCreative.update({
+                    where: { id: input.creativeId },
+                    data: {
+                        status,
+                        reviewedAt: new Date(),
+                        reviewedById: actor.profileId,
+                        reviewNotes: input.notes?.trim() || null,
+                    },
+                });
+
+                await createSalesReviewEvent(tx, {
+                    orderId: updatedCreative.orderId,
+                    eventType: resolveDocumentEventType(input.result),
+                    targetType: "CREATIVE",
+                    targetId: updatedCreative.id,
+                    result: input.result,
+                    notes: input.notes?.trim() || null,
+                    actorId: actor.profileId,
+                });
+
+                return updatedCreative;
+            });
+
+            return updated;
+        }),
+
+    reviewPurchaseOrder: salesReviewProcedure
+        .input(
+            z.object({
+                purchaseOrderId: z.string(),
+                result: z.nativeEnum(SalesReviewResult),
+                notes: z.string().trim().max(2000).optional(),
+            })
+        )
+        .mutation(async ({ input, ctx }) => {
+            if (input.result === SalesReviewResult.CHANGES_REQUESTED && !input.notes?.trim()) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Debes incluir notas cuando el resultado requiere cambios.",
+                });
+            }
+
+            const actor = await resolveSalesReviewActor(ctx.user.id);
+            const purchaseOrder = await db.orderPurchaseOrder.findUnique({
+                where: { id: input.purchaseOrderId },
+                select: {
+                    id: true,
+                    orderId: true,
+                },
+            });
+
+            if (!purchaseOrder) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "OC no encontrada.",
+                });
+            }
+
+            const status =
+                input.result === SalesReviewResult.APPROVED
+                    ? PurchaseOrderReviewStatus.APPROVED
+                    : PurchaseOrderReviewStatus.CHANGES_REQUESTED;
+
+            const updated = await db.$transaction(async (tx) => {
+                const updatedPurchaseOrder = await tx.orderPurchaseOrder.update({
+                    where: { id: input.purchaseOrderId },
+                    data: {
+                        reviewStatus: status,
+                        reviewedAt: new Date(),
+                        reviewedById: actor.profileId,
+                        reviewNotes: input.notes?.trim() || null,
+                    },
+                });
+
+                await createSalesReviewEvent(tx, {
+                    orderId: updatedPurchaseOrder.orderId,
+                    eventType: resolveDocumentEventType(input.result),
+                    targetType: "PURCHASE_ORDER",
+                    targetId: updatedPurchaseOrder.id,
+                    result: input.result,
+                    notes: input.notes?.trim() || null,
+                    actorId: actor.profileId,
+                });
+
+                return updatedPurchaseOrder;
+            });
+
+            return updated;
+        }),
+
+    confirmSalesReview: salesReviewProcedure
+        .input(
+            z.object({
+                orderId: z.string(),
+                result: z.nativeEnum(SalesReviewResult),
+                notes: z.string().trim().max(2000).optional(),
+            })
+        )
+        .mutation(async ({ input, ctx }) => {
+            if (input.result === SalesReviewResult.CHANGES_REQUESTED && !input.notes?.trim()) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Debes incluir notas cuando el resultado requiere cambios.",
+                });
+            }
+
+            const actor = await resolveSalesReviewActor(ctx.user.id);
+            const order = await db.order.findUnique({
+                where: { id: input.orderId },
+                select: { id: true },
+            });
+
+            if (!order) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Order not found",
+                });
+            }
+
+            const nextStatus =
+                input.result === SalesReviewResult.APPROVED
+                    ? SalesReviewStatus.APPROVED
+                    : SalesReviewStatus.CHANGES_REQUESTED;
+
+            const updatedOrder = await db.$transaction(async (tx) => {
+                const updated = await tx.order.update({
+                    where: { id: input.orderId },
+                    data: {
+                        salesReviewStatus: nextStatus,
+                        salesReviewUpdatedAt: new Date(),
+                        salesReviewById: actor.profileId,
+                        salesReviewNotes: input.notes?.trim() || null,
+                    },
+                });
+
+                await createSalesReviewEvent(tx, {
+                    orderId: input.orderId,
+                    eventType: resolveOrderEventType(input.result),
+                    targetType: "ORDER",
+                    targetId: input.orderId,
+                    result: input.result,
+                    notes: input.notes?.trim() || null,
+                    actorId: actor.profileId,
+                });
+
+                return updated;
+            });
+
+            return updatedOrder;
+        }),
+
+    updateCreativeStatus: salesReviewProcedure
         .input(
             z.object({
                 id: z.string(),

@@ -18,7 +18,7 @@ export default async function AdminLayout({
   const caller = await createServerTRPCCaller();
   const profile = await caller.userProfile.current();
 
-  if (!profile || !["SUPERADMIN", "STAFF"].includes(profile.systemRole)) {
+  if (!profile || !["SUPERADMIN", "STAFF", "SALES"].includes(profile.systemRole)) {
     // Redirect customers to their dashboard
     redirect("/profile");
   }
