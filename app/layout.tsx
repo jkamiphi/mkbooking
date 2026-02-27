@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MK Booking",
+  title: "MKM Booking",
   description: "OOH Booking Platform",
 };
 

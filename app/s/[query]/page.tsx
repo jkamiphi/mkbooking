@@ -9,6 +9,7 @@ import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 import { UserHeaderActions } from "@/components/layout/user-header-actions";
 import { SearchFilters } from "./_components/search-filters";
 import { SearchResultsView } from "./_components/search-results-view";
+import Image from "next/image";
 
 type PageProps = {
   params: Promise<{ query: string }>;
@@ -54,8 +55,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   if (zoneId) searchStateParams.set("zone", zoneId);
   if (fromDate) searchStateParams.set("from", fromDate);
   if (toDate) searchStateParams.set("to", toDate);
-  const currentSearchPath = `/s/${encodeURIComponent(decodedQuery)}${searchStateParams.toString() ? `?${searchStateParams.toString()}` : ""
-    }`;
+  const currentSearchPath = `/s/${encodeURIComponent(decodedQuery)}${
+    searchStateParams.toString() ? `?${searchStateParams.toString()}` : ""
+  }`;
 
   const profile = session?.user?.id ? await caller.userProfile.current() : null;
   const organizationId =
@@ -87,15 +89,16 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
   const results = visibleFaces.map((face) => {
     const title =
-      face.catalogFace?.title || `${face.asset.structureType.name} · Cara ${face.code}`;
+      face.catalogFace?.title ||
+      `${face.asset.structureType.name} · Cara ${face.code}`;
     const location = `${face.asset.zone.name}, ${face.asset.zone.province.name}`;
     const dimensions = formatFaceDimensions(face.width, face.height);
     const priceLabel =
       face.effectivePrice && showPrices
         ? formatPrice(
-          Number(face.effectivePrice.priceDaily),
-          face.effectivePrice.currency ?? "USD"
-        )
+            Number(face.effectivePrice.priceDaily),
+            face.effectivePrice.currency ?? "USD",
+          )
         : null;
 
     return {
@@ -110,7 +113,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       dimensionsLabel: dimensions?.label ?? null,
       areaLabel: dimensions?.areaLabel ?? null,
       priceLabel,
-      priceDaily: face.effectivePrice ? Number(face.effectivePrice.priceDaily) : null,
+      priceDaily: face.effectivePrice
+        ? Number(face.effectivePrice.priceDaily)
+        : null,
       currency: face.effectivePrice?.currency ?? "USD",
       structureType: face.asset.structureType.name,
     };
@@ -127,13 +132,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         lat,
         lng,
         title:
-          face.catalogFace?.title || `${face.asset.structureType.name} · Cara ${face.code}`,
+          face.catalogFace?.title ||
+          `${face.asset.structureType.name} · Cara ${face.code}`,
         price:
           face.effectivePrice && showPrices
             ? formatPrice(
-              Number(face.effectivePrice.priceDaily),
-              face.effectivePrice.currency ?? "USD"
-            )
+                Number(face.effectivePrice.priceDaily),
+                face.effectivePrice.currency ?? "USD",
+              )
             : null,
         structureType: face.asset.structureType.name,
         href: `/faces/${face.id}?from=${encodeURIComponent(currentSearchPath)}`,
@@ -146,9 +152,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const mapCenter =
     markers.length > 0
       ? {
-        lat: markers.reduce((sum, m) => sum + m.lat, 0) / markers.length,
-        lng: markers.reduce((sum, m) => sum + m.lng, 0) / markers.length,
-      }
+          lat: markers.reduce((sum, m) => sum + m.lat, 0) / markers.length,
+          lng: markers.reduce((sum, m) => sum + m.lng, 0) / markers.length,
+        }
       : defaultCenter;
 
   return (
@@ -164,15 +170,12 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
             <span className="hidden sm:inline">Volver</span>
           </Link>
           <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0359A8] text-white">
-              <Sparkles className="h-4 w-4" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-neutral-900">
-                MK Booking
-              </p>
-              <p className="text-xs text-neutral-500">Catálogo OOH</p>
-            </div>
+            <Image
+              src="/images/logo/b-mkm-blue.png"
+              alt="Logo"
+              width={68.4}
+              height={30}
+            />
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import Image from "next/image";
 
 type AuthBrandProps = {
   className?: string;
@@ -9,17 +10,12 @@ type AuthBrandProps = {
 export function AuthBrand({ className }: AuthBrandProps) {
   return (
     <div className={cn("flex items-center justify-center gap-3", className)}>
-      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30">
-        <Sparkles className="h-5 w-5" />
-      </span>
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
-          MK Booking
-        </p>
-        <p className="text-sm font-semibold text-neutral-900 dark:text-white">
-          Catálogo OOH
-        </p>
-      </div>
+      <Image
+        src="/images/logo/b-mkm-blue.png"
+        alt="Logo"
+        width={78.4}
+        height={40}
+      />
     </div>
   );
 }

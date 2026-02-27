@@ -152,15 +152,12 @@ export default async function Home({
 
       <header className="relative mx-auto flex w-full max-w-7xl items-start justify-between px-6 pb-6 pt-6">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/30">
-            <Sparkles className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">
-              MK Booking
-            </p>
-            <p className="text-lg font-semibold tracking-tight">Catálogo OOH</p>
-          </div>
+          <Image
+            src="/images/logo/b-mkm-blue.png"
+            alt="Logo"
+            width={78.4}
+            height={40}
+          />
         </Link>
 
         <div className="flex items-center gap-2">
@@ -472,9 +469,12 @@ export default async function Home({
         <div className="mx-auto w-full max-w-7xl px-6 py-10">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-neutral-500">
-                MK Booking
-              </p>
+              <Image
+                src="/images/logo/b-mkm-blue.png"
+                alt="Logo"
+                width={78.4}
+                height={40}
+              />
               <p className="mt-2 max-w-md text-sm text-neutral-600">
                 Marketplace OOH en Panamá para descubrir, reservar y operar
                 campañas con una experiencia simple.
@@ -509,7 +509,7 @@ export default async function Home({
           </div>
 
           <div className="mt-6 flex flex-col gap-2 border-t border-neutral-200/80 pt-4 text-xs text-neutral-500 md:flex-row md:items-center md:justify-between">
-            <p>© {new Date().getFullYear()} MK Booking.</p>
+            <p>© {new Date().getFullYear()} MKM Booking.</p>
             <p>hola@mkbooking.com · +507 6000-0000 · Panamá</p>
           </div>
         </div>

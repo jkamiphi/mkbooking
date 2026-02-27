@@ -4,7 +4,7 @@ import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 import { createServerTRPCCaller } from "@/lib/trpc/server";
 
 export const metadata = {
-  title: "Panel de Administración - MK Booking",
+  title: "Panel de Administración - MKM Booking",
   description: "Panel de administración de la plataforma",
 };
 
