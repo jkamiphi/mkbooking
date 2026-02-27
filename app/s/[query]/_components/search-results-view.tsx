@@ -93,8 +93,8 @@ export function SearchResultsView({
   }, [highlightedFaceId]);
 
   return (
-    <div className="flex flex-1 overflow-hidden">
-      <div className="flex w-full flex-col overflow-hidden lg:w-[55%] xl:w-[60%]">
+    <div className="flex flex-auto items-start">
+      <div className="flex w-full flex-col lg:w-[55%] xl:w-[60%]">
         <div className="flex flex-col gap-3 border-b border-neutral-100 bg-neutral-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p className="text-sm text-neutral-600">
             <span className="font-semibold text-neutral-900">{total}</span>{" "}
@@ -153,7 +153,7 @@ export function SearchResultsView({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-20">
+        <div className="pb-20">
           <div
             className={cn(
               "gap-4 p-4 sm:p-6",
@@ -338,7 +338,7 @@ export function SearchResultsView({
         </div>
       </div>
 
-      <div className="hidden border-l border-neutral-200 lg:block lg:w-[45%] xl:w-[40%]">
+      <div className="hidden border-l border-neutral-200 lg:sticky lg:top-0 lg:block lg:h-screen lg:self-start lg:w-[45%] xl:w-[40%]">
         <SearchMap
           markers={markers}
           center={center}

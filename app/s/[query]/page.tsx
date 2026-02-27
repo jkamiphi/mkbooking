@@ -237,7 +237,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           query={decodedQuery}
         />
 
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex flex-auto flex-col">
           <SearchResultsView
             total={visibleTotal}
             searchTerm={searchTerm}
