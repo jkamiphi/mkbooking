@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Grid3X3, List, MapPin, Plus } from "lucide-react";
 import { SearchMap, type SearchMapMarker } from "./search-map";
 import { useFaceSelection, type SelectedFace } from "@/components/face-selection-context";
+import { cn } from "@/lib/utils";
 
 export type SearchResultCard = {
   id: string;
@@ -67,6 +68,7 @@ export function SearchResultsView({
   searchPath,
 }: SearchResultsViewProps) {
   const [highlightedFaceId, setHighlightedFaceId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
   const { toggleFace, isSelected } = useFaceSelection();
 
@@ -122,13 +124,29 @@ export function SearchResultsView({
             )}
             <button
               type="button"
-              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition hover:border-neutral-300 sm:flex"
+              onClick={() => setViewMode("grid")}
+              aria-pressed={viewMode === "grid"}
+              aria-label="Ver resultados en cuadrícula"
+              className={cn(
+                "hidden h-8 w-8 items-center justify-center rounded-lg border transition sm:flex",
+                viewMode === "grid"
+                  ? "border-neutral-300 bg-white text-neutral-700 shadow-sm"
+                  : "border-transparent bg-transparent text-neutral-400 hover:border-neutral-200 hover:bg-white hover:text-neutral-600",
+              )}
             >
               <Grid3X3 className="h-4 w-4" />
             </button>
             <button
               type="button"
-              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-transparent text-neutral-400 transition hover:bg-neutral-100 sm:flex"
+              onClick={() => setViewMode("list")}
+              aria-pressed={viewMode === "list"}
+              aria-label="Ver resultados en lista"
+              className={cn(
+                "hidden h-8 w-8 items-center justify-center rounded-lg border transition sm:flex",
+                viewMode === "list"
+                  ? "border-neutral-300 bg-white text-neutral-700 shadow-sm"
+                  : "border-transparent bg-transparent text-neutral-400 hover:border-neutral-200 hover:bg-white hover:text-neutral-600",
+              )}
             >
               <List className="h-4 w-4" />
             </button>
@@ -136,9 +154,21 @@ export function SearchResultsView({
         </div>
 
         <div className="flex-1 overflow-y-auto pb-20">
-          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
+          <div
+            className={cn(
+              "gap-4 p-4 sm:p-6",
+              viewMode === "grid"
+                ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+                : "flex flex-col",
+            )}
+          >
             {results.length === 0 ? (
-              <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 py-16 text-center">
+              <div
+                className={cn(
+                  "flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 py-16 text-center",
+                  viewMode === "grid" ? "col-span-full" : "w-full",
+                )}
+              >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-200">
                   <MapPin className="h-6 w-6 text-neutral-500" />
                 </div>
