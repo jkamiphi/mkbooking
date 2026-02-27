@@ -1,13 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface HomeFooterProps {
   showPrices: boolean;
+  className?: string;
 }
 
-export function HomeFooter({ showPrices }: HomeFooterProps) {
+export function HomeFooter({ showPrices, className }: HomeFooterProps) {
   return (
-    <footer className="mt-16 border-t border-neutral-200/80 bg-white/70">
+    <footer className={cn("mt-16 border-t border-neutral-200/80 bg-white/70", className)}>
       <div className="mx-auto w-full max-w-7xl px-6 py-10">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>

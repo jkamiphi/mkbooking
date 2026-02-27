@@ -169,91 +169,92 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       : defaultCenter;
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      {/* Header */}
-      <header className="z-20 flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Volver</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Image
-              src="/images/logo/b-mkm-blue.png"
-              alt="Logo"
-              width={68.4}
-              height={30}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3">
-          {searchContextLabel ? (
-            <div className="hidden items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 md:flex">
-              <MapPin className="h-4 w-4 text-neutral-400" />
-              <span className="text-sm font-medium text-neutral-900">
-                {searchContextLabel}
-              </span>
-              {zoneId && zones.find((z) => z.id === zoneId) && (
-                <span className="text-sm text-neutral-500">
-                  {zones.find((z) => z.id === zoneId)?.province.name}
-                </span>
-              )}
-            </div>
-          ) : null}
-
-          {session ? (
-            <UserHeaderActions
-              user={{
-                email: session.user.email,
-                name: session.user.name,
-              }}
-            />
-          ) : (
+    <>
+      <div className="flex min-h-screen flex-col bg-white">
+        {/* Header */}
+        <header className="z-20 flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link
-              href="/login"
-              className="rounded-full bg-[#0359A8] px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-[#0359A8]/20 transition hover:bg-[#024a8c] sm:px-4 sm:text-sm"
+              href="/"
+              className="flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
             >
-              Iniciar sesión
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Volver</span>
             </Link>
-          )}
-        </div>
-      </header>
+            <div className="flex items-center gap-2">
+              <Image
+                src="/images/logo/b-mkm-blue.png"
+                alt="Logo"
+                width={68.4}
+                height={30}
+              />
+            </div>
+          </div>
 
-      {/* Filters Bar */}
-      <SearchFilters
-        key={`${typeId ?? ""}-${zoneId ?? ""}-${fromDate ?? ""}-${toDate ?? ""}`}
-        structureTypes={structureTypes}
-        zones={zones}
-        selectedTypeId={typeId}
-        selectedZoneId={zoneId}
-        selectedFromDate={fromDate}
-        selectedToDate={toDate}
-        minimumStartDate={toDateInputValue(minimumStartDate)}
-        query={decodedQuery}
-      />
+          <div className="flex items-center gap-2 sm:gap-3">
+            {searchContextLabel ? (
+              <div className="hidden items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 md:flex">
+                <MapPin className="h-4 w-4 text-neutral-400" />
+                <span className="text-sm font-medium text-neutral-900">
+                  {searchContextLabel}
+                </span>
+                {zoneId && zones.find((z) => z.id === zoneId) && (
+                  <span className="text-sm text-neutral-500">
+                    {zones.find((z) => z.id === zoneId)?.province.name}
+                  </span>
+                )}
+              </div>
+            ) : null}
 
-      <div className="flex flex-1 min-h-0 flex-col">
-        <SearchResultsView
-          total={visibleTotal}
-          searchTerm={searchTerm}
-          results={results}
-          markers={markers}
-          center={mapCenter}
-          showPrices={showPrices}
+            {session ? (
+              <UserHeaderActions
+                user={{
+                  email: session.user.email,
+                  name: session.user.name,
+                }}
+              />
+            ) : (
+              <Link
+                href="/login"
+                className="rounded-full bg-[#0359A8] px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-[#0359A8]/20 transition hover:bg-[#024a8c] sm:px-4 sm:text-sm"
+              >
+                Iniciar sesión
+              </Link>
+            )}
+          </div>
+        </header>
+
+        {/* Filters Bar */}
+        <SearchFilters
+          key={`${typeId ?? ""}-${zoneId ?? ""}-${fromDate ?? ""}-${toDate ?? ""}`}
+          structureTypes={structureTypes}
+          zones={zones}
           selectedTypeId={typeId}
           selectedZoneId={zoneId}
           selectedFromDate={fromDate}
           selectedToDate={toDate}
-          isAuthenticated={Boolean(session)}
-          searchPath={currentSearchPath}
+          minimumStartDate={toDateInputValue(minimumStartDate)}
+          query={decodedQuery}
         />
-      </div>
 
-      <HomeFooter showPrices={showPrices} />
-    </div>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <SearchResultsView
+            total={visibleTotal}
+            searchTerm={searchTerm}
+            results={results}
+            markers={markers}
+            center={mapCenter}
+            showPrices={showPrices}
+            selectedTypeId={typeId}
+            selectedZoneId={zoneId}
+            selectedFromDate={fromDate}
+            selectedToDate={toDate}
+            isAuthenticated={Boolean(session)}
+            searchPath={currentSearchPath}
+          />
+        </div>
+      </div>
+      <HomeFooter showPrices={showPrices} className="mt-0" />
+    </>
   );
 }
