@@ -10,6 +10,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ImageGalleryField,
+  type ImageGalleryItem,
+} from "@/components/inventory/image-gallery-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
@@ -180,6 +184,15 @@ function mapAssetToForm(asset: AssetGetOutput): AssetFormValues {
   };
 }
 
+function mapAssetImages(asset: AssetGetOutput): ImageGalleryItem[] {
+  return (asset.images ?? []).map((image) => ({
+    id: image.id,
+    image: image.image,
+    caption: image.caption ?? "",
+    isPrimary: image.isPrimary,
+  }));
+}
+
 export function EditAssetForm({ assetId }: { assetId: string }) {
   const router = useRouter();
   const utils = trpc.useUtils();
@@ -187,6 +200,7 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [draft, setDraft] = useState<Partial<AssetFormValues>>({});
+  const [imageDraft, setImageDraft] = useState<ImageGalleryItem[] | null>(null);
 
   const assetQuery = trpc.inventory.assets.get.useQuery({ id: assetId });
   const structureTypesQuery = trpc.inventory.structureTypes.list.useQuery();
@@ -200,6 +214,17 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
       ...draft,
     } satisfies AssetFormValues;
   }, [assetQuery.data, draft]);
+  const images = useMemo(() => {
+    if (imageDraft) {
+      return imageDraft;
+    }
+
+    if (!assetQuery.data) {
+      return [];
+    }
+
+    return mapAssetImages(assetQuery.data);
+  }, [assetQuery.data, imageDraft]);
 
   const coordinates = useMemo(() => {
     if (!form) return null;
@@ -361,6 +386,12 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 ? new Date(form.installedDate)
                 : undefined,
               retiredDate: form.retiredDate ? new Date(form.retiredDate) : undefined,
+              images: images.map((image) => ({
+                id: image.id,
+                image: image.image,
+                caption: image.caption.trim() || undefined,
+                isPrimary: image.isPrimary,
+              })),
             });
           }}
         >
@@ -576,6 +607,16 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                   setDraft((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 rows={3}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <ImageGalleryField
+                images={images}
+                scope="inventory-asset-image"
+                label="Imágenes del activo"
+                description="Define una imagen principal para usar como fallback visual."
+                onChange={setImageDraft}
+                disabled={updateAsset.isPending}
               />
             </div>
           </div>

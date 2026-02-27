@@ -127,6 +127,7 @@ export function PurchaseOrderModule({
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("scope", "orders-purchase-order");
 
       const response = await fetch("/api/upload", {
         method: "POST",

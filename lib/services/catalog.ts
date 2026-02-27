@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { isExpectedS3PublicUrl } from "@/lib/storage/s3";
 
 const promoTypeValues = ["PERCENT", "FIXED"] as const;
 const holdStatusValues = ["ACTIVE", "EXPIRED", "RELEASED", "CONVERTED"] as const;
@@ -8,12 +9,19 @@ const holdStatusValues = ["ACTIVE", "EXPIRED", "RELEASED", "CONVERTED"] as const
 export const promoTypeSchema = z.enum(promoTypeValues);
 export const holdStatusSchema = z.enum(holdStatusValues);
 
+const s3OnlyImageErrorMessage =
+  "Image URLs must use the configured public S3 domain.";
+
+const s3PublicUrlSchema = z.string().url().refine(isExpectedS3PublicUrl, {
+  message: s3OnlyImageErrorMessage,
+});
+
 export const upsertCatalogFaceSchema = z.object({
   faceId: z.string().min(1),
   title: z.string().optional(),
   summary: z.string().optional(),
   highlight: z.string().optional(),
-  primaryImageUrl: z.string().url().optional(),
+  primaryImageUrl: s3PublicUrlSchema.nullish(),
   isPublished: z.boolean().optional(),
 });
 
@@ -80,7 +88,8 @@ export async function upsertCatalogFace(input: UpsertCatalogFaceInput) {
       title: data.title ?? undefined,
       summary: data.summary ?? undefined,
       highlight: data.highlight ?? undefined,
-      primaryImageUrl: data.primaryImageUrl ?? undefined,
+      primaryImageUrl:
+        data.primaryImageUrl === null ? null : data.primaryImageUrl ?? undefined,
       isPublished: data.isPublished ?? undefined,
     },
   });
@@ -94,10 +103,16 @@ export async function getCatalogFaceByFaceId(faceId: string) {
         include: {
           asset: {
             include: {
+              images: {
+                orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+              },
               structureType: true,
               zone: { include: { province: true } },
               roadType: true,
             },
+          },
+          images: {
+            orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
           },
           position: true,
         },
@@ -123,10 +138,16 @@ export async function getCatalogFaceByFaceId(faceId: string) {
         include: {
           asset: {
             include: {
+              images: {
+                orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+              },
               structureType: true,
               zone: { include: { province: true } },
               roadType: true,
             },
+          },
+          images: {
+            orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
           },
           position: true,
         },
@@ -314,6 +335,56 @@ function mapFacesWithEffectivePrice<T extends FacePricingContext>({
   });
 }
 
+type FaceWithImageFallback = {
+  asset: {
+    images?: Array<{
+      image: string;
+      isPrimary: boolean;
+      createdAt: Date;
+    }>;
+  };
+  catalogFace?: {
+    primaryImageUrl: string | null;
+  } | null;
+  images?: Array<{
+    image: string;
+    isPrimary: boolean;
+    createdAt: Date;
+  }>;
+};
+
+function pickPrimaryImageUrl(
+  images: Array<{ image: string; isPrimary: boolean; createdAt: Date }> | undefined
+): string | null {
+  if (!images || images.length === 0) {
+    return null;
+  }
+
+  const orderedImages = [...images]
+    .filter((image) => isExpectedS3PublicUrl(image.image))
+    .sort((first, second) => {
+      if (first.isPrimary === second.isPrimary) {
+        return first.createdAt.getTime() - second.createdAt.getTime();
+      }
+
+      return first.isPrimary ? -1 : 1;
+    });
+
+  return orderedImages[0]?.image || null;
+}
+
+export function resolveCatalogFaceImageUrl(face: FaceWithImageFallback): string | null {
+  return (
+    (face.catalogFace?.primaryImageUrl &&
+    isExpectedS3PublicUrl(face.catalogFace.primaryImageUrl)
+      ? face.catalogFace.primaryImageUrl
+      : null) ||
+    pickPrimaryImageUrl(face.images) ||
+    pickPrimaryImageUrl(face.asset.images) ||
+    null
+  );
+}
+
 export async function listCatalogFaces(options?: {
   search?: string;
   isPublished?: boolean;
@@ -424,9 +495,15 @@ export async function listCatalogFaces(options?: {
       include: {
         asset: {
           include: {
+            images: {
+              orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+            },
             structureType: true,
             zone: { include: { province: true } },
           },
+        },
+        images: {
+          orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
         },
         position: true,
         catalogFace: true,
@@ -442,9 +519,13 @@ export async function listCatalogFaces(options?: {
     rules: activeRules,
     organizationId,
   });
+  const facesWithResolvedImage = facesWithPrice.map((face) => ({
+    ...face,
+    resolvedImageUrl: resolveCatalogFaceImageUrl(face),
+  }));
 
   return {
-    faces: facesWithPrice,
+    faces: facesWithResolvedImage,
     total,
     hasMore: skip + faces.length < total,
     promo,
@@ -537,9 +618,15 @@ export async function getPublicCatalogFaceDetailById(
       include: {
         asset: {
           include: {
+            images: {
+              orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+            },
             structureType: true,
             zone: { include: { province: true } },
           },
+        },
+        images: {
+          orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
         },
         position: true,
         catalogFace: true,
@@ -555,7 +642,10 @@ export async function getPublicCatalogFaceDetailById(
     faces: rawRelatedFaces,
     rules: relatedRules,
     organizationId: options?.organizationId,
-  });
+  }).map((relatedFace) => ({
+    ...relatedFace,
+    resolvedImageUrl: resolveCatalogFaceImageUrl(relatedFace),
+  }));
 
   const effectiveRule = pickEffectiveRule({
     rules: activeRules,
@@ -569,6 +659,7 @@ export async function getPublicCatalogFaceDetailById(
     face,
     promo,
     relatedFaces,
+    resolvedImageUrl: resolveCatalogFaceImageUrl(face),
     effectivePrice: effectiveRule
       ? {
         priceDaily: effectiveRule.priceDaily,

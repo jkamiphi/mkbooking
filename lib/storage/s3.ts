@@ -28,6 +28,19 @@ export interface UploadPublicObjectResult {
   url: string;
 }
 
+const uploadScopeToKeyPrefix = {
+  default: "uploads",
+  "inventory-zone": "inventory/zones",
+  "inventory-structure-type": "inventory/structure-types",
+  "inventory-asset-image": "inventory/assets",
+  "inventory-face-image": "inventory/faces",
+  "catalog-face-primary": "catalog/faces",
+  "orders-creative": "orders/creatives",
+  "orders-purchase-order": "orders/purchase-orders",
+} as const;
+
+type KnownUploadScope = keyof typeof uploadScopeToKeyPrefix;
+
 let cachedConfig: S3StorageConfig | null = null;
 let cachedS3Client: S3Client | null = null;
 
@@ -95,6 +108,79 @@ function getDatePath(date: Date): string {
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}/${month}/${day}`;
+}
+
+function isKnownUploadScope(scope: string): scope is KnownUploadScope {
+  return scope in uploadScopeToKeyPrefix;
+}
+
+function normalizeUploadScopeSuffix(rawSuffix: string): string {
+  const normalized = rawSuffix
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9/_-]/g, "-")
+    .replace(/\/+/g, "/")
+    .replace(/-+/g, "-")
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized || "uploads";
+}
+
+export function resolveUploadScopeKeyPrefix(scope: string | null | undefined): string {
+  if (!scope) {
+    return uploadScopeToKeyPrefix.default;
+  }
+
+  if (isKnownUploadScope(scope)) {
+    return uploadScopeToKeyPrefix[scope];
+  }
+
+  if (scope.startsWith("orders-")) {
+    return `orders/${normalizeUploadScopeSuffix(scope.slice("orders-".length))}`;
+  }
+
+  return uploadScopeToKeyPrefix.default;
+}
+
+export function isExpectedS3PublicUrl(rawUrl: string): boolean {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  let config: S3StorageConfig;
+  try {
+    config = getS3StorageConfig();
+  } catch {
+    return false;
+  }
+
+  const { bucket, publicBaseUrl, region } = config;
+
+  if (publicBaseUrl) {
+    let parsedBaseUrl: URL;
+    try {
+      parsedBaseUrl = new URL(publicBaseUrl);
+    } catch {
+      return false;
+    }
+
+    if (parsedUrl.origin !== parsedBaseUrl.origin) {
+      return false;
+    }
+
+    const basePath = parsedBaseUrl.pathname.replace(/\/+$/g, "");
+    if (!basePath || basePath === "/") {
+      return parsedUrl.pathname.length > 1;
+    }
+
+    return parsedUrl.pathname.startsWith(`${basePath}/`);
+  }
+
+  return parsedUrl.hostname === `${bucket}.s3.${region}.amazonaws.com`;
 }
 
 export function createS3ObjectKey(

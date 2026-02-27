@@ -43,6 +43,7 @@ export default function ZonesPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("scope", "inventory-zone");
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,

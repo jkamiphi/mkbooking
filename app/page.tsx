@@ -11,6 +11,7 @@ import {
   toDateInputValue,
 } from "@/lib/date/campaign-date-range";
 import { getCampaignRequestStartGapDays } from "@/lib/server-config";
+import { isExpectedS3PublicUrl } from "@/lib/storage/s3";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 import { HomeSearchBar } from "@/components/home/home-search";
 import { ScrollNavigation } from "@/components/home/scroll-navigation";
@@ -217,6 +218,10 @@ export default async function Home({
             className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
           >
             {structureTypes.slice(0, 12).map((type) => {
+              const typeImageUrl =
+                type.imageUrl && isExpectedS3PublicUrl(type.imageUrl)
+                  ? type.imageUrl
+                  : null;
               const url = buildSearchUrl({
                 searchTerm: "all",
                 type: type.id,
@@ -228,10 +233,10 @@ export default async function Home({
                   className="group relative flex-shrink-0 overflow-hidden rounded-2xl transition hover:shadow-lg"
                   style={{ width: 160 }}
                 >
-                  {type.imageUrl ? (
+                  {typeImageUrl ? (
                     <div className="relative aspect-[4/3] w-full overflow-hidden">
                       <Image
-                        src={type.imageUrl}
+                        src={typeImageUrl}
                         alt={type.name}
                         fill
                         sizes="160px"
@@ -276,6 +281,10 @@ export default async function Home({
             className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
           >
             {zones.slice(0, 12).map((zone) => {
+              const zoneImageUrl =
+                zone.imageUrl && isExpectedS3PublicUrl(zone.imageUrl)
+                  ? zone.imageUrl
+                  : null;
               const url = buildSearchUrl({
                 searchTerm: "all",
                 zone: zone.id,
@@ -287,10 +296,10 @@ export default async function Home({
                   className="group relative flex-shrink-0 overflow-hidden rounded-2xl transition hover:shadow-lg"
                   style={{ width: 160 }}
                 >
-                  {zone.imageUrl ? (
+                  {zoneImageUrl ? (
                     <div className="relative aspect-[4/3] w-full overflow-hidden">
                       <Image
-                        src={zone.imageUrl}
+                        src={zoneImageUrl}
                         alt={zone.name}
                         fill
                         sizes="160px"
@@ -346,7 +355,7 @@ export default async function Home({
                 face.catalogFace?.title ||
                 `${face.asset.structureType.name} · Cara ${face.code}`;
               const location = `${face.asset.zone.name}, ${face.asset.zone.province.name}`;
-              const imageUrl = face.catalogFace?.primaryImageUrl;
+              const imageUrl = face.resolvedImageUrl ?? null;
               const priceLabel =
                 face.effectivePrice && showPrices
                   ? formatPrice(

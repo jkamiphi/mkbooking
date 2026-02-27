@@ -5,6 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  ImageGalleryField,
+  type ImageGalleryItem,
+} from "@/components/inventory/image-gallery-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
@@ -34,6 +38,7 @@ export function NewFaceForm() {
   const utils = trpc.useUtils();
   const assetsQuery = trpc.inventory.assets.list.useQuery({ take: 100 });
   const positionsQuery = trpc.inventory.facePositions.list.useQuery();
+  const [images, setImages] = useState<ImageGalleryItem[]>([]);
 
   const [form, setForm] = useState({
     assetId: preselectedAssetId,
@@ -80,6 +85,12 @@ export function NewFaceForm() {
             visibilityNotes: form.visibilityNotes.trim() || undefined,
             restrictions: form.restrictions.trim() || undefined,
             notes: form.notes.trim() || undefined,
+            images: images.map((image) => ({
+              id: image.id,
+              image: image.image,
+              caption: image.caption.trim() || undefined,
+              isPrimary: image.isPrimary,
+            })),
           });
         }}
       >
@@ -224,6 +235,16 @@ export function NewFaceForm() {
                 setForm((prev) => ({ ...prev, notes: event.target.value }))
               }
               rows={2}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <ImageGalleryField
+              images={images}
+              scope="inventory-face-image"
+              label="Imágenes de la cara"
+              description="Agrega evidencia visual de la cara. Marca una imagen principal."
+              onChange={setImages}
+              disabled={createFace.isPending}
             />
           </div>
         </div>

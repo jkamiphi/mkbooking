@@ -115,7 +115,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       id: face.id,
       title,
       location,
-      imageUrl: face.catalogFace?.primaryImageUrl ?? null,
+      imageUrl: face.resolvedImageUrl ?? null,
       detailHref: `/faces/${face.id}?from=${encodeURIComponent(currentSearchPath)}`,
       isDigital: face.asset.digital,
       isIlluminated: face.asset.illuminated,

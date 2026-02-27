@@ -8,6 +8,10 @@ import { LocateFixed, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ImageGalleryField,
+  type ImageGalleryItem,
+} from "@/components/inventory/image-gallery-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
@@ -117,6 +121,7 @@ export function NewAssetForm() {
 
   const [error, setError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [images, setImages] = useState<ImageGalleryItem[]>([]);
 
   const [form, setForm] = useState({
     code: "",
@@ -254,6 +259,12 @@ export function NewAssetForm() {
                 ? new Date(form.installedDate)
                 : undefined,
               retiredDate: form.retiredDate ? new Date(form.retiredDate) : undefined,
+              images: images.map((image) => ({
+                id: image.id,
+                image: image.image,
+                caption: image.caption.trim() || undefined,
+                isPrimary: image.isPrimary,
+              })),
             });
           }}
         >
@@ -486,6 +497,16 @@ export function NewAssetForm() {
                   setForm((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 rows={3}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <ImageGalleryField
+                images={images}
+                scope="inventory-asset-image"
+                label="Imágenes del activo"
+                description="La imagen principal se usará como fallback en catálogo y detalle."
+                onChange={setImages}
+                disabled={createAsset.isPending}
               />
             </div>
           </div>

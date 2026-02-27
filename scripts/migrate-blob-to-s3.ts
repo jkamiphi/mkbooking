@@ -4,10 +4,10 @@ import { db } from "../lib/db";
 import {
   buildPublicObjectUrl,
   createS3ObjectKey,
+  isExpectedS3PublicUrl,
   uploadPublicObject,
 } from "../lib/storage/s3";
 
-const BLOB_HOST_FRAGMENT = "blob.vercel-storage.com";
 const DEFAULT_BATCH_SIZE = 100;
 
 interface ParsedArguments {
@@ -70,13 +70,19 @@ function parseArguments(argv: string[]): ParsedArguments {
   };
 }
 
-function isVercelBlobUrl(rawUrl: string): boolean {
+function isMigratableSourceUrl(rawUrl: string): boolean {
+  let parsedUrl: URL;
   try {
-    const parsedUrl = new URL(rawUrl);
-    return parsedUrl.hostname.includes(BLOB_HOST_FRAGMENT);
+    parsedUrl = new URL(rawUrl);
   } catch {
     return false;
   }
+
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    return false;
+  }
+
+  return !isExpectedS3PublicUrl(rawUrl);
 }
 
 function getFileNameFromUrl(url: string, fallbackName: string): string {
@@ -108,15 +114,16 @@ function createMigrationTargets(): MigrationTarget[] {
   return [
     {
       fetchBatch: (lastId, batchSize) =>
-        db.zone.findMany({
-          orderBy: { id: "asc" },
-          select: { id: true, imageUrl: true },
-          take: batchSize,
-          where: {
-            id: lastId ? { gt: lastId } : undefined,
-            imageUrl: { contains: BLOB_HOST_FRAGMENT },
-          },
-        })
+        db.zone
+          .findMany({
+            orderBy: { id: "asc" },
+            select: { id: true, imageUrl: true },
+            take: batchSize,
+            where: {
+              id: lastId ? { gt: lastId } : undefined,
+              imageUrl: { not: null },
+            },
+          })
           .then((rows) =>
             rows
               .filter((row): row is { id: string; imageUrl: string } => Boolean(row.imageUrl))
@@ -125,22 +132,25 @@ function createMigrationTargets(): MigrationTarget[] {
       keyPrefix: "migrated/zone",
       label: "Zone.imageUrl",
       updateUrl: (id, newUrl) =>
-        db.zone.update({
-          data: { imageUrl: newUrl },
-          where: { id },
-        }).then(() => undefined),
+        db.zone
+          .update({
+            data: { imageUrl: newUrl },
+            where: { id },
+          })
+          .then(() => undefined),
     },
     {
       fetchBatch: (lastId, batchSize) =>
-        db.structureType.findMany({
-          orderBy: { id: "asc" },
-          select: { id: true, imageUrl: true },
-          take: batchSize,
-          where: {
-            id: lastId ? { gt: lastId } : undefined,
-            imageUrl: { contains: BLOB_HOST_FRAGMENT },
-          },
-        })
+        db.structureType
+          .findMany({
+            orderBy: { id: "asc" },
+            select: { id: true, imageUrl: true },
+            take: batchSize,
+            where: {
+              id: lastId ? { gt: lastId } : undefined,
+              imageUrl: { not: null },
+            },
+          })
           .then((rows) =>
             rows
               .filter((row): row is { id: string; imageUrl: string } => Boolean(row.imageUrl))
@@ -149,30 +159,87 @@ function createMigrationTargets(): MigrationTarget[] {
       keyPrefix: "migrated/structure-type",
       label: "StructureType.imageUrl",
       updateUrl: (id, newUrl) =>
-        db.structureType.update({
-          data: { imageUrl: newUrl },
-          where: { id },
-        }).then(() => undefined),
+        db.structureType
+          .update({
+            data: { imageUrl: newUrl },
+            where: { id },
+          })
+          .then(() => undefined),
     },
     {
       fetchBatch: (lastId, batchSize) =>
-        db.orderCreative.findMany({
-          orderBy: { id: "asc" },
-          select: { fileUrl: true, id: true },
-          take: batchSize,
-          where: {
-            fileUrl: { contains: BLOB_HOST_FRAGMENT },
-            id: lastId ? { gt: lastId } : undefined,
-          },
-        })
-          .then((rows) => rows.map((row) => ({ id: row.id, url: row.fileUrl }))),
-      keyPrefix: "migrated/order-creative",
-      label: "OrderCreative.fileUrl",
+        db.assetImage
+          .findMany({
+            orderBy: { id: "asc" },
+            select: { id: true, image: true },
+            take: batchSize,
+            where: {
+              id: lastId ? { gt: lastId } : undefined,
+              image: { startsWith: "http" },
+            },
+          })
+          .then((rows) => rows.map((row) => ({ id: row.id, url: row.image }))),
+      keyPrefix: "migrated/asset-image",
+      label: "AssetImage.image",
       updateUrl: (id, newUrl) =>
-        db.orderCreative.update({
-          data: { fileUrl: newUrl },
-          where: { id },
-        }).then(() => undefined),
+        db.assetImage
+          .update({
+            data: { image: newUrl },
+            where: { id },
+          })
+          .then(() => undefined),
+    },
+    {
+      fetchBatch: (lastId, batchSize) =>
+        db.assetFaceImage
+          .findMany({
+            orderBy: { id: "asc" },
+            select: { id: true, image: true },
+            take: batchSize,
+            where: {
+              id: lastId ? { gt: lastId } : undefined,
+              image: { startsWith: "http" },
+            },
+          })
+          .then((rows) => rows.map((row) => ({ id: row.id, url: row.image }))),
+      keyPrefix: "migrated/asset-face-image",
+      label: "AssetFaceImage.image",
+      updateUrl: (id, newUrl) =>
+        db.assetFaceImage
+          .update({
+            data: { image: newUrl },
+            where: { id },
+          })
+          .then(() => undefined),
+    },
+    {
+      fetchBatch: (lastId, batchSize) =>
+        db.catalogFace
+          .findMany({
+            orderBy: { id: "asc" },
+            select: { id: true, primaryImageUrl: true },
+            take: batchSize,
+            where: {
+              id: lastId ? { gt: lastId } : undefined,
+              primaryImageUrl: { not: null },
+            },
+          })
+          .then((rows) =>
+            rows
+              .filter((row): row is { id: string; primaryImageUrl: string } =>
+                Boolean(row.primaryImageUrl)
+              )
+              .map((row) => ({ id: row.id, url: row.primaryImageUrl }))
+          ),
+      keyPrefix: "migrated/catalog-face",
+      label: "CatalogFace.primaryImageUrl",
+      updateUrl: (id, newUrl) =>
+        db.catalogFace
+          .update({
+            data: { primaryImageUrl: newUrl },
+            where: { id },
+          })
+          .then(() => undefined),
     },
   ];
 }
@@ -203,9 +270,9 @@ async function migrateTarget(
       stats.processed += 1;
       lastId = record.id;
 
-      if (!isVercelBlobUrl(record.url)) {
+      if (!isMigratableSourceUrl(record.url)) {
         stats.skipped += 1;
-        console.log(`[SKIP] ${target.label} ${record.id} -> URL is not a Vercel Blob URL`);
+        console.log(`[SKIP] ${target.label} ${record.id} -> URL is already S3 or invalid`);
         continue;
       }
 
@@ -241,7 +308,7 @@ async function migrateTarget(
           fileName,
           keyPrefix: target.keyPrefix,
           metadata: {
-            source: "vercel-blob-migration",
+            source: "legacy-url-migration",
             sourceRecordId: record.id,
           },
         });
@@ -275,7 +342,7 @@ async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
   const mode = options.execute ? "execute" : "dry-run";
 
-  console.log(`Starting Blob to S3 migration in ${mode} mode...`);
+  console.log(`Starting legacy URL to S3 migration in ${mode} mode...`);
   console.log(`Batch size: ${options.batchSize}`);
 
   const totalStats: MigrationStats = {

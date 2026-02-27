@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { isExpectedS3PublicUrl } from "@/lib/storage/s3";
 
 const assetStatusValues = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
 const assetFaceStatusValues = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
@@ -9,6 +10,20 @@ const assetFaceFacingValues = ["TRAFFIC", "OPPOSITE_TRAFFIC"] as const;
 export const assetStatusSchema = z.enum(assetStatusValues);
 export const assetFaceStatusSchema = z.enum(assetFaceStatusValues);
 export const assetFaceFacingSchema = z.enum(assetFaceFacingValues);
+
+const s3OnlyImageErrorMessage =
+  "Image URLs must use the configured public S3 domain.";
+
+const s3PublicUrlSchema = z.string().url().refine(isExpectedS3PublicUrl, {
+  message: s3OnlyImageErrorMessage,
+});
+
+const inventoryImageInputSchema = z.object({
+  id: z.string().min(1).optional(),
+  image: s3PublicUrlSchema,
+  caption: z.string().trim().max(300).optional(),
+  isPrimary: z.boolean().optional(),
+});
 
 // ============================================================================
 // Taxonomy Schemas
@@ -21,25 +36,25 @@ export const createProvinceSchema = z.object({
 export const createZoneSchema = z.object({
   name: z.string().min(1),
   provinceId: z.string().min(1),
-  imageUrl: z.string().url().optional(),
+  imageUrl: s3PublicUrlSchema.optional(),
 });
 
 export const updateZoneSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).optional(),
   provinceId: z.string().min(1).optional(),
-  imageUrl: z.string().url().nullish(),
+  imageUrl: s3PublicUrlSchema.nullish(),
 });
 
 export const createStructureTypeSchema = z.object({
   name: z.string().min(1),
-  imageUrl: z.string().url().optional(),
+  imageUrl: s3PublicUrlSchema.optional(),
 });
 
 export const updateStructureTypeSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).optional(),
-  imageUrl: z.string().url().nullish(),
+  imageUrl: s3PublicUrlSchema.nullish(),
 });
 
 export const createRoadTypeSchema = z.object({
@@ -80,6 +95,7 @@ export const createAssetSchema = z.object({
   notes: z.string().optional(),
   installedDate: z.coerce.date().optional(),
   retiredDate: z.coerce.date().optional(),
+  images: z.array(inventoryImageInputSchema).max(30).optional(),
 });
 
 export const updateAssetSchema = createAssetSchema.partial().extend({
@@ -101,6 +117,7 @@ export const createAssetFaceSchema = z.object({
   status: assetFaceStatusSchema.optional(),
   restrictions: z.string().optional(),
   notes: z.string().optional(),
+  images: z.array(inventoryImageInputSchema).max(30).optional(),
 });
 
 export const updateAssetFaceSchema = createAssetFaceSchema.partial().extend({
@@ -113,14 +130,14 @@ export const updateAssetFaceSchema = createAssetFaceSchema.partial().extend({
 
 export const createAssetImageSchema = z.object({
   assetId: z.string().min(1),
-  image: z.string().url(),
+  image: s3PublicUrlSchema,
   caption: z.string().optional(),
   isPrimary: z.boolean().optional(),
 });
 
 export const createAssetFaceImageSchema = z.object({
   faceId: z.string().min(1),
-  image: z.string().url(),
+  image: s3PublicUrlSchema,
   caption: z.string().optional(),
   isPrimary: z.boolean().optional(),
 });
@@ -199,6 +216,32 @@ function buildStatusCounts(
   }
 
   return initial;
+}
+
+type InventoryImageInput = z.infer<typeof inventoryImageInputSchema>;
+
+function normalizeInventoryImages(images: InventoryImageInput[] | undefined) {
+  if (!images) {
+    return undefined;
+  }
+
+  const normalized = images.map((image) => ({
+    caption: image.caption?.trim() || null,
+    image: image.image,
+    isPrimary: Boolean(image.isPrimary),
+  }));
+
+  if (normalized.length === 0) {
+    return [];
+  }
+
+  const currentPrimaryIndex = normalized.findIndex((image) => image.isPrimary);
+  const primaryIndex = currentPrimaryIndex >= 0 ? currentPrimaryIndex : 0;
+
+  return normalized.map((image, index) => ({
+    ...image,
+    isPrimary: index === primaryIndex,
+  }));
 }
 
 export async function getInventoryOverview() {
@@ -438,26 +481,53 @@ export async function getAssetById(id: string) {
       structureType: true,
       zone: { include: { province: true } },
       roadType: true,
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      },
       _count: { select: { faces: true } },
     },
   });
 }
 
 export async function createAsset(input: CreateAssetInput) {
+  const normalizedImages = normalizeInventoryImages(input.images);
+
   return db.asset.create({
     data: {
-      ...input,
+      address: input.address,
+      code: input.code,
+      digital: input.digital,
+      hasPrintService: input.hasPrintService,
+      illuminated: input.illuminated,
+      latitude: input.latitude,
       roadTypeId: input.roadTypeId || null,
+      longitude: input.longitude,
       landmark: input.landmark || null,
       notes: input.notes || null,
+      powered: input.powered,
       installedDate: input.installedDate || null,
       retiredDate: input.retiredDate || null,
+      status: input.status,
+      structureTypeId: input.structureTypeId,
+      zoneId: input.zoneId,
+      ...(normalizedImages && normalizedImages.length > 0
+        ? {
+            images: {
+              create: normalizedImages.map((image) => ({
+                caption: image.caption,
+                image: image.image,
+                isPrimary: image.isPrimary,
+              })),
+            },
+          }
+        : {}),
     },
   });
 }
 
 export async function updateAsset(input: UpdateAssetInput) {
-  const { id, ...data } = input;
+  const { id, images, ...data } = input;
+  const normalizedImages = normalizeInventoryImages(images);
   const updateData: Prisma.AssetUncheckedUpdateInput = {
     ...data,
   };
@@ -484,9 +554,30 @@ export async function updateAsset(input: UpdateAssetInput) {
     updateData.longitude = data.longitude ?? null;
   }
 
-  return db.asset.update({
-    where: { id },
-    data: updateData,
+  return db.$transaction(async (transaction) => {
+    const updatedAsset = await transaction.asset.update({
+      where: { id },
+      data: updateData,
+    });
+
+    if (images !== undefined) {
+      await transaction.assetImage.deleteMany({
+        where: { assetId: id },
+      });
+
+      if (normalizedImages && normalizedImages.length > 0) {
+        await transaction.assetImage.createMany({
+          data: normalizedImages.map((image) => ({
+            assetId: id,
+            caption: image.caption,
+            image: image.image,
+            isPrimary: image.isPrimary,
+          })),
+        });
+      }
+    }
+
+    return updatedAsset;
   });
 }
 
@@ -530,26 +621,53 @@ export async function getAssetFaceById(id: string) {
   return db.assetFace.findUnique({
     where: { id },
     include: {
-      asset: { select: { id: true, code: true } },
+      asset: {
+        select: {
+          id: true,
+          code: true,
+        },
+      },
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      },
       position: true,
     },
   });
 }
 
 export async function createAssetFace(input: CreateAssetFaceInput) {
+  const normalizedImages = normalizeInventoryImages(input.images);
+
   return db.assetFace.create({
     data: {
-      ...input,
+      assetId: input.assetId,
+      code: input.code,
+      facing: input.facing,
+      height: input.height,
+      status: input.status,
+      width: input.width,
       positionId: input.positionId || null,
       visibilityNotes: input.visibilityNotes || null,
       restrictions: input.restrictions || null,
       notes: input.notes || null,
+      ...(normalizedImages && normalizedImages.length > 0
+        ? {
+            images: {
+              create: normalizedImages.map((image) => ({
+                caption: image.caption,
+                image: image.image,
+                isPrimary: image.isPrimary,
+              })),
+            },
+          }
+        : {}),
     },
   });
 }
 
 export async function updateAssetFace(input: UpdateAssetFaceInput) {
-  const { id, ...data } = input;
+  const { id, images, ...data } = input;
+  const normalizedImages = normalizeInventoryImages(images);
   const updateData: Prisma.AssetFaceUncheckedUpdateInput = {
     ...data,
   };
@@ -567,9 +685,30 @@ export async function updateAssetFace(input: UpdateAssetFaceInput) {
     updateData.notes = data.notes ? data.notes : null;
   }
 
-  return db.assetFace.update({
-    where: { id },
-    data: updateData,
+  return db.$transaction(async (transaction) => {
+    const updatedFace = await transaction.assetFace.update({
+      where: { id },
+      data: updateData,
+    });
+
+    if (images !== undefined) {
+      await transaction.assetFaceImage.deleteMany({
+        where: { faceId: id },
+      });
+
+      if (normalizedImages && normalizedImages.length > 0) {
+        await transaction.assetFaceImage.createMany({
+          data: normalizedImages.map((image) => ({
+            faceId: id,
+            caption: image.caption,
+            image: image.image,
+            isPrimary: image.isPrimary,
+          })),
+        });
+      }
+    }
+
+    return updatedFace;
   });
 }
 

@@ -98,7 +98,7 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
           face.catalogFace?.title ||
           `${face.asset.structureType.name} · Cara ${face.code}`,
         location: `${face.asset.zone.name}, ${face.asset.zone.province.name}`,
-        imageUrl: face.catalogFace?.primaryImageUrl ?? null,
+        imageUrl: face.resolvedImageUrl ?? null,
         priceLabel: face.effectivePrice
           ? `$${Number(face.effectivePrice.priceDaily).toFixed(2)}`
           : null,

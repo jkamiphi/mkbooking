@@ -7,6 +7,10 @@ import type { inferRouterOutputs } from "@trpc/server";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  ImageGalleryField,
+  type ImageGalleryItem,
+} from "@/components/inventory/image-gallery-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
@@ -62,12 +66,22 @@ function mapFaceToForm(
   };
 }
 
+function mapFaceImages(face: FaceGetOutput): ImageGalleryItem[] {
+  return (face.images ?? []).map((image) => ({
+    id: image.id,
+    image: image.image,
+    caption: image.caption ?? "",
+    isPrimary: image.isPrimary,
+  }));
+}
+
 export function EditFaceForm({ faceId }: { faceId: string }) {
   const router = useRouter();
   const utils = trpc.useUtils();
 
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<FaceFormValues>>({});
+  const [imageDraft, setImageDraft] = useState<ImageGalleryItem[] | null>(null);
 
   const faceQuery = trpc.inventory.faces.get.useQuery({ id: faceId });
   const assetsQuery = trpc.inventory.assets.list.useQuery({ take: 100 });
@@ -80,6 +94,17 @@ export function EditFaceForm({ faceId }: { faceId: string }) {
       ...draft,
     } satisfies FaceFormValues;
   }, [faceQuery.data, draft]);
+  const images = useMemo(() => {
+    if (imageDraft) {
+      return imageDraft;
+    }
+
+    if (!faceQuery.data) {
+      return [];
+    }
+
+    return mapFaceImages(faceQuery.data);
+  }, [faceQuery.data, imageDraft]);
 
   const updateFace = trpc.inventory.faces.update.useMutation({
     onSuccess: async () => {
@@ -176,6 +201,12 @@ export function EditFaceForm({ faceId }: { faceId: string }) {
               visibilityNotes: form.visibilityNotes.trim(),
               restrictions: form.restrictions.trim(),
               notes: form.notes.trim(),
+              images: images.map((image) => ({
+                id: image.id,
+                image: image.image,
+                caption: image.caption.trim() || undefined,
+                isPrimary: image.isPrimary,
+              })),
             });
           }}
         >
@@ -314,6 +345,16 @@ export function EditFaceForm({ faceId }: { faceId: string }) {
                   setDraft((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 rows={2}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <ImageGalleryField
+                images={images}
+                scope="inventory-face-image"
+                label="Imágenes de la cara"
+                description="Define una imagen principal para el catálogo y búsqueda."
+                onChange={setImageDraft}
+                disabled={updateFace.isPending}
               />
             </div>
           </div>

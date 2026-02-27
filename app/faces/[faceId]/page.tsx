@@ -14,6 +14,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { formatFaceDimensions, formatPrice } from "@/lib/formatters/catalog-face";
+import { isExpectedS3PublicUrl } from "@/lib/storage/s3";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 import { FaceDetailActions } from "./_components/face-detail-actions";
 
@@ -131,7 +132,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
   });
   if (!detail) notFound();
 
-  const { face, effectivePrice, relatedFaces, promo } = detail;
+  const { face, effectivePrice, relatedFaces, promo, resolvedImageUrl } = detail;
   const catalogFace = face.catalogFace;
   if (!catalogFace) notFound();
 
@@ -150,7 +151,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
       : "N/D";
 
   const gallery = dedupeGallery([
-    ...(catalogFace.primaryImageUrl
+    ...(catalogFace.primaryImageUrl &&
+    isExpectedS3PublicUrl(catalogFace.primaryImageUrl)
       ? [
         {
           url: catalogFace.primaryImageUrl,
@@ -158,14 +160,18 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
         },
       ]
       : []),
-    ...face.images.map((image) => ({
-      url: image.image,
-      caption: image.caption || `Cara ${face.code}`,
-    })),
-    ...face.asset.images.map((image) => ({
-      url: image.image,
-      caption: image.caption || `Activo ${face.asset.code}`,
-    })),
+    ...face.images
+      .filter((image) => isExpectedS3PublicUrl(image.image))
+      .map((image) => ({
+        url: image.image,
+        caption: image.caption || `Cara ${face.code}`,
+      })),
+    ...face.asset.images
+      .filter((image) => isExpectedS3PublicUrl(image.image))
+      .map((image) => ({
+        url: image.image,
+        caption: image.caption || `Activo ${face.asset.code}`,
+      })),
   ]);
   const gallerySlots: Array<GalleryItem | null> = Array.from(
     { length: 5 },
@@ -653,7 +659,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                       id: face.id,
                       title,
                       location,
-                      imageUrl: catalogFace.primaryImageUrl ?? null,
+                      imageUrl: resolvedImageUrl ?? null,
                       priceLabel: priceDailyLabel,
                       priceDaily: effectivePrice ? Number(effectivePrice.priceDaily) : null,
                       currency: effectivePrice?.currency ?? "USD",
@@ -695,7 +701,12 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               {relatedFaces.map((item) => {
                 const itemTitle =
                   item.catalogFace?.title || `${item.asset.structureType.name} · Cara ${item.code}`;
-                const itemImage = item.catalogFace?.primaryImageUrl;
+                const itemImage =
+                  item.resolvedImageUrl ||
+                  (item.catalogFace?.primaryImageUrl &&
+                  isExpectedS3PublicUrl(item.catalogFace.primaryImageUrl)
+                    ? item.catalogFace.primaryImageUrl
+                    : null);
                 const itemPrice =
                   item.effectivePrice && showPrices
                     ? formatPrice(

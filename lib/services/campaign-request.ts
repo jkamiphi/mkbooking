@@ -683,7 +683,7 @@ export async function suggestFacesForCampaignRequest(
       zone: face.asset.zone.name,
       province: face.asset.zone.province.name,
       structureType: face.asset.structureType.name,
-      imageUrl: face.catalogFace?.primaryImageUrl || null,
+      imageUrl: face.resolvedImageUrl ?? null,
       latitude: face.asset.latitude ? Number(face.asset.latitude) : null,
       longitude: face.asset.longitude ? Number(face.asset.longitude) : null,
       matchesCriteria,

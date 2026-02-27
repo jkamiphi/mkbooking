@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
+import { ImagePlus } from "lucide-react";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,16 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type CatalogFaceQueryData = NonNullable<
   RouterOutputs["catalog"]["faces"]["get"]
 >;
+
+function findPreferredInventoryImageUrl(data: CatalogFaceQueryData) {
+  const facePrimaryImage =
+    data.face.images.find((image) => image.isPrimary)?.image || data.face.images[0]?.image;
+  const assetPrimaryImage =
+    data.face.asset.images.find((image) => image.isPrimary)?.image ||
+    data.face.asset.images[0]?.image;
+
+  return facePrimaryImage || assetPrimaryImage || null;
+}
 
 export function CatalogFaceDetail({ faceId }: { faceId: string }) {
   const faceQuery = trpc.catalog.faces.get.useQuery({ faceId });
@@ -59,6 +70,9 @@ function CatalogFaceDetailContent({
   const [price, setPrice] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [isUploadingPrimaryImage, setIsUploadingPrimaryImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const upsertFace = trpc.catalog.faces.upsert.useMutation({
     onSuccess: () => {
@@ -79,6 +93,46 @@ function CatalogFaceDetailContent({
   });
 
   const face = data.face;
+  const inventoryPrimaryImageUrl = findPreferredInventoryImageUrl(data);
+
+  async function handlePrimaryImageUpload(file: File) {
+    setUploadError(null);
+    setIsUploadingPrimaryImage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("scope", "catalog-face-primary");
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(payload?.error || "No se pudo subir la imagen.");
+      }
+
+      const payload = (await response.json()) as { url: string };
+      if (!payload.url) {
+        throw new Error("No se recibió una URL de imagen válida.");
+      }
+
+      setForm((previous) => ({
+        ...previous,
+        primaryImageUrl: payload.url,
+      }));
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "No se pudo subir la imagen principal."
+      );
+    } finally {
+      setIsUploadingPrimaryImage(false);
+    }
+  }
 
   return (
     <AdminPageShell>
@@ -101,7 +155,7 @@ function CatalogFaceDetailContent({
                 title: form.title.trim() || undefined,
                 summary: form.summary.trim() || undefined,
                 highlight: form.highlight.trim() || undefined,
-                primaryImageUrl: form.primaryImageUrl.trim() || undefined,
+                primaryImageUrl: form.primaryImageUrl.trim() || null,
                 isPublished: form.isPublished,
               });
             }}
@@ -147,6 +201,48 @@ function CatalogFaceDetailContent({
                   }
                 />
               </div>
+              <div className="md:col-span-2 flex flex-wrap gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    void handlePrimaryImageUpload(file);
+                    event.target.value = "";
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isUploadingPrimaryImage}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImagePlus className="mr-2 h-4 w-4" />
+                  {isUploadingPrimaryImage ? "Subiendo..." : "Subir imagen principal"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!inventoryPrimaryImageUrl}
+                  onClick={() => {
+                    if (!inventoryPrimaryImageUrl) return;
+                    setForm((previous) => ({
+                      ...previous,
+                      primaryImageUrl: inventoryPrimaryImageUrl,
+                    }));
+                  }}
+                >
+                  Usar imagen primaria del inventario
+                </Button>
+              </div>
+              {uploadError ? (
+                <p className="md:col-span-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {uploadError}
+                </p>
+              ) : null}
               <Label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={form.isPublished}
