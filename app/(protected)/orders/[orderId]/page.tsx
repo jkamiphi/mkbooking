@@ -5,8 +5,9 @@ import { TRPCError } from "@trpc/server";
 import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { Badge } from "@/components/ui/badge";
 import { ClientApprovalButton } from "./_components/client-approval-button";
-import { CreativesModule } from "@/components/orders/creatives-module";
+import { DesignWorkspace } from "@/components/orders/design-workspace";
 import { PurchaseOrderModule } from "@/components/orders/purchase-order-module";
+import { OrderDetailTabs } from "./_components/order-detail-tabs";
 
 type PageProps = {
     params: Promise<{ orderId: string }>;
@@ -72,6 +73,132 @@ export default async function OrderDetailPage({ params }: PageProps) {
         (sum, item) => sum + Number(item.subtotal),
         0
     );
+    const creativeLineItems = order.lineItems.map((item) => ({
+        id: item.id,
+        face: item.face
+            ? {
+                code: item.face.code,
+                catalogFace: item.face.catalogFace
+                    ? {
+                        title: item.face.catalogFace.title,
+                    }
+                    : null,
+                asset: item.face.asset
+                    ? {
+                        structureType: item.face.asset.structureType
+                            ? {
+                                name: item.face.asset.structureType.name,
+                            }
+                            : null,
+                        zone: item.face.asset.zone
+                            ? {
+                                name: item.face.asset.zone.name,
+                            }
+                            : null,
+                    }
+                    : null,
+            }
+            : null,
+    }));
+    const detailContent = (
+        <div className="space-y-5">
+            <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+                <h2 className="mb-4 border-b border-neutral-100 pb-3 text-sm font-semibold text-neutral-900">
+                    Detalle de Espacios ({order.lineItems.length})
+                </h2>
+
+                <div className="space-y-4">
+                    {order.lineItems.map((item) => (
+                        <div
+                            key={item.id}
+                            className="flex gap-4 border-b border-neutral-100 pb-4 last:border-0 last:pb-0"
+                        >
+                            <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+                                <div className="flex h-full w-full items-center justify-center bg-neutral-50">
+                                    <span className="p-1 text-center text-[10px] leading-tight font-semibold text-neutral-400">
+                                        {item.face?.asset?.structureType?.name || "Cara"}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex justify-between gap-2">
+                                    <h3 className="truncate font-medium text-neutral-900">
+                                        {item.face?.catalogFace?.title || `Cara ${item.face?.code} - ${item.face?.asset?.structureType?.name}`}
+                                    </h3>
+                                    <p className="font-semibold text-neutral-900">
+                                        {formatCurrency(String(item.subtotal))}
+                                    </p>
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-2 text-xs text-neutral-500">
+                                    <span className="inline-flex items-center gap-1">
+                                        <MapPin className="h-3 w-3" />
+                                        {item.face?.asset?.zone?.name || "N/D"}
+                                    </span>
+                                    {order.fromDate && order.toDate && (
+                                        <span className="inline-flex items-center gap-1">
+                                            <CalendarDays className="h-3 w-3" />
+                                            {formatDate(order.fromDate)} - {formatDate(order.toDate)}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="mt-2 text-xs text-neutral-400">
+                                    {formatCurrency(String(item.priceDaily))} / día x {item.days} días
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+                <h2 className="mb-4 border-b border-neutral-100 pb-3 text-sm font-semibold text-neutral-900">
+                    Servicios facturables ({order.serviceItems.length})
+                </h2>
+
+                {order.serviceItems.length === 0 ? (
+                    <p className="text-sm text-neutral-500">Sin servicios adicionales.</p>
+                ) : (
+                    <div className="space-y-3">
+                        {order.serviceItems.map((item) => (
+                            <div
+                                key={item.id}
+                                className="flex items-center justify-between rounded-xl border border-neutral-100 p-3"
+                            >
+                                <div>
+                                    <p className="text-sm font-medium text-neutral-900">
+                                        {item.serviceNameSnapshot}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-neutral-500">
+                                        {item.quantity} x {formatCurrency(String(item.unitPrice))}
+                                    </p>
+                                </div>
+                                <p className="text-sm font-semibold text-neutral-900">
+                                    {formatCurrency(String(item.subtotal))}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            {order.status !== "DRAFT" && order.status !== "CANCELLED" && (
+                <PurchaseOrderModule orderId={order.id} />
+            )}
+        </div>
+    );
+    const designContent =
+        order.status === "CONFIRMED" ? (
+            <DesignWorkspace
+                orderId={order.id}
+                lineItems={creativeLineItems}
+                mode="client"
+                allowReviewActions={false}
+            />
+        ) : (
+            <section className="rounded-2xl border border-neutral-200/80 bg-white p-5 text-sm text-neutral-600">
+                El flujo de diseño se habilita cuando la orden está confirmada.
+            </section>
+        );
 
     return (
         <div>
@@ -100,84 +227,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
             <div className="grid gap-5 lg:grid-cols-3">
                 {/* Main Content: Line items */}
                 <div className="lg:col-span-2 space-y-5">
-                    <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
-                        <h2 className="mb-4 text-sm font-semibold text-neutral-900 border-b border-neutral-100 pb-3">
-                            Detalle de Espacios ({order.lineItems.length})
-                        </h2>
-
-                        <div className="space-y-4">
-                            {order.lineItems.map((item) => (
-                                <div key={item.id} className="flex gap-4 border-b border-neutral-100 pb-4 last:border-0 last:pb-0">
-                                    <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-neutral-100 border border-neutral-200">
-                                        <div className="flex h-full w-full items-center justify-center bg-neutral-50">
-                                            <span className="text-[10px] font-semibold text-neutral-400 text-center leading-tight p-1">
-                                                {item.face?.asset?.structureType?.name || "Cara"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between gap-2">
-                                            <h3 className="font-medium text-neutral-900 truncate">
-                                                {item.face?.catalogFace?.title || `Cara ${item.face?.code} - ${item.face?.asset?.structureType?.name}`}
-                                            </h3>
-                                            <p className="font-semibold text-neutral-900">{formatCurrency(String(item.subtotal))}</p>
-                                        </div>
-                                        <div className="mt-1 flex flex-wrap gap-2 text-xs text-neutral-500">
-                                            <span className="inline-flex items-center gap-1">
-                                                <MapPin className="h-3 w-3" />
-                                                {item.face?.asset?.zone?.name || "N/D"}
-                                            </span>
-                                            {order.fromDate && order.toDate && (
-                                                <span className="inline-flex items-center gap-1">
-                                                    <CalendarDays className="h-3 w-3" />
-                                                    {formatDate(order.fromDate)} - {formatDate(order.toDate)}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="mt-2 text-xs text-neutral-400">
-                                            {formatCurrency(String(item.priceDaily))} / día x {item.days} días
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
-                        <h2 className="mb-4 text-sm font-semibold text-neutral-900 border-b border-neutral-100 pb-3">
-                            Servicios facturables ({order.serviceItems.length})
-                        </h2>
-
-                        {order.serviceItems.length === 0 ? (
-                            <p className="text-sm text-neutral-500">Sin servicios adicionales.</p>
-                        ) : (
-                            <div className="space-y-3">
-                                {order.serviceItems.map((item) => (
-                                    <div key={item.id} className="flex items-center justify-between rounded-xl border border-neutral-100 p-3">
-                                        <div>
-                                            <p className="text-sm font-medium text-neutral-900">
-                                                {item.serviceNameSnapshot}
-                                            </p>
-                                            <p className="mt-0.5 text-xs text-neutral-500">
-                                                {item.quantity} x {formatCurrency(String(item.unitPrice))}
-                                            </p>
-                                        </div>
-                                        <p className="text-sm font-semibold text-neutral-900">
-                                            {formatCurrency(String(item.subtotal))}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </section>
-
-                    {order.status === "CONFIRMED" && (
-                        <CreativesModule orderId={order.id} lineItems={order.lineItems} />
-                    )}
-
-                    {order.status !== "DRAFT" && order.status !== "CANCELLED" && (
-                        <PurchaseOrderModule orderId={order.id} />
-                    )}
+                    <OrderDetailTabs detailContent={detailContent} designContent={designContent} />
                 </div>
 
                 {/* Sidebar: Totals & Actions */}

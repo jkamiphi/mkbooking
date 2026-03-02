@@ -234,7 +234,7 @@ export function DesignInboxTable() {
                               ))}
                           </SelectNative>
                           <Link
-                            href={`/admin/orders/${task.order.id}`}
+                            href={`/admin/design/${task.order.id}`}
                             className="inline-flex h-7 items-center rounded-md border border-neutral-200 px-2 text-xs text-neutral-700 hover:bg-neutral-100"
                           >
                             Ver

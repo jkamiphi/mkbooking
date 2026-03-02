@@ -875,6 +875,8 @@ enum OrderDesignTaskEventType {
   PROOF_UPLOADED
   CLIENT_APPROVED
   CLIENT_CHANGES_REQUESTED
+  DESIGNER_APPROVED
+  DESIGNER_CHANGES_REQUESTED
 
   @@map("order_design_task_event_type")
 }
@@ -1199,6 +1201,8 @@ model OrderDesignTask {
   assignedToId String?
   assignedAt   DateTime?
   closedAt     DateTime?
+  designerApprovedProofVersion Int?
+  clientApprovedProofVersion   Int?
   createdById  String?
 
   createdAt DateTime @default(now())

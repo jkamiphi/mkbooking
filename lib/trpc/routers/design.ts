@@ -6,10 +6,12 @@ import {
   claimDesignTask,
   claimDesignTaskSchema,
   clientProofDecisionSchema,
+  designerProofDecisionSchema,
   designInboxListSchema,
   getDesignTaskByOrder,
   getDesignTaskByOrderSchema,
   listDesignInbox,
+  registerDesignerProofDecision,
   registerClientProofDecision,
   updateDesignTaskStatus,
   updateDesignTaskStatusSchema,
@@ -92,10 +94,38 @@ export const designRouter = router({
           });
         }
       }),
+    designerDecision: designProcedure
+      .input(designerProofDecisionSchema)
+      .mutation(async ({ input, ctx }) => {
+        if (input.decision === "CHANGES_REQUESTED" && !input.notes?.trim()) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Debes incluir notas cuando se solicitan cambios.",
+          });
+        }
+
+        try {
+          return await registerDesignerProofDecision(input, ctx.user.id);
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              error instanceof Error
+                ? error.message
+                : "No se pudo registrar la decision del dissenador.",
+          });
+        }
+      }),
     clientDecision: protectedProcedure
       .input(clientProofDecisionSchema)
       .mutation(async ({ input, ctx }) => {
         await assertOrderAccess(ctx.user.id, input.orderId);
+        if (input.decision === "CHANGES_REQUESTED" && !input.notes?.trim()) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Debes incluir notas cuando se solicitan cambios.",
+          });
+        }
 
         try {
           return await registerClientProofDecision(input, ctx.user.id);

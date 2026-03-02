@@ -38,8 +38,14 @@ export const uploadDesignProofSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
   fileType: z.string().trim().min(1).max(120),
   fileSize: z.number().int().min(0),
-  sourceType: z.nativeEnum(CreativeSourceType).default("FILE_UPLOAD"),
+  sourceType: z.nativeEnum(CreativeSourceType).default("EXTERNAL_URL"),
   metadata: z.any().optional(),
+  notes: z.string().trim().max(2000).optional(),
+});
+
+export const designerProofDecisionSchema = z.object({
+  orderId: z.string().min(1),
+  decision: z.enum(["APPROVED", "CHANGES_REQUESTED"]),
   notes: z.string().trim().max(2000).optional(),
 });
 
@@ -93,6 +99,17 @@ function assertDesignTaskNotBlockedBySales(status: SalesReviewStatus) {
     throw new Error(
       "La tarea de diseno esta bloqueada hasta que Ventas apruebe la validacion de la orden."
     );
+  }
+}
+
+function assertHttpsUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") {
+      throw new Error();
+    }
+  } catch {
+    throw new Error("La prueba de color debe ser una URL publica valida con https://.");
   }
 }
 
@@ -201,6 +218,8 @@ export async function activateDesignTaskAfterSalesApproval(
     data: {
       slaDueAt: resolveSlaDueAt(now),
       closedAt: null,
+      designerApprovedProofVersion: null,
+      clientApprovedProofVersion: null,
     },
   });
 
@@ -212,6 +231,180 @@ export async function activateDesignTaskAfterSalesApproval(
     actorId: input.actorId ?? null,
     notes:
       "Tarea de diseno habilitada por aprobacion de Ventas. SLA reiniciado a 48 horas.",
+  });
+
+  return updatedTask;
+}
+
+async function resolveLatestProofVersion(
+  client: PrismaClientLike,
+  orderId: string
+): Promise<number> {
+  const latestProof = await client.orderCreative.findFirst({
+    where: {
+      orderId,
+      creativeKind: "DESIGN_PROOF",
+      lineItemId: null,
+    },
+    orderBy: { version: "desc" },
+    select: { version: true },
+  });
+
+  if (!latestProof) {
+    throw new Error("No hay prueba de color publicada para esta orden.");
+  }
+
+  return latestProof.version;
+}
+
+async function applyDesignerDecision(
+  client: PrismaClientLike,
+  input: z.infer<typeof designerProofDecisionSchema>,
+  actorProfileId: string
+) {
+  const task = await client.orderDesignTask.findUnique({
+    where: { orderId: input.orderId },
+    select: {
+      id: true,
+      status: true,
+      clientApprovedProofVersion: true,
+      order: {
+        select: {
+          salesReviewStatus: true,
+        },
+      },
+    },
+  });
+
+  if (!task) {
+    throw new Error("No hay tarea de diseno asociada a esta orden.");
+  }
+
+  assertDesignTaskNotBlockedBySales(task.order.salesReviewStatus);
+
+  if (input.decision === "CHANGES_REQUESTED") {
+    const updatedTask = await client.orderDesignTask.update({
+      where: { id: task.id },
+      data: {
+        status: "ADJUST",
+        closedAt: null,
+        designerApprovedProofVersion: null,
+        clientApprovedProofVersion: null,
+      },
+    });
+
+    await createDesignTaskEvent(client, {
+      taskId: task.id,
+      eventType: "DESIGNER_CHANGES_REQUESTED",
+      fromStatus: task.status,
+      toStatus: "ADJUST",
+      actorId: actorProfileId,
+      notes: input.notes?.trim() || null,
+    });
+
+    return updatedTask;
+  }
+
+  const latestProofVersion = await resolveLatestProofVersion(client, input.orderId);
+  const shouldClose = task.clientApprovedProofVersion === latestProofVersion;
+  const now = new Date();
+
+  const updatedTask = await client.orderDesignTask.update({
+    where: { id: task.id },
+    data: {
+      status: "COLOR_PROOF_READY",
+      closedAt: shouldClose ? now : null,
+      designerApprovedProofVersion: latestProofVersion,
+    },
+  });
+
+  await createDesignTaskEvent(client, {
+    taskId: task.id,
+    eventType: "DESIGNER_APPROVED",
+    fromStatus: task.status,
+    toStatus: updatedTask.status,
+    actorId: actorProfileId,
+    notes: input.notes?.trim() || null,
+    metadata: {
+      proofVersion: latestProofVersion,
+      closedAt: shouldClose ? now.toISOString() : null,
+    },
+  });
+
+  return updatedTask;
+}
+
+async function applyClientDecision(
+  client: PrismaClientLike,
+  input: z.infer<typeof clientProofDecisionSchema>,
+  actorProfileId: string
+) {
+  const task = await client.orderDesignTask.findUnique({
+    where: { orderId: input.orderId },
+    select: {
+      id: true,
+      status: true,
+      designerApprovedProofVersion: true,
+      order: {
+        select: {
+          salesReviewStatus: true,
+        },
+      },
+    },
+  });
+
+  if (!task) {
+    throw new Error("No hay tarea de diseno asociada a esta orden.");
+  }
+
+  assertDesignTaskNotBlockedBySales(task.order.salesReviewStatus);
+
+  if (input.decision === "CHANGES_REQUESTED") {
+    const updatedTask = await client.orderDesignTask.update({
+      where: { id: task.id },
+      data: {
+        status: "ADJUST",
+        closedAt: null,
+        clientApprovedProofVersion: null,
+      },
+    });
+
+    await createDesignTaskEvent(client, {
+      taskId: task.id,
+      eventType: "CLIENT_CHANGES_REQUESTED",
+      fromStatus: task.status,
+      toStatus: "ADJUST",
+      actorId: actorProfileId,
+      notes: input.notes?.trim() || null,
+    });
+
+    return updatedTask;
+  }
+
+  const latestProofVersion = await resolveLatestProofVersion(client, input.orderId);
+  const shouldClose = task.designerApprovedProofVersion === latestProofVersion;
+  const now = new Date();
+
+  const updatedTask = await client.orderDesignTask.update({
+    where: { id: task.id },
+    data: {
+      status: "COLOR_PROOF_READY",
+      closedAt: shouldClose ? now : null,
+      clientApprovedProofVersion: latestProofVersion,
+    },
+  });
+
+  await createDesignTaskEvent(client, {
+    taskId: task.id,
+    eventType: "CLIENT_APPROVED",
+    fromStatus: task.status,
+    toStatus: updatedTask.status,
+    actorId: actorProfileId,
+    notes: input.notes?.trim() || null,
+    metadata: {
+      proofVersion: latestProofVersion,
+      closedAt: shouldClose ? now.toISOString() : null,
+    },
   });
 
   return updatedTask;
@@ -414,6 +607,16 @@ export async function uploadDesignProof(
   actorUserId: string
 ) {
   const actor = await resolveDesignActor(actorUserId);
+  if (input.sourceType !== "EXTERNAL_URL") {
+    throw new Error("La prueba de color del diseno se registra solo mediante URL externa.");
+  }
+  assertHttpsUrl(input.fileUrl);
+
+  if (input.fileType !== "text/uri-list" || input.fileSize !== 0) {
+    throw new Error(
+      "Para pruebas por URL debes enviar fileType=\"text/uri-list\" y fileSize=0."
+    );
+  }
 
   return db.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
@@ -470,6 +673,8 @@ export async function uploadDesignProof(
       data: {
         status: "COLOR_PROOF_READY",
         closedAt: null,
+        designerApprovedProofVersion: nextVersion,
+        clientApprovedProofVersion: null,
         assignedToId: task.assignedToId ?? actor.profileId,
         assignedAt: task.assignedAt ?? new Date(),
       },
@@ -502,8 +707,9 @@ export async function uploadDesignProof(
       notes: "Se subio una nueva prueba de color para revision del cliente.",
       metadata: {
         proofId: proof.id,
-        version: nextVersion,
+        proofVersion: nextVersion,
         sourceType: input.sourceType,
+        url: input.fileUrl,
       },
     });
 
@@ -516,55 +722,15 @@ export async function registerClientProofDecision(
   actorUserId: string
 ) {
   const actor = await resolveDesignActor(actorUserId);
+  return db.$transaction((tx) => applyClientDecision(tx, input, actor.profileId));
+}
 
-  return db.$transaction(async (tx) => {
-    const task = await tx.orderDesignTask.findUnique({
-      where: { orderId: input.orderId },
-      select: {
-        id: true,
-        status: true,
-        order: {
-          select: {
-            salesReviewStatus: true,
-          },
-        },
-      },
-    });
-
-    if (!task) {
-      throw new Error("No hay tarea de diseno asociada a esta orden.");
-    }
-
-    assertDesignTaskNotBlockedBySales(task.order.salesReviewStatus);
-
-    const now = new Date();
-    const nextStatus =
-      input.decision === "APPROVED"
-        ? "COLOR_PROOF_READY"
-        : ("ADJUST" as OrderDesignTaskStatus);
-
-    const updatedTask = await tx.orderDesignTask.update({
-      where: { id: task.id },
-      data: {
-        status: nextStatus,
-        closedAt: input.decision === "APPROVED" ? now : null,
-      },
-    });
-
-    await createDesignTaskEvent(tx, {
-      taskId: task.id,
-      eventType:
-        input.decision === "APPROVED"
-          ? "CLIENT_APPROVED"
-          : "CLIENT_CHANGES_REQUESTED",
-      fromStatus: task.status,
-      toStatus: nextStatus,
-      actorId: actor.profileId,
-      notes: input.notes?.trim() || null,
-    });
-
-    return updatedTask;
-  });
+export async function registerDesignerProofDecision(
+  input: z.infer<typeof designerProofDecisionSchema>,
+  actorUserId: string
+) {
+  const actor = await resolveDesignActor(actorUserId);
+  return db.$transaction((tx) => applyDesignerDecision(tx, input, actor.profileId));
 }
 
 export async function onClientArtworkUploaded(
@@ -596,6 +762,8 @@ export async function onClientArtworkUploaded(
     data: {
       status: "REVIEW",
       closedAt: null,
+      designerApprovedProofVersion: null,
+      clientApprovedProofVersion: null,
     },
   });
 

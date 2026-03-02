@@ -115,6 +115,18 @@ export function DesignTaskPanel({ orderId }: { orderId: string }) {
             <span>Cierre</span>
             <span className="font-medium text-neutral-900">{formatDateTime(task.closedAt)}</span>
           </div>
+          <div className="flex items-center justify-between text-neutral-600">
+            <span>Aprobación diseño</span>
+            <span className="font-medium text-neutral-900">
+              {task.designerApprovedProofVersion ? `v${task.designerApprovedProofVersion}` : "Pendiente"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-neutral-600">
+            <span>Aprobación cliente</span>
+            <span className="font-medium text-neutral-900">
+              {task.clientApprovedProofVersion ? `v${task.clientApprovedProofVersion}` : "Pendiente"}
+            </span>
+          </div>
 
           {canManage ? (
             <div className="space-y-2 border-t border-neutral-100 pt-3">

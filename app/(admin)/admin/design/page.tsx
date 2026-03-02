@@ -21,7 +21,7 @@ export default async function AdminDesignPage() {
     <AdminPageShell>
       <AdminPageHeader
         title="Bandeja de Diseño"
-        description="Gestiona tareas de diseño abiertas por confirmación de orden, con SLA y responsable."
+        description="Gestiona tareas de diseño habilitadas por Ventas, con SLA, responsable y trazabilidad."
       />
       <DesignInboxTable />
     </AdminPageShell>

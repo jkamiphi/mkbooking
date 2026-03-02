@@ -9,7 +9,7 @@ import { DraftEditor } from "./_components/draft-editor";
 import { SalesReviewPanel } from "./_components/sales-review-panel";
 import { DesignTaskPanel } from "./_components/design-task-panel";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
-import { CreativesModule } from "@/components/orders/creatives-module";
+import { DesignWorkspace } from "@/components/orders/design-workspace";
 import { PurchaseOrderModule } from "@/components/orders/purchase-order-module";
 
 type PageProps = {
@@ -61,6 +61,33 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         (sum, item) => sum + Number(item.subtotal),
         0
     );
+    const creativeLineItems = order.lineItems.map((item) => ({
+        id: item.id,
+        face: item.face
+            ? {
+                code: item.face.code,
+                catalogFace: item.face.catalogFace
+                    ? {
+                        title: item.face.catalogFace.title,
+                    }
+                    : null,
+                asset: item.face.asset
+                    ? {
+                        structureType: item.face.asset.structureType
+                            ? {
+                                name: item.face.asset.structureType.name,
+                            }
+                            : null,
+                        zone: item.face.asset.zone
+                            ? {
+                                name: item.face.asset.zone.name,
+                            }
+                            : null,
+                    }
+                    : null,
+            }
+            : null,
+    }));
 
     return (
         <AdminPageShell>
@@ -168,9 +195,10 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                         </section>
 
                         {order.status === "CONFIRMED" && (
-                            <CreativesModule
+                            <DesignWorkspace
                                 orderId={order.id}
-                                lineItems={order.lineItems}
+                                lineItems={creativeLineItems}
+                                mode="admin"
                                 readOnly
                                 allowReviewActions
                             />

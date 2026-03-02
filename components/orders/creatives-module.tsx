@@ -31,9 +31,20 @@ import { Input } from "@/components/ui/input";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type CreativeItem = RouterOutputs["orders"]["getCreatives"][number];
-type OrderLineItem = RouterOutputs["orders"]["get"]["lineItems"][number];
+export type CreativeLineItem = {
+  id: string;
+  face: {
+    code: string;
+    catalogFace: { title: string | null } | null;
+    asset: {
+      structureType: { name: string } | null;
+      zone: { name: string } | null;
+    } | null;
+  } | null;
+};
 type SalesReviewDecision = "APPROVED" | "CHANGES_REQUESTED";
 type UploadKind = "CLIENT_ARTWORK" | "DESIGN_PROOF";
+type DesignerDecision = "APPROVED" | "CHANGES_REQUESTED";
 
 type UrlUploadContext = {
   open: boolean;
@@ -61,6 +72,18 @@ function formatDateTime(value: Date | string | null | undefined) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function designEventLabel(eventType: string) {
+  if (eventType === "TASK_CREATED") return "Tarea creada";
+  if (eventType === "TASK_CLAIMED") return "Tarea tomada";
+  if (eventType === "STATUS_CHANGED") return "Cambio de estado";
+  if (eventType === "PROOF_UPLOADED") return "Prueba publicada";
+  if (eventType === "CLIENT_APPROVED") return "Cliente aprueba";
+  if (eventType === "CLIENT_CHANGES_REQUESTED") return "Cliente solicita cambios";
+  if (eventType === "DESIGNER_APPROVED") return "Diseno aprueba";
+  if (eventType === "DESIGNER_CHANGES_REQUESTED") return "Diseno solicita cambios";
+  return eventType;
 }
 
 function resolveExternalFileName(url: string, fallback: string) {
@@ -91,11 +114,13 @@ export function CreativesModule({
   lineItems,
   readOnly = false,
   allowReviewActions = false,
+  mode = "client",
 }: {
   orderId: string;
-  lineItems: OrderLineItem[];
+  lineItems: CreativeLineItem[];
   readOnly?: boolean;
   allowReviewActions?: boolean;
+  mode?: "designer" | "client" | "admin";
 }) {
   const utils = trpc.useUtils();
   const { data: profile } = trpc.userProfile.me.useQuery();
@@ -107,11 +132,18 @@ export function CreativesModule({
     profile?.systemRole === "STAFF" ||
     profile?.systemRole === "DESIGNER";
   const isDesignTaskBlockedBySales = Boolean(taskQuery.data?.isBlockedBySales);
+  const isDesignerSurface = mode === "designer";
+  const isAdminSurface = mode === "admin";
 
   const canReviewClientArtwork =
-    allowReviewActions && isDesignReviewer && !isDesignTaskBlockedBySales;
-  const canUploadProofs = isDesignReviewer && !isDesignTaskBlockedBySales;
-  const canUploadClientArtwork = !readOnly;
+    allowReviewActions &&
+    isDesignReviewer &&
+    !isDesignTaskBlockedBySales &&
+    (isDesignerSurface || isAdminSurface);
+  const canUploadProofs = isDesignReviewer && !isDesignTaskBlockedBySales && !readOnly;
+  const canUploadClientArtwork = !readOnly && !isDesignerSurface;
+  const canDesignerRespondToProof =
+    isDesignerSurface && isDesignReviewer && !isDesignTaskBlockedBySales;
 
   const addCreative = trpc.orders.addCreative.useMutation({
     onSuccess: async () => {
@@ -182,6 +214,23 @@ export function CreativesModule({
     },
   });
 
+  const designerDecision = trpc.design.proofs.designerDecision.useMutation({
+    onSuccess: async () => {
+      await Promise.all([
+        utils.design.byOrder.invalidate({ orderId }),
+        utils.design.inbox.list.invalidate(),
+      ]);
+      setDesignerDecisionDialogOpen(false);
+      setDesignerDecisionNotes("");
+      toast.success("Respuesta de diseno registrada.");
+    },
+    onError: (error) => {
+      toast.error("No se pudo registrar la respuesta de diseno", {
+        description: error.message,
+      });
+    },
+  });
+
   const [uploadingTargetId, setUploadingTargetId] = useState<string | null>(null);
   const [reviewingCreative, setReviewingCreative] = useState<CreativeItem | null>(null);
   const [reviewDecision, setReviewDecision] = useState<SalesReviewDecision>("APPROVED");
@@ -200,6 +249,9 @@ export function CreativesModule({
     "APPROVED"
   );
   const [proofDecisionNotes, setProofDecisionNotes] = useState("");
+  const [designerDecisionDialogOpen, setDesignerDecisionDialogOpen] = useState(false);
+  const [designerDecisionType, setDesignerDecisionType] = useState<DesignerDecision>("APPROVED");
+  const [designerDecisionNotes, setDesignerDecisionNotes] = useState("");
 
   const creativesData = useMemo(() => creativesQuery.data ?? [], [creativesQuery.data]);
 
@@ -253,39 +305,6 @@ export function CreativesModule({
       });
     } catch {
       toast.error("Error al subir el archivo");
-    } finally {
-      setUploadingTargetId(null);
-    }
-  }
-
-  async function uploadProofFile(file: File) {
-    setUploadingTargetId("design-proof");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("scope", "orders-creative");
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
-
-      const blob = await response.json();
-      await uploadProof.mutateAsync({
-        orderId,
-        fileUrl: blob.url,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        sourceType: "FILE_UPLOAD",
-      });
-    } catch {
-      toast.error("No se pudo cargar la prueba");
     } finally {
       setUploadingTargetId(null);
     }
@@ -382,6 +401,19 @@ export function CreativesModule({
     });
   }
 
+  function submitDesignerDecision() {
+    if (designerDecisionType === "CHANGES_REQUESTED" && designerDecisionNotes.trim().length === 0) {
+      toast.error("Incluye comentarios para solicitar ajustes.");
+      return;
+    }
+
+    designerDecision.mutate({
+      orderId,
+      decision: designerDecisionType,
+      notes: designerDecisionNotes.trim() || undefined,
+    });
+  }
+
   const latestProof = proofs[0] ?? null;
   const canClientRespondToProof =
     profile !== undefined &&
@@ -389,6 +421,7 @@ export function CreativesModule({
     !readOnly &&
     !isDesignTaskBlockedBySales &&
     Boolean(latestProof);
+  const designTimeline = taskQuery.data?.events ?? [];
 
   return (
     <>
@@ -495,11 +528,6 @@ export function CreativesModule({
 
               {canUploadProofs ? (
                 <div className="flex gap-2">
-                  <UploadButton
-                    onUpload={uploadProofFile}
-                    isUploading={uploadingTargetId === "design-proof"}
-                    label={proofs.length > 0 ? "Subir nueva prueba" : "Subir prueba"}
-                  />
                   <Button
                     size="sm"
                     variant="outline"
@@ -569,7 +597,62 @@ export function CreativesModule({
                 </div>
               </div>
             ) : null}
+
+            {canDesignerRespondToProof && latestProof ? (
+              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <p className="text-xs text-blue-900">
+                  Puedes marcar aprobacion final de diseno o solicitar ajustes adicionales.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setDesignerDecisionType("APPROVED");
+                      setDesignerDecisionDialogOpen(true);
+                    }}
+                  >
+                    Aprobar como diseno
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setDesignerDecisionType("CHANGES_REQUESTED");
+                      setDesignerDecisionDialogOpen(true);
+                    }}
+                  >
+                    Solicitar cambios
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </div>
+
+          {designTimeline.length > 0 ? (
+            <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
+              <h3 className="mb-3 text-sm font-medium text-neutral-900">Discusion y trazabilidad</h3>
+              <div className="space-y-2">
+                {designTimeline.slice(0, 12).map((event) => (
+                  <div key={event.id} className="rounded-lg border border-neutral-200 bg-white p-3">
+                    <p className="text-xs font-medium text-neutral-900">
+                      {designEventLabel(event.eventType)}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-neutral-500">
+                      {formatDateTime(event.createdAt)} ·{" "}
+                      {event.actor
+                        ? event.actor.user?.name ||
+                          event.actor.user?.email ||
+                          "Usuario"
+                        : "Sistema"}
+                    </p>
+                    {event.notes ? (
+                      <p className="mt-1 text-[11px] text-neutral-700">{event.notes}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -740,6 +823,51 @@ export function CreativesModule({
             </Button>
             <Button onClick={submitProofDecision} disabled={clientDecision.isPending}>
               {clientDecision.isPending ? "Guardando..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={designerDecisionDialogOpen} onOpenChange={setDesignerDecisionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {designerDecisionType === "APPROVED"
+                ? "Aprobacion final de diseno"
+                : "Solicitud de cambios de diseno"}
+            </DialogTitle>
+            <DialogDescription>
+              Esta decision forma parte de la aprobacion dual cliente-diseno.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="designer-decision-notes">
+              Notas {designerDecisionType === "CHANGES_REQUESTED" ? "(requeridas)" : "(opcionales)"}
+            </Label>
+            <Textarea
+              id="designer-decision-notes"
+              value={designerDecisionNotes}
+              onChange={(event) => setDesignerDecisionNotes(event.target.value)}
+              rows={4}
+              placeholder={
+                designerDecisionType === "CHANGES_REQUESTED"
+                  ? "Indica el ajuste requerido al cliente"
+                  : "Comentario opcional de cierre"
+              }
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDesignerDecisionDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={submitDesignerDecision} disabled={designerDecision.isPending}>
+              {designerDecision.isPending ? "Guardando..." : "Confirmar"}
             </Button>
           </DialogFooter>
         </DialogContent>

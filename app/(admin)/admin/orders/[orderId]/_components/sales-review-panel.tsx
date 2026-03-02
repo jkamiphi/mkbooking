@@ -79,6 +79,8 @@ export function SalesReviewPanel({ orderId }: { orderId: string }) {
       await Promise.all([
         utils.orders.get.invalidate({ id: orderId }),
         utils.orders.getSalesReviewTimeline.invalidate({ orderId }),
+        utils.design.byOrder.invalidate({ orderId }),
+        utils.design.inbox.list.invalidate(),
       ]);
       setIsDialogOpen(false);
       setNotes("");
@@ -97,6 +99,7 @@ export function SalesReviewPanel({ orderId }: { orderId: string }) {
   }
 
   const isOrderConfirmed = order.status === "CONFIRMED";
+  const isSalesReviewApproved = order.salesReviewStatus === "APPROVED";
 
   return (
     <>
@@ -138,14 +141,20 @@ export function SalesReviewPanel({ orderId }: { orderId: string }) {
 
         {canConfirmSalesReview ? (
           <div className="mt-4 border-t border-neutral-100 pt-4">
-            <Button
-              className="w-full"
-              onClick={() => setIsDialogOpen(true)}
-              disabled={!isOrderConfirmed}
-            >
-              Confirmar validación comercial
-            </Button>
-            {!isOrderConfirmed ? (
+            {isSalesReviewApproved ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                Validación comercial aprobada.
+              </div>
+            ) : (
+              <Button
+                className="w-full"
+                onClick={() => setIsDialogOpen(true)}
+                disabled={!isOrderConfirmed}
+              >
+                Confirmar validación comercial
+              </Button>
+            )}
+            {!isOrderConfirmed && !isSalesReviewApproved ? (
               <p className="mt-2 text-xs text-amber-700">
                 Debes confirmar la orden antes de validar comercialmente.
               </p>
