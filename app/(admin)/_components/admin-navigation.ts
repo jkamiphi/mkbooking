@@ -9,6 +9,7 @@ import {
   ClipboardList,
   PackageCheck,
   Palette,
+  Printer,
   FileText,
   Settings,
 } from "lucide-react";
@@ -70,6 +71,12 @@ export const adminNavigation: AdminNavigationItem[] = [
     roles: ["SUPERADMIN", "STAFF", "DESIGNER"],
   },
   {
+    name: "Impresión",
+    href: "/admin/print",
+    icon: Printer,
+    roles: ["SUPERADMIN", "STAFF", "OPERATIONS_PRINT"],
+  },
+  {
     name: "Registros de Auditoría",
     href: "/admin/audit-logs",
     icon: FileText,
@@ -99,6 +106,9 @@ export function getSystemRoleLabel(systemRole: SystemRole): string {
   }
   if (systemRole === "DESIGNER") {
     return "Diseño";
+  }
+  if (systemRole === "OPERATIONS_PRINT") {
+    return "Impresión";
   }
   return "Cliente";
 }

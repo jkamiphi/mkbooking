@@ -38,6 +38,7 @@ const uploadScopeToKeyPrefix = {
   "catalog-face-primary": "catalog/faces",
   "orders-creative": "orders/creatives",
   "orders-purchase-order": "orders/purchase-orders",
+  "orders-print-evidence": "orders/print-evidences",
 } as const;
 
 type KnownUploadScope = keyof typeof uploadScopeToKeyPrefix;

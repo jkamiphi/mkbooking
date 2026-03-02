@@ -85,6 +85,7 @@ enum SystemRole {
   STAFF // Platform employee with limited admin access
   DESIGNER // Design workflow role for order creatives and color proofs
   SALES // Commercial validation role for orders and requests
+  OPERATIONS_PRINT // Final print workflow role
   CUSTOMER // Regular users (advertisers, agencies) - default
 
   @@map("system_role")
@@ -138,6 +139,10 @@ model UserProfile {
   assignedOrderDesignTasks OrderDesignTask[]       @relation("OrderDesignTaskAssignee")
   createdOrderDesignTasks  OrderDesignTask[]       @relation("OrderDesignTaskCreator")
   orderDesignTaskEvents    OrderDesignTaskEvent[]  @relation("OrderDesignTaskEventActor")
+  assignedOrderPrintTasks  OrderPrintTask[]        @relation("OrderPrintTaskAssignee")
+  completedOrderPrintTasks OrderPrintTask[]        @relation("OrderPrintTaskCompleter")
+  orderPrintTaskEvents     OrderPrintTaskEvent[]   @relation("OrderPrintTaskEventActor")
+  uploadedPrintEvidences   OrderPrintEvidence[]    @relation("OrderPrintEvidenceUploader")
 
   @@index([userId])
   @@index([isActive])
@@ -881,6 +886,24 @@ enum OrderDesignTaskEventType {
   @@map("order_design_task_event_type")
 }
 
+enum OrderPrintTaskStatus {
+  READY
+  IN_PROGRESS
+  COMPLETED
+
+  @@map("order_print_task_status")
+}
+
+enum OrderPrintTaskEventType {
+  TASK_ACTIVATED
+  TASK_CLAIMED
+  STATUS_CHANGED
+  FINAL_PRINT_CONFIRMED
+  REOPENED_BY_DESIGN
+
+  @@map("order_print_task_event_type")
+}
+
 model Order {
   id   String @id @default(cuid())
   code String @unique @default(dbgenerated("concat('ORD-', lpad(cast(nextval('order_code_seq') as text), 6, '0'))"))
@@ -932,6 +955,7 @@ model Order {
   purchaseOrders    OrderPurchaseOrder[]
   salesReviewEvents OrderSalesReviewEvent[]
   designTask        OrderDesignTask?
+  printTask         OrderPrintTask?
 
   @@index([status])
   @@index([organizationId])
@@ -1278,6 +1302,81 @@ model OrderCreative {
   @@index([reviewedById])
   @@index([creativeKind])
   @@map("order_creative")
+}
+
+model OrderPrintTask {
+  id String @id @default(cuid())
+
+  orderId String @unique
+
+  status                OrderPrintTaskStatus @default(READY)
+  assignedToId          String?
+  assignedAt            DateTime?
+  closedAt              DateTime?
+  completedAt           DateTime?
+  completedById         String?
+  activatedProofVersion Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order       Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  assignedTo  UserProfile?       @relation("OrderPrintTaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  completedBy UserProfile?       @relation("OrderPrintTaskCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+  events      OrderPrintTaskEvent[]
+  evidences   OrderPrintEvidence[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([closedAt])
+  @@map("order_print_task")
+}
+
+model OrderPrintTaskEvent {
+  id String @id @default(cuid())
+
+  taskId String
+
+  eventType  OrderPrintTaskEventType
+  fromStatus OrderPrintTaskStatus?
+  toStatus   OrderPrintTaskStatus?
+  notes      String?                @db.Text
+  metadata   Json?
+  actorId    String?
+  createdAt  DateTime               @default(now())
+
+  task  OrderPrintTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor UserProfile?   @relation("OrderPrintTaskEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([eventType])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("order_print_task_event")
+}
+
+model OrderPrintEvidence {
+  id String @id @default(cuid())
+
+  taskId String
+
+  fileUrl  String
+  fileName String
+  fileType String
+  fileSize Int
+  notes    String? @db.Text
+  metadata Json?
+
+  uploadedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  task       OrderPrintTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy UserProfile?   @relation("OrderPrintEvidenceUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([uploadedById])
+  @@map("order_print_evidence")
 }
 
 model OrderPurchaseOrder {

@@ -302,6 +302,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
     STAFF: "info",
     DESIGNER: "info",
     SALES: "warning",
+    OPERATIONS_PRINT: "info",
     CUSTOMER: "secondary",
   };
 
@@ -310,6 +311,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
     STAFF: "Personal",
     DESIGNER: "Diseño",
     SALES: "Ventas",
+    OPERATIONS_PRINT: "Impresión",
     CUSTOMER: "Cliente",
   };
 

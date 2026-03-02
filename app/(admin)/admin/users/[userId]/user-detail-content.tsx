@@ -374,7 +374,16 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
               <span className="font-medium">{displayName}</span>
             </p>
             <div className="space-y-2 mb-6">
-              {(["CUSTOMER", "STAFF", "DESIGNER", "SALES", "SUPERADMIN"] as SystemRole[]).map(
+              {(
+                [
+                  "CUSTOMER",
+                  "STAFF",
+                  "DESIGNER",
+                  "SALES",
+                  "OPERATIONS_PRINT",
+                  "SUPERADMIN",
+                ] as SystemRole[]
+              ).map(
                 (role) => (
                   <label
                     key={role}
@@ -402,6 +411,8 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
                               ? "Diseñador"
                             : role === "SALES"
                               ? "Ventas"
+                            : role === "OPERATIONS_PRINT"
+                              ? "Impresión"
                             : "Customer"}
                       </p>
                       <p className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -413,6 +424,8 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
                               ? "Design workflow access for proofs and artwork review"
                             : role === "SALES"
                               ? "Commercial review access for orders and requests"
+                            : role === "OPERATIONS_PRINT"
+                              ? "Print workflow access for final production confirmation"
                             : "Regular user access"}
                       </p>
                     </div>
@@ -461,6 +474,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
     STAFF: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400",
     DESIGNER: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400",
     SALES: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400",
+    OPERATIONS_PRINT: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-400",
     CUSTOMER:
       "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400",
   };
@@ -470,6 +484,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
     STAFF: "Staff",
     DESIGNER: "Diseño",
     SALES: "Ventas",
+    OPERATIONS_PRINT: "Impresión",
     CUSTOMER: "Customer",
   };
 
@@ -478,6 +493,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
     STAFF: "Limited admin access - can view and manage users",
     DESIGNER: "Design workflow access - can review artworks and publish color proofs",
     SALES: "Commercial access - can validate orders and purchase orders",
+    OPERATIONS_PRINT: "Print workflow access - can confirm final production and evidences",
     CUSTOMER: "Regular user - can only access customer features",
   };
 

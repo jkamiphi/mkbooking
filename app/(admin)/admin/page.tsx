@@ -20,6 +20,10 @@ export default async function AdminDashboardPage() {
     redirect("/admin/design");
   }
 
+  if (profile?.systemRole === "OPERATIONS_PRINT") {
+    redirect("/admin/print");
+  }
+
   return (
     <AdminPageShell>
       <AdminPageHeader

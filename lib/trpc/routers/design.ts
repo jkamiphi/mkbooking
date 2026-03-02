@@ -30,7 +30,10 @@ async function resolveSystemRole(userId: string) {
 
 async function assertOrderAccess(userId: string, orderId: string) {
   const systemRole = await resolveSystemRole(userId);
-  if (systemRole && ["SUPERADMIN", "STAFF", "DESIGNER", "SALES"].includes(systemRole)) {
+  if (
+    systemRole &&
+    ["SUPERADMIN", "STAFF", "DESIGNER", "SALES", "OPERATIONS_PRINT"].includes(systemRole)
+  ) {
     return;
   }
 

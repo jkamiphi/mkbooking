@@ -8,9 +8,11 @@ import { AdminConfirmButton } from "./_components/admin-confirm-button";
 import { DraftEditor } from "./_components/draft-editor";
 import { SalesReviewPanel } from "./_components/sales-review-panel";
 import { DesignTaskPanel } from "./_components/design-task-panel";
+import { PrintTaskPanel } from "./_components/print-task-panel";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 import { DesignWorkspace } from "@/components/orders/design-workspace";
 import { PurchaseOrderModule } from "@/components/orders/purchase-order-module";
+import { PrintEvidenceModule } from "@/components/orders/print-evidence-module";
 
 type PageProps = {
     params: Promise<{ orderId: string }>;
@@ -88,6 +90,10 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             }
             : null,
     }));
+    const canManagePrintWorkflow =
+        profile?.systemRole === "SUPERADMIN" ||
+        profile?.systemRole === "STAFF" ||
+        profile?.systemRole === "OPERATIONS_PRINT";
 
     return (
         <AdminPageShell>
@@ -204,13 +210,19 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                             />
                         )}
 
+                        {canManagePrintWorkflow && order.status === "CONFIRMED" ? (
+                            <PrintEvidenceModule orderId={order.id} />
+                        ) : null}
+
                         <PurchaseOrderModule orderId={order.id} readOnly allowReviewActions />
                     </div>
 
                     {/* Sidebar: Totals & Actions */}
                     <div className="space-y-5">
                         <DesignTaskPanel orderId={order.id} />
-                        {profile && profile.systemRole !== "DESIGNER" ? (
+                        {canManagePrintWorkflow ? <PrintTaskPanel orderId={order.id} /> : null}
+                        {profile &&
+                        ["SUPERADMIN", "STAFF", "SALES"].includes(profile.systemRole) ? (
                             <SalesReviewPanel orderId={order.id} />
                         ) : null}
 

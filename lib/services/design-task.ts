@@ -7,6 +7,10 @@ import {
   SalesReviewStatus,
 } from "@prisma/client";
 import { z } from "zod";
+import {
+  activatePrintTaskAfterDesignClosure,
+  reopenPrintTaskAfterDesignReopened,
+} from "@/lib/services/print-task";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -313,6 +317,12 @@ async function applyDesignerDecision(
       });
     }
 
+    await reopenPrintTaskAfterDesignReopened(client, {
+      orderId: input.orderId,
+      actorId: actorProfileId,
+      reason: "Diseno solicito cambios en la prueba final.",
+    });
+
     await createDesignTaskEvent(client, {
       taskId: task.id,
       eventType: "DESIGNER_CHANGES_REQUESTED",
@@ -342,6 +352,12 @@ async function applyDesignerDecision(
     await client.orderCreative.update({
       where: { id: latestProof.id },
       data: { status: "APPROVED" },
+    });
+
+    await activatePrintTaskAfterDesignClosure(client, {
+      orderId: input.orderId,
+      actorId: actorProfileId,
+      proofVersion: latestProof.version,
     });
   }
 
@@ -413,6 +429,12 @@ async function applyClientDecision(
       });
     }
 
+    await reopenPrintTaskAfterDesignReopened(client, {
+      orderId: input.orderId,
+      actorId: actorProfileId,
+      reason: "Cliente solicito cambios en la prueba final.",
+    });
+
     await createDesignTaskEvent(client, {
       taskId: task.id,
       eventType: "CLIENT_CHANGES_REQUESTED",
@@ -442,6 +464,12 @@ async function applyClientDecision(
     await client.orderCreative.update({
       where: { id: latestProof.id },
       data: { status: "APPROVED" },
+    });
+
+    await activatePrintTaskAfterDesignClosure(client, {
+      orderId: input.orderId,
+      actorId: actorProfileId,
+      proofVersion: latestProof.version,
     });
   }
 
@@ -640,6 +668,14 @@ export async function updateDesignTaskStatus(
       },
     });
 
+    if (input.status !== "COLOR_PROOF_READY") {
+      await reopenPrintTaskAfterDesignReopened(tx, {
+        orderId: updatedTask.orderId,
+        actorId: actor.profileId,
+        reason: "La tarea de diseno cambio de estado y requiere nueva impresion final.",
+      });
+    }
+
     await createDesignTaskEvent(tx, {
       taskId: input.taskId,
       eventType: "STATUS_CHANGED",
@@ -749,6 +785,13 @@ export async function uploadDesignProof(
       },
     });
 
+    await reopenPrintTaskAfterDesignReopened(tx, {
+      orderId: input.orderId,
+      actorId: actor.profileId,
+      reason: "Se publico una nueva prueba de diseno; impresion final debe revalidarse.",
+      proofVersion: nextVersion,
+    });
+
     await createDesignTaskEvent(tx, {
       taskId: task.id,
       eventType: "PROOF_UPLOADED",
@@ -816,6 +859,12 @@ export async function onClientArtworkUploaded(
       designerApprovedProofVersion: null,
       clientApprovedProofVersion: null,
     },
+  });
+
+  await reopenPrintTaskAfterDesignReopened(client, {
+    orderId: input.orderId,
+    actorId: input.actorId ?? null,
+    reason: "Nuevo arte del cliente cargado. Se reactiva diseno y se invalida impresion previa.",
   });
 
   await createDesignTaskEvent(client, {

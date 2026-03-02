@@ -13,6 +13,7 @@ const systemRoleSchema = z.enum([
   "STAFF",
   "DESIGNER",
   "SALES",
+  "OPERATIONS_PRINT",
   "CUSTOMER",
 ]);
 
@@ -297,7 +298,11 @@ export async function adminGetStats() {
     db.userProfile.count(),
     db.userProfile.count({ where: { isActive: true } }),
     db.userProfile.count({
-      where: { systemRole: { in: ["SUPERADMIN", "STAFF", "DESIGNER", "SALES"] } },
+      where: {
+        systemRole: {
+          in: ["SUPERADMIN", "STAFF", "DESIGNER", "SALES", "OPERATIONS_PRINT"],
+        },
+      },
     }),
     db.userProfile.count({
       where: {
