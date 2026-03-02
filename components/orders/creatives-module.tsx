@@ -144,15 +144,14 @@ export function CreativesModule({
     isDesignReviewer &&
     !isDesignTaskBlockedBySales &&
     (isDesignerSurface || isAdminSurface);
-  const canUploadProofs = isDesignReviewer && !isDesignTaskBlockedBySales && !readOnly;
+  const canUploadProofs =
+    isDesignReviewer && !isDesignTaskBlockedBySales && !readOnly && !isClientSurface;
   const isClientArtworkLocked =
     isClientSurface && (Boolean(taskQuery.data?.clientArtworkLocked) || hasPublishedProof);
   const canUploadClientArtwork =
     !readOnly &&
     !isDesignerSurface &&
     (!isClientSurface || Boolean(taskQuery.data?.canClientUploadArtwork ?? true));
-  const canDesignerRespondToProof =
-    isDesignerSurface && isDesignReviewer && !isDesignTaskBlockedBySales;
 
   const addCreative = trpc.orders.addCreative.useMutation({
     onSuccess: async () => {
@@ -209,6 +208,7 @@ export function CreativesModule({
   const clientDecision = trpc.design.proofs.clientDecision.useMutation({
     onSuccess: async () => {
       await Promise.all([
+        utils.orders.getCreatives.invalidate({ orderId }),
         utils.design.byOrder.invalidate({ orderId }),
         utils.design.inbox.list.invalidate(),
       ]);
@@ -226,6 +226,7 @@ export function CreativesModule({
   const designerDecision = trpc.design.proofs.designerDecision.useMutation({
     onSuccess: async () => {
       await Promise.all([
+        utils.orders.getCreatives.invalidate({ orderId }),
         utils.design.byOrder.invalidate({ orderId }),
         utils.design.inbox.list.invalidate(),
       ]);
@@ -424,12 +425,25 @@ export function CreativesModule({
   }
 
   const latestProof = proofs[0] ?? null;
+  const isLatestProofClientApproved =
+    Boolean(latestProof) &&
+    taskQuery.data?.clientApprovedProofVersion === latestProof?.version;
+  const isLatestProofDesignerApproved =
+    Boolean(latestProof) &&
+    taskQuery.data?.designerApprovedProofVersion === latestProof?.version;
   const canClientRespondToProof =
     profile !== undefined &&
     !isDesignReviewer &&
     !readOnly &&
     !isDesignTaskBlockedBySales &&
-    Boolean(latestProof);
+    Boolean(latestProof) &&
+    !isLatestProofClientApproved;
+  const canDesignerRespondToProof =
+    isDesignerSurface &&
+    isDesignReviewer &&
+    !isDesignTaskBlockedBySales &&
+    Boolean(latestProof) &&
+    !isLatestProofDesignerApproved;
   const designTimeline = taskQuery.data?.events ?? [];
 
   return (
@@ -614,7 +628,7 @@ export function CreativesModule({
               </div>
             ) : null}
 
-            {canDesignerRespondToProof && latestProof ? (
+            {canDesignerRespondToProof ? (
               <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
                 <p className="text-xs text-blue-900">
                   Puedes marcar aprobacion final de diseno o solicitar ajustes adicionales.

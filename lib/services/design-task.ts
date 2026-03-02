@@ -239,7 +239,7 @@ export async function activateDesignTaskAfterSalesApproval(
 async function resolveLatestProofVersion(
   client: PrismaClientLike,
   orderId: string
-): Promise<number> {
+): Promise<{ id: string; version: number }> {
   const latestProof = await client.orderCreative.findFirst({
     where: {
       orderId,
@@ -247,14 +247,17 @@ async function resolveLatestProofVersion(
       lineItemId: null,
     },
     orderBy: { version: "desc" },
-    select: { version: true },
+    select: {
+      id: true,
+      version: true,
+    },
   });
 
   if (!latestProof) {
     throw new Error("No hay prueba de color publicada para esta orden.");
   }
 
-  return latestProof.version;
+  return latestProof;
 }
 
 async function applyDesignerDecision(
@@ -283,6 +286,16 @@ async function applyDesignerDecision(
   assertDesignTaskNotBlockedBySales(task.order.salesReviewStatus);
 
   if (input.decision === "CHANGES_REQUESTED") {
+    const latestProof = await client.orderCreative.findFirst({
+      where: {
+        orderId: input.orderId,
+        creativeKind: "DESIGN_PROOF",
+        lineItemId: null,
+      },
+      orderBy: { version: "desc" },
+      select: { id: true },
+    });
+
     const updatedTask = await client.orderDesignTask.update({
       where: { id: task.id },
       data: {
@@ -292,6 +305,13 @@ async function applyDesignerDecision(
         clientApprovedProofVersion: null,
       },
     });
+
+    if (latestProof) {
+      await client.orderCreative.update({
+        where: { id: latestProof.id },
+        data: { status: "REJECTED" },
+      });
+    }
 
     await createDesignTaskEvent(client, {
       taskId: task.id,
@@ -305,8 +325,8 @@ async function applyDesignerDecision(
     return updatedTask;
   }
 
-  const latestProofVersion = await resolveLatestProofVersion(client, input.orderId);
-  const shouldClose = task.clientApprovedProofVersion === latestProofVersion;
+  const latestProof = await resolveLatestProofVersion(client, input.orderId);
+  const shouldClose = task.clientApprovedProofVersion === latestProof.version;
   const now = new Date();
 
   const updatedTask = await client.orderDesignTask.update({
@@ -314,9 +334,16 @@ async function applyDesignerDecision(
     data: {
       status: "COLOR_PROOF_READY",
       closedAt: shouldClose ? now : null,
-      designerApprovedProofVersion: latestProofVersion,
+      designerApprovedProofVersion: latestProof.version,
     },
   });
+
+  if (shouldClose) {
+    await client.orderCreative.update({
+      where: { id: latestProof.id },
+      data: { status: "APPROVED" },
+    });
+  }
 
   await createDesignTaskEvent(client, {
     taskId: task.id,
@@ -326,7 +353,7 @@ async function applyDesignerDecision(
     actorId: actorProfileId,
     notes: input.notes?.trim() || null,
     metadata: {
-      proofVersion: latestProofVersion,
+      proofVersion: latestProof.version,
       closedAt: shouldClose ? now.toISOString() : null,
     },
   });
@@ -360,6 +387,16 @@ async function applyClientDecision(
   assertDesignTaskNotBlockedBySales(task.order.salesReviewStatus);
 
   if (input.decision === "CHANGES_REQUESTED") {
+    const latestProof = await client.orderCreative.findFirst({
+      where: {
+        orderId: input.orderId,
+        creativeKind: "DESIGN_PROOF",
+        lineItemId: null,
+      },
+      orderBy: { version: "desc" },
+      select: { id: true },
+    });
+
     const updatedTask = await client.orderDesignTask.update({
       where: { id: task.id },
       data: {
@@ -368,6 +405,13 @@ async function applyClientDecision(
         clientApprovedProofVersion: null,
       },
     });
+
+    if (latestProof) {
+      await client.orderCreative.update({
+        where: { id: latestProof.id },
+        data: { status: "REJECTED" },
+      });
+    }
 
     await createDesignTaskEvent(client, {
       taskId: task.id,
@@ -381,8 +425,8 @@ async function applyClientDecision(
     return updatedTask;
   }
 
-  const latestProofVersion = await resolveLatestProofVersion(client, input.orderId);
-  const shouldClose = task.designerApprovedProofVersion === latestProofVersion;
+  const latestProof = await resolveLatestProofVersion(client, input.orderId);
+  const shouldClose = task.designerApprovedProofVersion === latestProof.version;
   const now = new Date();
 
   const updatedTask = await client.orderDesignTask.update({
@@ -390,9 +434,16 @@ async function applyClientDecision(
     data: {
       status: "COLOR_PROOF_READY",
       closedAt: shouldClose ? now : null,
-      clientApprovedProofVersion: latestProofVersion,
+      clientApprovedProofVersion: latestProof.version,
     },
   });
+
+  if (shouldClose) {
+    await client.orderCreative.update({
+      where: { id: latestProof.id },
+      data: { status: "APPROVED" },
+    });
+  }
 
   await createDesignTaskEvent(client, {
     taskId: task.id,
@@ -402,7 +453,7 @@ async function applyClientDecision(
     actorId: actorProfileId,
     notes: input.notes?.trim() || null,
     metadata: {
-      proofVersion: latestProofVersion,
+      proofVersion: latestProof.version,
       closedAt: shouldClose ? now.toISOString() : null,
     },
   });
@@ -673,7 +724,7 @@ export async function uploadDesignProof(
       data: {
         status: "COLOR_PROOF_READY",
         closedAt: null,
-        designerApprovedProofVersion: nextVersion,
+        designerApprovedProofVersion: null,
         clientApprovedProofVersion: null,
         assignedToId: task.assignedToId ?? actor.profileId,
         assignedAt: task.assignedAt ?? new Date(),
