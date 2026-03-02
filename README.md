@@ -72,8 +72,8 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 | `pnpm prisma:studio` | Open Prisma Studio |
 | `pnpm prisma:migrate` | Run database migrations |
 | `pnpm prisma:seed` | Seed database |
-| `pnpm storage:migrate:blob-to-s3 -- --dry-run` | Preview legacy image URL migration to S3 (zone/structure/asset/face/catalog) |
-| `pnpm storage:migrate:blob-to-s3 -- --execute` | Execute legacy image URL migration to S3 and persist URLs |
+| `pnpm storage:migrate:s3-to-cloudfront -- --dry-run` | Preview S3 URL base replacement to CloudFront for all media tables |
+| `pnpm storage:migrate:s3-to-cloudfront -- --execute` | Execute S3 URL base replacement to CloudFront for all media tables |
 
 ## Project Structure
 

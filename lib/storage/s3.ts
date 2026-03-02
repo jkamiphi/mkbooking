@@ -8,6 +8,7 @@ import { getServerConfig } from "@/lib/server-config";
 
 interface S3StorageConfig {
   bucket: string;
+  legacyPublicBaseUrls: string[];
   publicBaseUrl: string | null;
   region: string;
 }
@@ -53,6 +54,7 @@ function getS3StorageConfig(): S3StorageConfig {
 
   cachedConfig = {
     bucket: serverConfig.awsS3Bucket,
+    legacyPublicBaseUrls: serverConfig.awsLegacyPublicBaseUrls,
     publicBaseUrl: serverConfig.awsS3PublicBaseUrl,
     region: serverConfig.awsRegion,
   };
@@ -158,18 +160,22 @@ export function isExpectedS3PublicUrl(rawUrl: string): boolean {
     return false;
   }
 
-  const { bucket, publicBaseUrl, region } = config;
+  const { bucket, legacyPublicBaseUrls, publicBaseUrl, region } = config;
+  const configuredPublicBaseUrls = [
+    publicBaseUrl,
+    ...legacyPublicBaseUrls,
+  ].filter((url): url is string => Boolean(url));
 
-  if (publicBaseUrl) {
+  for (const configuredBaseUrl of configuredPublicBaseUrls) {
     let parsedBaseUrl: URL;
     try {
-      parsedBaseUrl = new URL(publicBaseUrl);
+      parsedBaseUrl = new URL(configuredBaseUrl);
     } catch {
-      return false;
+      continue;
     }
 
     if (parsedUrl.origin !== parsedBaseUrl.origin) {
-      return false;
+      continue;
     }
 
     const basePath = parsedBaseUrl.pathname.replace(/\/+$/g, "");
@@ -177,7 +183,9 @@ export function isExpectedS3PublicUrl(rawUrl: string): boolean {
       return parsedUrl.pathname.length > 1;
     }
 
-    return parsedUrl.pathname.startsWith(`${basePath}/`);
+    if (parsedUrl.pathname.startsWith(`${basePath}/`)) {
+      return true;
+    }
   }
 
   return parsedUrl.hostname === `${bucket}.s3.${region}.amazonaws.com`;

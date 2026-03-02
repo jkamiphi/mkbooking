@@ -1,5 +1,6 @@
 interface ServerConfig {
   awsAccessKeyId: string;
+  awsLegacyPublicBaseUrls: string[];
   awsRegion: string;
   awsS3Bucket: string;
   awsS3PublicBaseUrl: string | null;
@@ -38,6 +39,19 @@ function readNonNegativeIntegerEnvironmentVariable(
   return Math.floor(parsed);
 }
 
+function readCsvEnvironmentVariable(name: string): string[] {
+  const value = process.env[name];
+
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
 export function getCampaignRequestStartGapDays() {
   if (cachedCampaignRequestStartGapDays !== null) {
     return cachedCampaignRequestStartGapDays;
@@ -58,6 +72,9 @@ export function getServerConfig(): ServerConfig {
 
   cachedServerConfig = {
     awsAccessKeyId: readRequiredEnvironmentVariable("AWS_ACCESS_KEY_ID"),
+    awsLegacyPublicBaseUrls: readCsvEnvironmentVariable(
+      "AWS_S3_LEGACY_PUBLIC_BASE_URLS",
+    ),
     awsRegion: readRequiredEnvironmentVariable("AWS_REGION"),
     awsS3Bucket: readRequiredEnvironmentVariable("AWS_S3_BUCKET"),
     awsS3PublicBaseUrl: process.env.AWS_S3_PUBLIC_BASE_URL?.trim() || null,

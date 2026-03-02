@@ -10,7 +10,7 @@ export const promoTypeSchema = z.enum(promoTypeValues);
 export const holdStatusSchema = z.enum(holdStatusValues);
 
 const s3OnlyImageErrorMessage =
-  "Image URLs must use the configured public S3 domain.";
+  "Image URLs must use a configured media domain (CloudFront or S3).";
 
 const s3PublicUrlSchema = z.string().url().refine(isExpectedS3PublicUrl, {
   message: s3OnlyImageErrorMessage,
