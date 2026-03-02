@@ -96,6 +96,8 @@ export function SalesReviewPanel({ orderId }: { orderId: string }) {
     return null;
   }
 
+  const isOrderConfirmed = order.status === "CONFIRMED";
+
   return (
     <>
       <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
@@ -136,9 +138,18 @@ export function SalesReviewPanel({ orderId }: { orderId: string }) {
 
         {canConfirmSalesReview ? (
           <div className="mt-4 border-t border-neutral-100 pt-4">
-            <Button className="w-full" onClick={() => setIsDialogOpen(true)}>
+            <Button
+              className="w-full"
+              onClick={() => setIsDialogOpen(true)}
+              disabled={!isOrderConfirmed}
+            >
               Confirmar validación comercial
             </Button>
+            {!isOrderConfirmed ? (
+              <p className="mt-2 text-xs text-amber-700">
+                Debes confirmar la orden antes de validar comercialmente.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -240,7 +251,7 @@ export function SalesReviewPanel({ orderId }: { orderId: string }) {
                   notes: notes.trim() || undefined,
                 })
               }
-              disabled={confirmSalesReview.isPending}
+              disabled={confirmSalesReview.isPending || !isOrderConfirmed}
             >
               {confirmSalesReview.isPending ? "Guardando..." : "Guardar resultado"}
             </Button>

@@ -97,6 +97,7 @@ export function UserFilters({ filters, onFiltersChange, actions }: UserFiltersPr
               <option value="ALL">Todos los roles</option>
               <option value="CUSTOMER">Cliente</option>
               <option value="STAFF">Staff</option>
+              <option value="DESIGNER">Diseñador</option>
               <option value="SALES">Ventas</option>
               <option value="SUPERADMIN">Superadmin</option>
             </SelectNative>

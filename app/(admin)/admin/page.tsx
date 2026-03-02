@@ -16,6 +16,10 @@ export default async function AdminDashboardPage() {
     redirect("/admin/orders");
   }
 
+  if (profile?.systemRole === "DESIGNER") {
+    redirect("/admin/design");
+  }
+
   return (
     <AdminPageShell>
       <AdminPageHeader

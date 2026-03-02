@@ -4,12 +4,14 @@ import {
     protectedProcedure,
     commercialProcedure,
     salesReviewProcedure,
+    designProcedure,
 } from "../init";
 import { db } from "@/lib/db";
 import { TRPCError } from "@trpc/server";
 import {
     OrderStatus,
     CreativeStatus,
+    CreativeSourceType,
     Prisma,
     SalesReviewResult,
     SalesReviewStatus,
@@ -21,13 +23,16 @@ import {
 } from "@/lib/services/order-financials";
 import {
     createSalesReviewEvent,
-    isSalesReviewApproved,
     notifySalesReviewReopened,
     reopenOrderSalesReview,
     resolveDocumentEventType,
     resolveOrderEventType,
     resolveSalesReviewActor,
 } from "@/lib/services/sales-review";
+import {
+    activateDesignTaskAfterSalesApproval,
+    onClientArtworkUploaded,
+} from "@/lib/services/design-task";
 
 function resolveOrderDays(fromDate: Date | null, toDate: Date | null) {
     if (!fromDate || !toDate) return 30;
@@ -623,10 +628,6 @@ export const ordersRouter = router({
                     message: "La orden debe ser aprobada por el cliente primero",
                 });
             }
-            const salesReviewNotApproved = !isSalesReviewApproved(
-                order.salesReviewStatus
-            );
-
             const now = new Date();
             // Default 30 days hold if order has no explicit dates
             const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -677,20 +678,6 @@ export const ordersRouter = router({
                     },
                 });
 
-                if (salesReviewNotApproved) {
-                    await createSalesReviewEvent(tx, {
-                        orderId: order.id,
-                        eventType: "ORDER_CONFIRMED_WITHOUT_SALES_APPROVAL",
-                        targetType: "ORDER",
-                        notes:
-                            "Orden confirmada sin aprobación comercial final.",
-                        metadata: {
-                            salesReviewStatus: order.salesReviewStatus,
-                        },
-                        actorId: userProfile.id,
-                    });
-                }
-
                 if (order.campaignRequestId) {
                     await tx.campaignRequest.update({
                         where: { id: order.campaignRequestId },
@@ -702,10 +689,6 @@ export const ordersRouter = router({
                     order: confirmedOrder,
                     createdHolds,
                     skippedActiveHolds,
-                    warnings: {
-                        salesReviewNotApproved,
-                        salesReviewStatus: order.salesReviewStatus,
-                    },
                 };
             });
 
@@ -850,10 +833,11 @@ export const ordersRouter = router({
             z.object({
                 orderId: z.string(),
                 lineItemId: z.string().optional().nullable(),
-                fileUrl: z.string(),
+                fileUrl: z.string().url(),
                 fileName: z.string(),
                 fileType: z.string(),
-                fileSize: z.number(),
+                fileSize: z.number().min(0),
+                sourceType: z.nativeEnum(CreativeSourceType).default("FILE_UPLOAD"),
                 metadata: z.any().optional(),
                 notes: z.string().optional(),
             })
@@ -889,7 +873,10 @@ export const ordersRouter = router({
                 }
 
                 const existingCreativeForLineItem = await db.orderCreative.findFirst({
-                    where: { lineItemId: targetLineItemId },
+                    where: {
+                        lineItemId: targetLineItemId,
+                        creativeKind: "CLIENT_ARTWORK",
+                    },
                     select: { id: true },
                 });
 
@@ -902,7 +889,11 @@ export const ordersRouter = router({
             }
 
             const latestCreative = await db.orderCreative.findFirst({
-                where: { orderId: input.orderId, lineItemId: targetLineItemId },
+                where: {
+                    orderId: input.orderId,
+                    lineItemId: targetLineItemId,
+                    creativeKind: "CLIENT_ARTWORK",
+                },
                 orderBy: { version: "desc" },
                 select: { version: true },
             });
@@ -920,6 +911,8 @@ export const ordersRouter = router({
                             fileName: input.fileName,
                             fileType: input.fileType,
                             fileSize: input.fileSize,
+                            sourceType: input.sourceType,
+                            creativeKind: "CLIENT_ARTWORK",
                             version: nextVersion,
                             metadata: input.metadata || null,
                             notes: input.notes,
@@ -928,18 +921,9 @@ export const ordersRouter = router({
                     });
                     creativeId = createdCreative.id;
 
-                    await reopenOrderSalesReview(tx, {
+                    await onClientArtworkUploaded(tx, {
                         orderId: input.orderId,
                         actorId: actor.profileId,
-                        notes: "Se subió un nuevo arte para revisión.",
-                        eventType: "REVIEW_REQUIRED",
-                        targetType: "CREATIVE",
-                        targetId: createdCreative.id,
-                        metadata: {
-                            lineItemId: targetLineItemId,
-                            version: nextVersion,
-                            fileName: input.fileName,
-                        },
                     });
                 });
             } catch (error) {
@@ -956,17 +940,6 @@ export const ordersRouter = router({
 
                 throw error;
             }
-
-            await notifySalesReviewReopened({
-                orderId: input.orderId,
-                orderCode: order.code,
-                eventType: "REVIEW_REQUIRED",
-                actorName: actor.fullName,
-                reason: targetLineItemId
-                    ? "Se cargó un arte por cara específica."
-                    : "Se cargó un arte general de la orden.",
-                notes: input.notes ?? null,
-            });
 
             if (!creativeId) {
                 throw new TRPCError({
@@ -1005,7 +978,7 @@ export const ordersRouter = router({
             return timeline;
         }),
 
-    reviewCreative: salesReviewProcedure
+    reviewCreative: designProcedure
         .input(
             z.object({
                 creativeId: z.string(),
@@ -1027,6 +1000,12 @@ export const ordersRouter = router({
                 select: {
                     id: true,
                     orderId: true,
+                    creativeKind: true,
+                    order: {
+                        select: {
+                            salesReviewStatus: true,
+                        },
+                    },
                 },
             });
 
@@ -1037,33 +1016,34 @@ export const ordersRouter = router({
                 });
             }
 
+            if (creative.creativeKind !== "CLIENT_ARTWORK") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Solo se pueden revisar artes enviados por el cliente.",
+                });
+            }
+
+            if (creative.order.salesReviewStatus !== SalesReviewStatus.APPROVED) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "No puedes revisar arte mientras la validacion de Ventas no este aprobada.",
+                });
+            }
+
             const status =
                 input.result === SalesReviewResult.APPROVED
                     ? CreativeStatus.APPROVED
                     : CreativeStatus.REJECTED;
 
-            const updated = await db.$transaction(async (tx) => {
-                const updatedCreative = await tx.orderCreative.update({
-                    where: { id: input.creativeId },
-                    data: {
-                        status,
-                        reviewedAt: new Date(),
-                        reviewedById: actor.profileId,
-                        reviewNotes: input.notes?.trim() || null,
-                    },
-                });
-
-                await createSalesReviewEvent(tx, {
-                    orderId: updatedCreative.orderId,
-                    eventType: resolveDocumentEventType(input.result),
-                    targetType: "CREATIVE",
-                    targetId: updatedCreative.id,
-                    result: input.result,
-                    notes: input.notes?.trim() || null,
-                    actorId: actor.profileId,
-                });
-
-                return updatedCreative;
+            const updated = await db.orderCreative.update({
+                where: { id: input.creativeId },
+                data: {
+                    status,
+                    reviewedAt: new Date(),
+                    reviewedById: actor.profileId,
+                    reviewNotes: input.notes?.trim() || null,
+                },
             });
 
             return updated;
@@ -1152,7 +1132,18 @@ export const ordersRouter = router({
             const actor = await resolveSalesReviewActor(ctx.user.id);
             const order = await db.order.findUnique({
                 where: { id: input.orderId },
-                select: { id: true },
+                select: {
+                    id: true,
+                    status: true,
+                    salesReviewStatus: true,
+                    serviceItems: {
+                        include: {
+                            service: {
+                                select: { code: true },
+                            },
+                        },
+                    },
+                },
             });
 
             if (!order) {
@@ -1162,10 +1153,20 @@ export const ordersRouter = router({
                 });
             }
 
+            if (order.status !== OrderStatus.CONFIRMED) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Debes confirmar la orden antes de validar comercialmente.",
+                });
+            }
+
             const nextStatus =
                 input.result === SalesReviewResult.APPROVED
                     ? SalesReviewStatus.APPROVED
                     : SalesReviewStatus.CHANGES_REQUESTED;
+            const shouldActivateDesignTask =
+                nextStatus === SalesReviewStatus.APPROVED &&
+                order.salesReviewStatus !== SalesReviewStatus.APPROVED;
 
             const updatedOrder = await db.$transaction(async (tx) => {
                 const updated = await tx.order.update({
@@ -1187,6 +1188,14 @@ export const ordersRouter = router({
                     notes: input.notes?.trim() || null,
                     actorId: actor.profileId,
                 });
+
+                if (shouldActivateDesignTask) {
+                    await activateDesignTaskAfterSalesApproval(tx, {
+                        orderId: input.orderId,
+                        actorId: actor.profileId,
+                        serviceItems: order.serviceItems,
+                    });
+                }
 
                 return updated;
             });

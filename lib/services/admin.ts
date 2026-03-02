@@ -8,7 +8,13 @@ import { z } from "zod";
 // Schemas
 // ============================================================================
 
-const systemRoleSchema = z.enum(["SUPERADMIN", "STAFF", "SALES", "CUSTOMER"]);
+const systemRoleSchema = z.enum([
+  "SUPERADMIN",
+  "STAFF",
+  "DESIGNER",
+  "SALES",
+  "CUSTOMER",
+]);
 
 export const updateSystemRoleSchema = z.object({
   userId: z.string(),
@@ -290,7 +296,9 @@ export async function adminGetStats() {
   const [totalUsers, activeUsers, staffUsers, customersWithOrgs, recentUsers] = await Promise.all([
     db.userProfile.count(),
     db.userProfile.count({ where: { isActive: true } }),
-    db.userProfile.count({ where: { systemRole: { in: ["SUPERADMIN", "STAFF", "SALES"] } } }),
+    db.userProfile.count({
+      where: { systemRole: { in: ["SUPERADMIN", "STAFF", "DESIGNER", "SALES"] } },
+    }),
     db.userProfile.count({
       where: {
         organizationRoles: {

@@ -8,6 +8,7 @@ import {
   BookOpen,
   ClipboardList,
   PackageCheck,
+  Palette,
   FileText,
   Settings,
 } from "lucide-react";
@@ -63,6 +64,12 @@ export const adminNavigation: AdminNavigationItem[] = [
     roles: ["SUPERADMIN", "STAFF", "SALES"],
   },
   {
+    name: "Diseño",
+    href: "/admin/design",
+    icon: Palette,
+    roles: ["SUPERADMIN", "STAFF", "DESIGNER"],
+  },
+  {
     name: "Registros de Auditoría",
     href: "/admin/audit-logs",
     icon: FileText,
@@ -89,6 +96,9 @@ export function getSystemRoleLabel(systemRole: SystemRole): string {
   }
   if (systemRole === "SALES") {
     return "Ventas";
+  }
+  if (systemRole === "DESIGNER") {
+    return "Diseño";
   }
   return "Cliente";
 }

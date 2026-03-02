@@ -83,6 +83,7 @@ model verification {
 enum SystemRole {
   SUPERADMIN // Full platform access
   STAFF // Platform employee with limited admin access
+  DESIGNER // Design workflow role for order creatives and color proofs
   SALES // Commercial validation role for orders and requests
   CUSTOMER // Regular users (advertisers, agencies) - default
 
@@ -134,6 +135,9 @@ model UserProfile {
   uploadedPurchaseOrders   OrderPurchaseOrder[]    @relation("PurchaseOrderUploader")
   reviewedPurchaseOrders   OrderPurchaseOrder[]    @relation("PurchaseOrderReviewer")
   salesReviewEvents        OrderSalesReviewEvent[] @relation("OrderSalesReviewEventActor")
+  assignedOrderDesignTasks OrderDesignTask[]       @relation("OrderDesignTaskAssignee")
+  createdOrderDesignTasks  OrderDesignTask[]       @relation("OrderDesignTaskCreator")
+  orderDesignTaskEvents    OrderDesignTaskEvent[]  @relation("OrderDesignTaskEventActor")
 
   @@index([userId])
   @@index([isActive])
@@ -855,6 +859,26 @@ enum SalesReviewResult {
   @@map("sales_review_result")
 }
 
+enum OrderDesignTaskStatus {
+  REVIEW
+  ADJUST
+  CREATE_FROM_SCRATCH
+  COLOR_PROOF_READY
+
+  @@map("order_design_task_status")
+}
+
+enum OrderDesignTaskEventType {
+  TASK_CREATED
+  TASK_CLAIMED
+  STATUS_CHANGED
+  PROOF_UPLOADED
+  CLIENT_APPROVED
+  CLIENT_CHANGES_REQUESTED
+
+  @@map("order_design_task_event_type")
+}
+
 model Order {
   id   String @id @default(cuid())
   code String @unique @default(dbgenerated("concat('ORD-', lpad(cast(nextval('order_code_seq') as text), 6, '0'))"))
@@ -905,6 +929,7 @@ model Order {
   creatives         OrderCreative[]
   purchaseOrders    OrderPurchaseOrder[]
   salesReviewEvents OrderSalesReviewEvent[]
+  designTask        OrderDesignTask?
 
   @@index([status])
   @@index([organizationId])
@@ -1150,6 +1175,70 @@ enum CreativeStatus {
   @@map("creative_status")
 }
 
+enum CreativeSourceType {
+  FILE_UPLOAD
+  EXTERNAL_URL
+
+  @@map("creative_source_type")
+}
+
+enum CreativeKind {
+  CLIENT_ARTWORK
+  DESIGN_PROOF
+
+  @@map("creative_kind")
+}
+
+model OrderDesignTask {
+  id String @id @default(cuid())
+
+  orderId String @unique
+
+  status       OrderDesignTaskStatus @default(REVIEW)
+  slaDueAt     DateTime
+  assignedToId String?
+  assignedAt   DateTime?
+  closedAt     DateTime?
+  createdById  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order      Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  assignedTo UserProfile?          @relation("OrderDesignTaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy  UserProfile?          @relation("OrderDesignTaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  events     OrderDesignTaskEvent[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([slaDueAt])
+  @@index([closedAt])
+  @@map("order_design_task")
+}
+
+model OrderDesignTaskEvent {
+  id String @id @default(cuid())
+
+  taskId String
+
+  eventType  OrderDesignTaskEventType
+  fromStatus OrderDesignTaskStatus?
+  toStatus   OrderDesignTaskStatus?
+  notes      String?                 @db.Text
+  metadata   Json?
+  actorId    String?
+  createdAt  DateTime                @default(now())
+
+  task  OrderDesignTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor UserProfile?    @relation("OrderDesignTaskEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([eventType])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("order_design_task_event")
+}
+
 model OrderCreative {
   id String @id @default(cuid())
 
@@ -1160,6 +1249,8 @@ model OrderCreative {
   fileName String
   fileType String
   fileSize Int
+  sourceType  CreativeSourceType @default(FILE_UPLOAD)
+  creativeKind CreativeKind      @default(CLIENT_ARTWORK)
 
   version      Int            @default(1)
   status       CreativeStatus @default(PENDING)
@@ -1181,6 +1272,7 @@ model OrderCreative {
   @@index([orderId])
   @@index([lineItemId])
   @@index([reviewedById])
+  @@index([creativeKind])
   @@map("order_creative")
 }
 

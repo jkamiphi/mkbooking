@@ -29,9 +29,11 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 export const createCallerFactory = t.createCallerFactory;
 
-type AllowedSystemRole = "SUPERADMIN" | "STAFF" | "SALES";
+type AllowedSystemRole = "SUPERADMIN" | "STAFF" | "DESIGNER" | "SALES";
 
-async function resolveUserSystemRole(ctx: Context): Promise<AllowedSystemRole | "CUSTOMER" | null> {
+async function resolveUserSystemRole(
+  ctx: Context
+): Promise<AllowedSystemRole | "CUSTOMER" | null> {
   if (!ctx.user) {
     return null;
   }
@@ -129,6 +131,30 @@ const isSalesReviewer = t.middleware(async ({ ctx, next }) => {
   });
 });
 
+// Middleware for design workflow actions
+const isDesignReviewer = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.session || !ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const systemRole = await resolveUserSystemRole(ctx);
+
+  if (!systemRole || !["SUPERADMIN", "STAFF", "DESIGNER"].includes(systemRole)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Design workflow access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      session: ctx.session,
+      user: ctx.user,
+      systemRole,
+    },
+  });
+});
+
 // Middleware to check if user is superadmin only
 const isSuperAdmin = t.middleware(async ({ ctx, next }) => {
   if (!ctx.session || !ctx.user) {
@@ -157,4 +183,5 @@ export const protectedProcedure = t.procedure.use(isAuthed);
 export const adminProcedure = t.procedure.use(isAdmin);
 export const commercialProcedure = t.procedure.use(isCommercial);
 export const salesReviewProcedure = t.procedure.use(isSalesReviewer);
+export const designProcedure = t.procedure.use(isDesignReviewer);
 export const superAdminProcedure = t.procedure.use(isSuperAdmin);

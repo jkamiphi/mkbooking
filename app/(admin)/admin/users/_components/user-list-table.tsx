@@ -300,6 +300,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
   const variants: Record<SystemRole, "destructive" | "info" | "warning" | "secondary"> = {
     SUPERADMIN: "destructive",
     STAFF: "info",
+    DESIGNER: "info",
     SALES: "warning",
     CUSTOMER: "secondary",
   };
@@ -307,6 +308,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
   const labels: Record<SystemRole, string> = {
     SUPERADMIN: "Superadmin",
     STAFF: "Personal",
+    DESIGNER: "Diseño",
     SALES: "Ventas",
     CUSTOMER: "Cliente",
   };

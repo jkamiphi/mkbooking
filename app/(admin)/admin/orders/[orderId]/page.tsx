@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { AdminConfirmButton } from "./_components/admin-confirm-button";
 import { DraftEditor } from "./_components/draft-editor";
 import { SalesReviewPanel } from "./_components/sales-review-panel";
+import { DesignTaskPanel } from "./_components/design-task-panel";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 import { CreativesModule } from "@/components/orders/creatives-module";
 import { PurchaseOrderModule } from "@/components/orders/purchase-order-module";
@@ -42,6 +43,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "info" | "warning"
 export default async function AdminOrderDetailPage({ params }: PageProps) {
     const { orderId } = await params;
     const caller = await createServerTRPCCaller();
+    const profile = await caller.userProfile.current();
 
     const order = await caller.orders.get({ id: orderId }).catch((error: unknown) => {
         if (error instanceof TRPCError && error.code === "NOT_FOUND") {
@@ -179,7 +181,10 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
                     {/* Sidebar: Totals & Actions */}
                     <div className="space-y-5">
-                        <SalesReviewPanel orderId={order.id} />
+                        <DesignTaskPanel orderId={order.id} />
+                        {profile && profile.systemRole !== "DESIGNER" ? (
+                            <SalesReviewPanel orderId={order.id} />
+                        ) : null}
 
                         <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
                             <h2 className="mb-4 text-sm font-semibold text-neutral-900">Resumen Financiero</h2>
@@ -209,13 +214,9 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
                             {order.status === "CLIENT_APPROVED" && (
                                 <div className="mt-6 pt-6 border-t border-neutral-100">
-                                    {order.salesReviewStatus !== "APPROVED" && (
-                                        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                                            La validación de Ventas aún no está aprobada. Puedes confirmar la orden, pero se registrará advertencia.
-                                        </div>
-                                    )}
                                     <p className="mb-4 text-xs text-neutral-500 text-center">
-                                        El cliente ya aprobó esta cotización. Al confirmar, se generarán los bloqueos activos en el inventario.
+                                        El cliente ya aprobó esta cotización. Al confirmar, se generarán los bloqueos
+                                        activos en inventario y luego Ventas podrá validar comercialmente.
                                     </p>
                                     <AdminConfirmButton orderId={order.id} />
                                 </div>
@@ -228,6 +229,9 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                                     </span>
                                     <span className="mt-1 block text-xs text-green-700">
                                         Por {order.companyConfirmBy?.firstName} {order.companyConfirmBy?.lastName} el {formatDate(order.companyConfirmedAt)}
+                                    </span>
+                                    <span className="mt-1 block text-xs text-green-700">
+                                        Siguiente paso: validación comercial de Ventas para habilitar Diseño.
                                     </span>
                                 </div>
                             )}

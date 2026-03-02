@@ -374,7 +374,7 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
               <span className="font-medium">{displayName}</span>
             </p>
             <div className="space-y-2 mb-6">
-              {(["CUSTOMER", "STAFF", "SALES", "SUPERADMIN"] as SystemRole[]).map(
+              {(["CUSTOMER", "STAFF", "DESIGNER", "SALES", "SUPERADMIN"] as SystemRole[]).map(
                 (role) => (
                   <label
                     key={role}
@@ -398,6 +398,8 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
                           ? "Superadmin"
                           : role === "STAFF"
                             ? "Staff"
+                            : role === "DESIGNER"
+                              ? "Diseñador"
                             : role === "SALES"
                               ? "Ventas"
                             : "Customer"}
@@ -407,6 +409,8 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
                           ? "Full platform access"
                           : role === "STAFF"
                             ? "Limited admin access"
+                            : role === "DESIGNER"
+                              ? "Design workflow access for proofs and artwork review"
                             : role === "SALES"
                               ? "Commercial review access for orders and requests"
                             : "Regular user access"}
@@ -455,6 +459,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
     SUPERADMIN:
       "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400",
     STAFF: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400",
+    DESIGNER: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400",
     SALES: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400",
     CUSTOMER:
       "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400",
@@ -463,6 +468,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
   const labels: Record<SystemRole, string> = {
     SUPERADMIN: "Superadmin",
     STAFF: "Staff",
+    DESIGNER: "Diseño",
     SALES: "Ventas",
     CUSTOMER: "Customer",
   };
@@ -470,7 +476,8 @@ function RoleBadge({ role }: { role: SystemRole }) {
   const descriptions: Record<SystemRole, string> = {
     SUPERADMIN: "Full platform access - can manage all settings and users",
     STAFF: "Limited admin access - can view and manage users",
-    SALES: "Commercial access - can validate arts and purchase orders",
+    DESIGNER: "Design workflow access - can review artworks and publish color proofs",
+    SALES: "Commercial access - can validate orders and purchase orders",
     CUSTOMER: "Regular user - can only access customer features",
   };
 
