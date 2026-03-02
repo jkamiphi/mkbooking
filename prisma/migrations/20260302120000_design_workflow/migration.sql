@@ -132,12 +132,11 @@ SELECT
       THEN 'CREATE_FROM_SCRATCH'::"order_design_task_status"
       ELSE 'REVIEW'::"order_design_task_status"
     END,
-    CURRENT_TIMESTAMP + INTERVAL '48 hours',
+    COALESCE(o."companyConfirmedAt", CURRENT_TIMESTAMP) + INTERVAL '48 hours',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
 FROM "order" o
 WHERE o."status" = 'confirmed'
-  AND o."salesReviewStatus" = 'APPROVED'
   AND NOT EXISTS (
     SELECT 1
     FROM "order_design_task" dt
