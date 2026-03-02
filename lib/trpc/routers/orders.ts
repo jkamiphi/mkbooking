@@ -844,6 +844,17 @@ export const ordersRouter = router({
         )
         .mutation(async ({ input, ctx }) => {
             const actor = await resolveSalesReviewActor(ctx.user.id);
+            const actorProfile = await db.userProfile.findUnique({
+                where: { id: actor.profileId },
+                select: { systemRole: true },
+            });
+
+            if (!actorProfile) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "User profile not found",
+                });
+            }
 
             const order = await db.order.findUnique({
                 where: { id: input.orderId },
@@ -855,6 +866,29 @@ export const ordersRouter = router({
                     code: "NOT_FOUND",
                     message: "Order not found",
                 });
+            }
+
+            const canOverrideClientArtworkLock =
+                actorProfile.systemRole === "SUPERADMIN" ||
+                actorProfile.systemRole === "STAFF" ||
+                actorProfile.systemRole === "DESIGNER";
+
+            if (!canOverrideClientArtworkLock) {
+                const existingDesignProof = await db.orderCreative.findFirst({
+                    where: {
+                        orderId: input.orderId,
+                        creativeKind: "DESIGN_PROOF",
+                    },
+                    select: { id: true },
+                });
+
+                if (existingDesignProof) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message:
+                            "Ya existe una prueba de diseño. Desde aquí solo puedes aprobar o solicitar ajustes.",
+                    });
+                }
             }
 
             const targetLineItemId = input.lineItemId ?? null;

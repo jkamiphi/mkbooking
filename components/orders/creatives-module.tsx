@@ -126,6 +126,9 @@ export function CreativesModule({
   const { data: profile } = trpc.userProfile.me.useQuery();
   const creativesQuery = trpc.orders.getCreatives.useQuery({ orderId });
   const taskQuery = trpc.design.byOrder.useQuery({ orderId });
+  const hasPublishedProof = (creativesQuery.data ?? []).some(
+    (creative) => creative.creativeKind === "DESIGN_PROOF"
+  );
 
   const isDesignReviewer =
     profile?.systemRole === "SUPERADMIN" ||
@@ -133,6 +136,7 @@ export function CreativesModule({
     profile?.systemRole === "DESIGNER";
   const isDesignTaskBlockedBySales = Boolean(taskQuery.data?.isBlockedBySales);
   const isDesignerSurface = mode === "designer";
+  const isClientSurface = mode === "client";
   const isAdminSurface = mode === "admin";
 
   const canReviewClientArtwork =
@@ -141,7 +145,12 @@ export function CreativesModule({
     !isDesignTaskBlockedBySales &&
     (isDesignerSurface || isAdminSurface);
   const canUploadProofs = isDesignReviewer && !isDesignTaskBlockedBySales && !readOnly;
-  const canUploadClientArtwork = !readOnly && !isDesignerSurface;
+  const isClientArtworkLocked =
+    isClientSurface && (Boolean(taskQuery.data?.clientArtworkLocked) || hasPublishedProof);
+  const canUploadClientArtwork =
+    !readOnly &&
+    !isDesignerSurface &&
+    (!isClientSurface || Boolean(taskQuery.data?.canClientUploadArtwork ?? true));
   const canDesignerRespondToProof =
     isDesignerSurface && isDesignReviewer && !isDesignTaskBlockedBySales;
 
@@ -431,6 +440,13 @@ export function CreativesModule({
         </h2>
 
         <div className="space-y-6">
+          {isClientArtworkLocked ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Ya hay una prueba de diseño publicada; ahora solo puedes aprobarla o solicitar
+              ajustes.
+            </div>
+          ) : null}
+
           <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
             <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>

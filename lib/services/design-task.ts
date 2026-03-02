@@ -840,8 +840,27 @@ export async function getDesignTaskByOrder(orderId: string) {
     return null;
   }
 
+  const latestProof = await db.orderCreative.findFirst({
+    where: {
+      orderId,
+      creativeKind: "DESIGN_PROOF",
+    },
+    orderBy: {
+      version: "desc",
+    },
+    select: {
+      version: true,
+    },
+  });
+
+  const latestProofVersion = latestProof?.version ?? null;
+  const clientArtworkLocked = latestProofVersion !== null;
+
   return {
     ...task,
+    latestProofVersion,
+    clientArtworkLocked,
+    canClientUploadArtwork: !clientArtworkLocked,
     isBlockedBySales: isDesignTaskBlockedBySalesReviewStatus(task.order.salesReviewStatus),
   };
 }
