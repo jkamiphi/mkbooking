@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { UserSidebar } from "@/components/user/user-sidebar";
@@ -14,6 +15,15 @@ export default async function ProtectedLayout({
 
   if (!session) {
     redirect("/login");
+  }
+
+  const profile = await db.userProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { systemRole: true },
+  });
+
+  if (profile?.systemRole === "INSTALLER") {
+    redirect("/installers/tasks");
   }
 
   return (

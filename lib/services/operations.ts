@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { Prisma, OperationalWorkOrderStatus } from "@prisma/client";
 import { z } from "zod";
+import { ensureChecklistForWorkOrder } from "@/lib/services/installer-checklist";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -421,6 +422,8 @@ export async function createOperationalWorkOrdersForPrintCompletion(
       },
     });
     createdCount += 1;
+
+    await ensureChecklistForWorkOrder(client, created.id);
 
     await createOperationalWorkOrderEvent(client, {
       workOrderId: created.id,

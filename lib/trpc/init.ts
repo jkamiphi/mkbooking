@@ -209,6 +209,33 @@ const isOperationsOperator = t.middleware(async ({ ctx, next }) => {
   });
 });
 
+// Middleware for installer workflow actions
+const isInstaller = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.session || !ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const profile = await ctx.db.userProfile.findUnique({
+    where: { userId: ctx.user.id },
+    select: { systemRole: true, isActive: true },
+  });
+
+  if (!profile || profile.systemRole !== "INSTALLER" || !profile.isActive) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Installer access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      session: ctx.session,
+      user: ctx.user,
+      systemRole: profile.systemRole,
+    },
+  });
+});
+
 // Middleware to check if user is superadmin only
 const isSuperAdmin = t.middleware(async ({ ctx, next }) => {
   if (!ctx.session || !ctx.user) {
@@ -240,4 +267,5 @@ export const salesReviewProcedure = t.procedure.use(isSalesReviewer);
 export const designProcedure = t.procedure.use(isDesignReviewer);
 export const printProcedure = t.procedure.use(isPrintOperator);
 export const operationsProcedure = t.procedure.use(isOperationsOperator);
+export const installerProcedure = t.procedure.use(isInstaller);
 export const superAdminProcedure = t.procedure.use(isSuperAdmin);

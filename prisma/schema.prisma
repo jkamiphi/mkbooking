@@ -148,6 +148,8 @@ model UserProfile {
   installerCoverageZones   InstallerCoverageZone[]    @relation("InstallerCoverageInstaller")
   assignedOperationalWorkOrders OrderOperationalWorkOrder[] @relation("OperationalWorkOrderAssignee")
   createdOperationalWorkOrders  OrderOperationalWorkOrder[] @relation("OperationalWorkOrderCreator")
+  checkedOperationalChecklistItems OrderOperationalChecklistItem[] @relation("OperationalChecklistItemChecker")
+  uploadedOperationalWorkOrderEvidences OrderOperationalWorkOrderEvidence[] @relation("OperationalWorkOrderEvidenceUploader")
   operationalWorkOrderEvents     OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventActor")
   operationalWorkOrderReassignmentsFrom OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventFromInstaller")
   operationalWorkOrderReassignmentsTo   OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventToInstaller")
@@ -1493,6 +1495,8 @@ model OrderOperationalWorkOrder {
   printTask OrderPrintTask @relation(fields: [printTaskId], references: [id], onDelete: Cascade)
   assignedInstaller UserProfile? @relation("OperationalWorkOrderAssignee", fields: [assignedInstallerId], references: [id], onDelete: SetNull)
   createdBy UserProfile? @relation("OperationalWorkOrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  checklistItems OrderOperationalChecklistItem[]
+  evidences OrderOperationalWorkOrderEvidence[]
   events OrderOperationalWorkOrderEvent[]
 
   @@unique([printTaskId, lineItemId, printTaskCompletedAt])
@@ -1503,6 +1507,62 @@ model OrderOperationalWorkOrder {
   @@index([closedAt])
   @@index([status])
   @@map("order_operational_work_order")
+}
+
+model OrderOperationalChecklistItem {
+  id String @id @default(cuid())
+
+  workOrderId String
+  code String
+  label String
+  isRequired Boolean @default(true)
+  isChecked Boolean @default(false)
+  checkedAt DateTime?
+  checkedById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workOrder OrderOperationalWorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  checkedBy UserProfile? @relation("OperationalChecklistItemChecker", fields: [checkedById], references: [id], onDelete: SetNull)
+
+  @@unique([workOrderId, code])
+  @@index([workOrderId])
+  @@index([isChecked])
+  @@index([checkedById])
+  @@map("order_operational_checklist_item")
+}
+
+model OrderOperationalWorkOrderEvidence {
+  id String @id @default(cuid())
+
+  workOrderId String
+  fileUrl String
+  fileName String
+  fileType String
+  fileSize Int
+  capturedAt DateTime?
+  receivedAt DateTime @default(now())
+  capturedLatitude Decimal? @db.Decimal(9, 6)
+  capturedLongitude Decimal? @db.Decimal(9, 6)
+  expectedLatitude Decimal? @db.Decimal(9, 6)
+  expectedLongitude Decimal? @db.Decimal(9, 6)
+  distanceMeters Decimal? @db.Decimal(10, 2)
+  withinExpectedRadius Boolean?
+  radiusMeters Int @default(250)
+  geoOverrideReason String? @db.Text
+  notes String? @db.Text
+  metadata Json?
+  uploadedById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workOrder OrderOperationalWorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  uploadedBy UserProfile? @relation("OperationalWorkOrderEvidenceUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([workOrderId, receivedAt])
+  @@index([uploadedById])
+  @@index([withinExpectedRadius])
+  @@map("order_operational_work_order_evidence")
 }
 
 model OrderOperationalWorkOrderEvent {

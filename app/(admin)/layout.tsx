@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
+import { resolvePostLoginPathByRole } from "@/lib/navigation/role-home";
 import { AdminSidebar } from "./_components/admin-sidebar";
 import { AdminHeader } from "./_components/admin-header";
 import type { SystemRole } from "@prisma/client";
@@ -24,8 +25,7 @@ export default async function AdminLayout({
       profile.systemRole
     )
   ) {
-    // Redirect customers to their dashboard
-    redirect("/profile");
+    redirect(resolvePostLoginPathByRole(profile?.systemRole));
   }
 
   return (

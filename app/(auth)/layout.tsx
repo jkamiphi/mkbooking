@@ -1,4 +1,6 @@
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { resolvePostLoginPathByRole } from "@/lib/navigation/role-home";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -11,9 +13,13 @@ export default async function AuthLayout({
     headers: await headers(),
   });
 
-  // Redirect to profile if already logged in
+  // Redirect authenticated users to their role home
   if (session) {
-    redirect("/profile");
+    const profile = await db.userProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { systemRole: true },
+    });
+    redirect(resolvePostLoginPathByRole(profile?.systemRole));
   }
 
   return (

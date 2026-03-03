@@ -33,7 +33,13 @@ export function LoginForm() {
         return;
       }
 
-      router.push("/profile");
+      const redirectResponse = await fetch("/api/auth/post-login-path", {
+        method: "GET",
+      });
+      const redirectData = (await redirectResponse.json()) as { path?: string };
+      const nextPath = redirectData.path || "/profile";
+
+      router.push(nextPath);
       router.refresh();
     } catch {
       setError("Ocurrió un error inesperado");

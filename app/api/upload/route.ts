@@ -27,7 +27,8 @@ function isImageOnlyScope(scope: string | null): boolean {
     scope === "inventory-zone" ||
     scope === "inventory-structure-type" ||
     scope === "inventory-asset-image" ||
-    scope === "inventory-face-image"
+    scope === "inventory-face-image" ||
+    scope === "orders-operational-evidence"
   );
 }
 
