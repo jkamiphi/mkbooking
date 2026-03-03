@@ -8,14 +8,14 @@ BEGIN
     SELECT 1
     FROM pg_class
     WHERE relkind = 'i'
-      AND relname = 'order_operational_work_order_printTaskId_lineItemId_printTaskCo'
+      AND relname = 'order_operational_work_order_evidence_workOrderId_receivedAt_id'
   ) AND NOT EXISTS (
     SELECT 1
     FROM pg_class
     WHERE relkind = 'i'
-      AND relname = 'order_operational_work_order_printTaskId_lineItemId_printTa_key'
+      AND relname = 'order_operational_work_order_evidence_workOrderId_receivedA_idx'
   ) THEN
-    ALTER INDEX "order_operational_work_order_printTaskId_lineItemId_printTaskCo"
-      RENAME TO "order_operational_work_order_printTaskId_lineItemId_printTa_key";
+    ALTER INDEX "order_operational_work_order_evidence_workOrderId_receivedAt_id"
+      RENAME TO "order_operational_work_order_evidence_workOrderId_receivedA_idx";
   END IF;
 END $$;
