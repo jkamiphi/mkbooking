@@ -26,7 +26,7 @@ export function OrderDetailTabs({
           Seguimiento
         </TabsTrigger>
         <TabsTrigger value="design" className="px-4 py-2 text-sm">
-          Diseno
+          Diseño
         </TabsTrigger>
       </TabsList>
       <TabsContent value="detail">{detailContent}</TabsContent>

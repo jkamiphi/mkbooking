@@ -27,13 +27,15 @@ function formatDateTime(value: Date | string) {
 
 function notificationTypeLabel(type: string) {
   if (type === "ORDER_CONFIRMED") return "Orden confirmada";
-  if (type === "SALES_REVIEW_APPROVED") return "Validacion ventas aprobada";
-  if (type === "SALES_REVIEW_CHANGES_REQUESTED") return "Ventas solicito cambios";
-  if (type === "DESIGN_PROOF_PUBLISHED") return "Prueba de diseno publicada";
-  if (type === "DESIGN_RESPONSE_APPROVED") return "Aprobacion de diseno";
-  if (type === "DESIGN_RESPONSE_CHANGES_REQUESTED") return "Cambios de diseno";
-  if (type === "PRINT_STARTED") return "Impresion iniciada";
-  if (type === "PRINT_COMPLETED") return "Impresion completada";
+  if (type === "SALES_REVIEW_APPROVED") return "Validación ventas aprobada";
+  if (type === "SALES_REVIEW_CHANGES_REQUESTED")
+    return "Ventas solicitó cambios";
+  if (type === "DESIGN_PROOF_PUBLISHED") return "Prueba de diseño publicada";
+  if (type === "DESIGN_RESPONSE_APPROVED") return "Aprobación de diseño";
+  if (type === "DESIGN_RESPONSE_CHANGES_REQUESTED")
+    return "Cambios de diseño solicitados";
+  if (type === "PRINT_STARTED") return "Impresión iniciada";
+  if (type === "PRINT_COMPLETED") return "Impresión completada";
   return type;
 }
 
@@ -66,7 +68,9 @@ export function NotificationsInbox() {
         utils.notifications.unreadCount.invalidate(),
       ]);
       if (result.updatedCount > 0) {
-        toast.success(`${result.updatedCount} notificaciones marcadas como leidas.`);
+        toast.success(
+          `${result.updatedCount} notificaciones marcadas como leidas.`,
+        );
       }
     },
     onError: (error) => {
@@ -78,7 +82,7 @@ export function NotificationsInbox() {
 
   const notifications = useMemo(
     () => notificationsQuery.data?.items ?? [],
-    [notificationsQuery.data?.items]
+    [notificationsQuery.data?.items],
   );
 
   async function openNotification(notification: {
@@ -109,9 +113,11 @@ export function NotificationsInbox() {
       <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 pb-4">
           <div>
-            <h2 className="text-sm font-semibold text-neutral-900">Bandeja in-app</h2>
+            <h2 className="text-sm font-semibold text-neutral-900">
+              Bandeja in-app
+            </h2>
             <p className="mt-1 text-xs text-neutral-500">
-              Recibe avances de ventas, diseno e impresion de tus ordenes.
+              Recibe avances de ventas, diseño e impresión de tus órdenes.
             </p>
           </div>
 
@@ -151,7 +157,9 @@ export function NotificationsInbox() {
 
         <div className="mt-4 space-y-2">
           {notificationsQuery.isLoading ? (
-            <p className="text-sm text-neutral-500">Cargando notificaciones...</p>
+            <p className="text-sm text-neutral-500">
+              Cargando notificaciones...
+            </p>
           ) : notifications.length === 0 ? (
             <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/70 p-6 text-center">
               <Bell className="mx-auto h-5 w-5 text-neutral-400" />
@@ -174,8 +182,12 @@ export function NotificationsInbox() {
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-neutral-900">{notification.title}</p>
-                    <p className="mt-1 text-xs text-neutral-600">{notification.message}</p>
+                    <p className="text-sm font-semibold text-neutral-900">
+                      {notification.title}
+                    </p>
+                    <p className="mt-1 text-xs text-neutral-600">
+                      {notification.message}
+                    </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
                       <span className="inline-flex items-center gap-1">
                         <Clock3 className="h-3.5 w-3.5" />
@@ -186,7 +198,9 @@ export function NotificationsInbox() {
                       {!notification.isRead ? (
                         <>
                           <span>·</span>
-                          <span className="font-semibold text-[#0359A8]">Nueva</span>
+                          <span className="font-semibold text-[#0359A8]">
+                            Nueva
+                          </span>
                         </>
                       ) : null}
                     </div>

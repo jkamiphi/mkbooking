@@ -80,9 +80,11 @@ function designEventLabel(eventType: string) {
   if (eventType === "STATUS_CHANGED") return "Cambio de estado";
   if (eventType === "PROOF_UPLOADED") return "Prueba publicada";
   if (eventType === "CLIENT_APPROVED") return "Cliente aprueba";
-  if (eventType === "CLIENT_CHANGES_REQUESTED") return "Cliente solicita cambios";
-  if (eventType === "DESIGNER_APPROVED") return "Diseno aprueba";
-  if (eventType === "DESIGNER_CHANGES_REQUESTED") return "Diseno solicita cambios";
+  if (eventType === "CLIENT_CHANGES_REQUESTED")
+    return "Cliente solicita cambios";
+  if (eventType === "DESIGNER_APPROVED") return "Diseño aprueba";
+  if (eventType === "DESIGNER_CHANGES_REQUESTED")
+    return "Diseño solicita cambios";
   return eventType;
 }
 
@@ -127,7 +129,7 @@ export function CreativesModule({
   const creativesQuery = trpc.orders.getCreatives.useQuery({ orderId });
   const taskQuery = trpc.design.byOrder.useQuery({ orderId });
   const hasPublishedProof = (creativesQuery.data ?? []).some(
-    (creative) => creative.creativeKind === "DESIGN_PROOF"
+    (creative) => creative.creativeKind === "DESIGN_PROOF",
   );
 
   const isDesignReviewer =
@@ -145,13 +147,18 @@ export function CreativesModule({
     !isDesignTaskBlockedBySales &&
     (isDesignerSurface || isAdminSurface);
   const canUploadProofs =
-    isDesignReviewer && !isDesignTaskBlockedBySales && !readOnly && !isClientSurface;
+    isDesignReviewer &&
+    !isDesignTaskBlockedBySales &&
+    !readOnly &&
+    !isClientSurface;
   const isClientArtworkLocked =
-    isClientSurface && (Boolean(taskQuery.data?.clientArtworkLocked) || hasPublishedProof);
+    isClientSurface &&
+    (Boolean(taskQuery.data?.clientArtworkLocked) || hasPublishedProof);
   const canUploadClientArtwork =
     !readOnly &&
     !isDesignerSurface &&
-    (!isClientSurface || Boolean(taskQuery.data?.canClientUploadArtwork ?? true));
+    (!isClientSurface ||
+      Boolean(taskQuery.data?.canClientUploadArtwork ?? true));
 
   const addCreative = trpc.orders.addCreative.useMutation({
     onSuccess: async () => {
@@ -160,7 +167,8 @@ export function CreativesModule({
         utils.design.byOrder.invalidate({ orderId }),
       ]);
       toast.success("Arte subido exitosamente", {
-        description: "El equipo de diseño revisará el creativo y dejará trazabilidad.",
+        description:
+          "El equipo de diseño revisará el creativo y dejará trazabilidad.",
       });
     },
     onError: (error) => {
@@ -232,18 +240,22 @@ export function CreativesModule({
       ]);
       setDesignerDecisionDialogOpen(false);
       setDesignerDecisionNotes("");
-      toast.success("Respuesta de diseno registrada.");
+      toast.success("Respuesta de diseño registrada.");
     },
     onError: (error) => {
-      toast.error("No se pudo registrar la respuesta de diseno", {
+      toast.error("No se pudo registrar la respuesta de diseño", {
         description: error.message,
       });
     },
   });
 
-  const [uploadingTargetId, setUploadingTargetId] = useState<string | null>(null);
-  const [reviewingCreative, setReviewingCreative] = useState<CreativeItem | null>(null);
-  const [reviewDecision, setReviewDecision] = useState<SalesReviewDecision>("APPROVED");
+  const [uploadingTargetId, setUploadingTargetId] = useState<string | null>(
+    null,
+  );
+  const [reviewingCreative, setReviewingCreative] =
+    useState<CreativeItem | null>(null);
+  const [reviewDecision, setReviewDecision] =
+    useState<SalesReviewDecision>("APPROVED");
   const [reviewNotes, setReviewNotes] = useState("");
 
   const [urlContext, setUrlContext] = useState<UrlUploadContext>({
@@ -255,35 +267,47 @@ export function CreativesModule({
   const [urlLabel, setUrlLabel] = useState("");
 
   const [proofDecisionDialogOpen, setProofDecisionDialogOpen] = useState(false);
-  const [proofDecisionType, setProofDecisionType] = useState<"APPROVED" | "CHANGES_REQUESTED">(
-    "APPROVED"
-  );
+  const [proofDecisionType, setProofDecisionType] = useState<
+    "APPROVED" | "CHANGES_REQUESTED"
+  >("APPROVED");
   const [proofDecisionNotes, setProofDecisionNotes] = useState("");
-  const [designerDecisionDialogOpen, setDesignerDecisionDialogOpen] = useState(false);
-  const [designerDecisionType, setDesignerDecisionType] = useState<DesignerDecision>("APPROVED");
+  const [designerDecisionDialogOpen, setDesignerDecisionDialogOpen] =
+    useState(false);
+  const [designerDecisionType, setDesignerDecisionType] =
+    useState<DesignerDecision>("APPROVED");
   const [designerDecisionNotes, setDesignerDecisionNotes] = useState("");
 
-  const creativesData = useMemo(() => creativesQuery.data ?? [], [creativesQuery.data]);
+  const creativesData = useMemo(
+    () => creativesQuery.data ?? [],
+    [creativesQuery.data],
+  );
 
   const clientArtworks = useMemo(
-    () => creativesData.filter((creative) => creative.creativeKind === "CLIENT_ARTWORK"),
-    [creativesData]
+    () =>
+      creativesData.filter(
+        (creative) => creative.creativeKind === "CLIENT_ARTWORK",
+      ),
+    [creativesData],
   );
   const proofs = useMemo(
-    () => creativesData.filter((creative) => creative.creativeKind === "DESIGN_PROOF"),
-    [creativesData]
+    () =>
+      creativesData.filter(
+        (creative) => creative.creativeKind === "DESIGN_PROOF",
+      ),
+    [creativesData],
   );
 
-  const generalCreatives = clientArtworks.filter((creative) => !creative.lineItemId);
-  const creativesByLineItem = clientArtworks.reduce<Record<string, CreativeItem[]>>(
-    (acc, creative) => {
-      if (!creative.lineItemId) return acc;
-      if (!acc[creative.lineItemId]) acc[creative.lineItemId] = [];
-      acc[creative.lineItemId].push(creative);
-      return acc;
-    },
-    {}
+  const generalCreatives = clientArtworks.filter(
+    (creative) => !creative.lineItemId,
   );
+  const creativesByLineItem = clientArtworks.reduce<
+    Record<string, CreativeItem[]>
+  >((acc, creative) => {
+    if (!creative.lineItemId) return acc;
+    if (!acc[creative.lineItemId]) acc[creative.lineItemId] = [];
+    acc[creative.lineItemId].push(creative);
+    return acc;
+  }, {});
 
   async function uploadClientArtworkFile(file: File, lineItemId?: string) {
     const targetId = lineItemId || ORDER_GENERAL_UPLOAD_TARGET;
@@ -341,13 +365,13 @@ export function CreativesModule({
       urlLabel.trim() ||
       resolveExternalFileName(
         normalizedUrl,
-        urlContext.kind === "DESIGN_PROOF" ? "Prueba externa" : "Arte externo"
+        urlContext.kind === "DESIGN_PROOF" ? "Prueba externa" : "Arte externo",
       );
 
     setUploadingTargetId(
       urlContext.kind === "DESIGN_PROOF"
         ? "design-proof"
-        : urlContext.lineItemId || ORDER_GENERAL_UPLOAD_TARGET
+        : urlContext.lineItemId || ORDER_GENERAL_UPLOAD_TARGET,
     );
 
     try {
@@ -385,7 +409,9 @@ export function CreativesModule({
   function openReviewDialog(creative: CreativeItem) {
     setReviewingCreative(creative);
     setReviewNotes(creative.reviewNotes ?? "");
-    setReviewDecision(creative.status === "REJECTED" ? "CHANGES_REQUESTED" : "APPROVED");
+    setReviewDecision(
+      creative.status === "REJECTED" ? "CHANGES_REQUESTED" : "APPROVED",
+    );
   }
 
   function submitReview() {
@@ -399,7 +425,10 @@ export function CreativesModule({
   }
 
   function submitProofDecision() {
-    if (proofDecisionType === "CHANGES_REQUESTED" && proofDecisionNotes.trim().length === 0) {
+    if (
+      proofDecisionType === "CHANGES_REQUESTED" &&
+      proofDecisionNotes.trim().length === 0
+    ) {
       toast.error("Incluye comentarios para solicitar ajustes.");
       return;
     }
@@ -412,7 +441,10 @@ export function CreativesModule({
   }
 
   function submitDesignerDecision() {
-    if (designerDecisionType === "CHANGES_REQUESTED" && designerDecisionNotes.trim().length === 0) {
+    if (
+      designerDecisionType === "CHANGES_REQUESTED" &&
+      designerDecisionNotes.trim().length === 0
+    ) {
       toast.error("Incluye comentarios para solicitar ajustes.");
       return;
     }
@@ -456,15 +488,17 @@ export function CreativesModule({
         <div className="space-y-6">
           {isClientArtworkLocked ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Ya hay una prueba de diseño publicada; ahora solo puedes aprobarla o solicitar
-              ajustes.
+              Ya hay una prueba de diseño publicada; ahora solo puedes aprobarla
+              o solicitar ajustes.
             </div>
           ) : null}
 
           <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
             <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h3 className="text-sm font-medium text-neutral-900">Artes del cliente (generales)</h3>
+                <h3 className="text-sm font-medium text-neutral-900">
+                  Artes del cliente (generales)
+                </h3>
                 <p className="mt-0.5 text-xs text-neutral-500">
                   Archivo o URL pública (Dropbox, Drive u otro enlace seguro).
                 </p>
@@ -473,8 +507,14 @@ export function CreativesModule({
                 <div className="flex gap-2">
                   <UploadButton
                     onUpload={(file) => uploadClientArtworkFile(file)}
-                    isUploading={uploadingTargetId === ORDER_GENERAL_UPLOAD_TARGET}
-                    label={generalCreatives.length > 0 ? "Subir otro archivo" : "Subir archivo"}
+                    isUploading={
+                      uploadingTargetId === ORDER_GENERAL_UPLOAD_TARGET
+                    }
+                    label={
+                      generalCreatives.length > 0
+                        ? "Subir otro archivo"
+                        : "Subir archivo"
+                    }
                   />
                   <Button
                     size="sm"
@@ -503,7 +543,10 @@ export function CreativesModule({
             const hasCreative = Boolean(itemCreative);
 
             return (
-              <div key={item.id} className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
+              <div
+                key={item.id}
+                className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4"
+              >
                 <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                   <div>
                     <h3 className="text-sm font-medium text-neutral-900">
@@ -511,14 +554,17 @@ export function CreativesModule({
                         `Cara ${item.face?.code} - ${item.face?.asset?.structureType?.name}`}
                     </h3>
                     <p className="mt-0.5 text-xs text-neutral-500">
-                      {item.face?.asset?.zone?.name || "Ubicación no disponible"}
+                      {item.face?.asset?.zone?.name ||
+                        "Ubicación no disponible"}
                     </p>
                   </div>
 
                   {canUploadClientArtwork ? (
                     <div className="flex gap-2">
                       <UploadButton
-                        onUpload={(file) => uploadClientArtworkFile(file, item.id)}
+                        onUpload={(file) =>
+                          uploadClientArtworkFile(file, item.id)
+                        }
                         isUploading={uploadingTargetId === item.id}
                         disabled={hasCreative}
                         label={hasCreative ? "Arte cargado" : "Subir archivo"}
@@ -550,9 +596,12 @@ export function CreativesModule({
           <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
             <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h3 className="text-sm font-medium text-neutral-900">Pruebas de color (diseño)</h3>
+                <h3 className="text-sm font-medium text-neutral-900">
+                  Pruebas de color (diseño)
+                </h3>
                 <p className="mt-0.5 text-xs text-neutral-500">
-                  El equipo de diseño publica aquí las pruebas para aprobación del cliente.
+                  El equipo de diseño publica aquí las pruebas para aprobación
+                  del cliente.
                 </p>
               </div>
 
@@ -574,13 +623,21 @@ export function CreativesModule({
 
             {taskQuery.data ? (
               <div className="mb-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-600">
-                Estado de tarea: <span className="font-medium text-neutral-900">{taskQuery.data.status}</span>
+                Estado de tarea:{" "}
+                <span className="font-medium text-neutral-900">
+                  {taskQuery.data.status}
+                </span>
                 <span className="mx-2">·</span>
-                SLA: <span className="font-medium text-neutral-900">{formatDateTime(taskQuery.data.slaDueAt)}</span>
+                SLA:{" "}
+                <span className="font-medium text-neutral-900">
+                  {formatDateTime(taskQuery.data.slaDueAt)}
+                </span>
                 {taskQuery.data.isBlockedBySales ? (
                   <>
                     <span className="mx-2">·</span>
-                    <span className="font-medium text-amber-700">Bloqueada por Ventas</span>
+                    <span className="font-medium text-amber-700">
+                      Bloqueada por Ventas
+                    </span>
                   </>
                 ) : null}
               </div>
@@ -631,7 +688,8 @@ export function CreativesModule({
             {canDesignerRespondToProof ? (
               <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
                 <p className="text-xs text-blue-900">
-                  Puedes marcar aprobacion final de diseno o solicitar ajustes adicionales.
+                  Puedes marcar aprobación final de diseño o solicitar ajustes
+                  adicionales.
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button
@@ -641,7 +699,7 @@ export function CreativesModule({
                       setDesignerDecisionDialogOpen(true);
                     }}
                   >
-                    Aprobar como diseno
+                    Aprobar como diseño
                   </Button>
                   <Button
                     size="sm"
@@ -660,10 +718,15 @@ export function CreativesModule({
 
           {designTimeline.length > 0 ? (
             <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
-              <h3 className="mb-3 text-sm font-medium text-neutral-900">Discusion y trazabilidad</h3>
+              <h3 className="mb-3 text-sm font-medium text-neutral-900">
+                Discusión y trazabilidad
+              </h3>
               <div className="space-y-2">
                 {designTimeline.slice(0, 12).map((event) => (
-                  <div key={event.id} className="rounded-lg border border-neutral-200 bg-white p-3">
+                  <div
+                    key={event.id}
+                    className="rounded-lg border border-neutral-200 bg-white p-3"
+                  >
                     <p className="text-xs font-medium text-neutral-900">
                       {designEventLabel(event.eventType)}
                     </p>
@@ -676,7 +739,9 @@ export function CreativesModule({
                         : "Sistema"}
                     </p>
                     {event.notes ? (
-                      <p className="mt-1 text-[11px] text-neutral-700">{event.notes}</p>
+                      <p className="mt-1 text-[11px] text-neutral-700">
+                        {event.notes}
+                      </p>
                     ) : null}
                   </div>
                 ))}
@@ -700,15 +765,21 @@ export function CreativesModule({
           <DialogHeader>
             <DialogTitle>Revisión de arte cliente</DialogTitle>
             <DialogDescription>
-              Define el resultado de revisión para este creativo y deja notas para trazabilidad.
+              Define el resultado de revisión para este creativo y deja notas
+              para trazabilidad.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
             <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-              <p className="text-xs font-medium text-neutral-900">{reviewingCreative?.fileName}</p>
+              <p className="text-xs font-medium text-neutral-900">
+                {reviewingCreative?.fileName}
+              </p>
               <p className="mt-1 text-[11px] text-neutral-500">
-                Resultado actual: <CreativeStatusBadge status={reviewingCreative?.status || "PENDING"} />
+                Resultado actual:{" "}
+                <CreativeStatusBadge
+                  status={reviewingCreative?.status || "PENDING"}
+                />
               </p>
             </div>
 
@@ -723,7 +794,11 @@ export function CreativesModule({
               </Button>
               <Button
                 type="button"
-                variant={reviewDecision === "CHANGES_REQUESTED" ? "destructive" : "outline"}
+                variant={
+                  reviewDecision === "CHANGES_REQUESTED"
+                    ? "destructive"
+                    : "outline"
+                }
                 onClick={() => setReviewDecision("CHANGES_REQUESTED")}
               >
                 <AlertTriangle className="mr-1.5 h-4 w-4" />
@@ -773,10 +848,13 @@ export function CreativesModule({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {urlContext.kind === "DESIGN_PROOF" ? "Agregar URL de prueba" : "Agregar URL de arte"}
+              {urlContext.kind === "DESIGN_PROOF"
+                ? "Agregar URL de prueba"
+                : "Agregar URL de arte"}
             </DialogTitle>
             <DialogDescription>
-              Usa un enlace público seguro con formato https:// para registrar el material.
+              Usa un enlace público seguro con formato https:// para registrar
+              el material.
             </DialogDescription>
           </DialogHeader>
 
@@ -791,7 +869,9 @@ export function CreativesModule({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="creative-url-label">Nombre visible (opcional)</Label>
+              <Label htmlFor="creative-url-label">
+                Nombre visible (opcional)
+              </Label>
               <Input
                 id="creative-url-label"
                 value={urlLabel}
@@ -805,7 +885,9 @@ export function CreativesModule({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setUrlContext((prev) => ({ ...prev, open: false }))}
+              onClick={() =>
+                setUrlContext((prev) => ({ ...prev, open: false }))
+              }
             >
               Cancelar
             </Button>
@@ -819,7 +901,10 @@ export function CreativesModule({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={proofDecisionDialogOpen} onOpenChange={setProofDecisionDialogOpen}>
+      <Dialog
+        open={proofDecisionDialogOpen}
+        onOpenChange={setProofDecisionDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -828,12 +913,18 @@ export function CreativesModule({
                 : "Solicitar ajustes de prueba"}
             </DialogTitle>
             <DialogDescription>
-              Esta decisión actualiza el estado de la tarea de diseño de la orden.
+              Esta decisión actualiza el estado de la tarea de diseño de la
+              orden.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-1.5">
-            <Label htmlFor="proof-decision-notes">Notas {proofDecisionType === "CHANGES_REQUESTED" ? "(requeridas)" : "(opcionales)"}</Label>
+            <Label htmlFor="proof-decision-notes">
+              Notas{" "}
+              {proofDecisionType === "CHANGES_REQUESTED"
+                ? "(requeridas)"
+                : "(opcionales)"}
+            </Label>
             <Textarea
               id="proof-decision-notes"
               value={proofDecisionNotes}
@@ -848,32 +939,45 @@ export function CreativesModule({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setProofDecisionDialogOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setProofDecisionDialogOpen(false)}
+            >
               Cancelar
             </Button>
-            <Button onClick={submitProofDecision} disabled={clientDecision.isPending}>
+            <Button
+              onClick={submitProofDecision}
+              disabled={clientDecision.isPending}
+            >
               {clientDecision.isPending ? "Guardando..." : "Confirmar"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={designerDecisionDialogOpen} onOpenChange={setDesignerDecisionDialogOpen}>
+      <Dialog
+        open={designerDecisionDialogOpen}
+        onOpenChange={setDesignerDecisionDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {designerDecisionType === "APPROVED"
-                ? "Aprobacion final de diseno"
-                : "Solicitud de cambios de diseno"}
+                ? "Aprobación final de diseño"
+                : "Solicitud de cambios de diseño"}
             </DialogTitle>
             <DialogDescription>
-              Esta decision forma parte de la aprobacion dual cliente-diseno.
+              Esta decisión forma parte de la aprobación dual cliente-diseño.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-1.5">
             <Label htmlFor="designer-decision-notes">
-              Notas {designerDecisionType === "CHANGES_REQUESTED" ? "(requeridas)" : "(opcionales)"}
+              Notas{" "}
+              {designerDecisionType === "CHANGES_REQUESTED"
+                ? "(requeridas)"
+                : "(opcionales)"}
             </Label>
             <Textarea
               id="designer-decision-notes"
@@ -896,7 +1000,10 @@ export function CreativesModule({
             >
               Cancelar
             </Button>
-            <Button onClick={submitDesignerDecision} disabled={designerDecision.isPending}>
+            <Button
+              onClick={submitDesignerDecision}
+              disabled={designerDecision.isPending}
+            >
               {designerDecision.isPending ? "Guardando..." : "Confirmar"}
             </Button>
           </DialogFooter>
@@ -975,7 +1082,9 @@ function CreativeList({
           <div
             key={creative.id}
             className={`flex flex-wrap items-center justify-between gap-4 rounded-lg border p-3 ${
-              isLatest ? "border-primary/20 bg-primary/5" : "border-neutral-200 bg-white"
+              isLatest
+                ? "border-primary/20 bg-primary/5"
+                : "border-neutral-200 bg-white"
             }`}
           >
             <div className="flex items-center gap-3 overflow-hidden">
@@ -987,9 +1096,13 @@ function CreativeList({
                 )}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-neutral-900">{creative.fileName}</p>
+                <p className="truncate text-xs font-medium text-neutral-900">
+                  {creative.fileName}
+                </p>
                 <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-neutral-500">
-                  <span className="font-semibold text-primary/80">v{creative.version}</span>
+                  <span className="font-semibold text-primary/80">
+                    v{creative.version}
+                  </span>
                   <span>•</span>
                   <span>
                     {creative.sourceType === "EXTERNAL_URL"
@@ -1008,20 +1121,32 @@ function CreativeList({
                     <>
                       <span>•</span>
                       <span>
-                        Revisado por {creative.reviewedBy.user.name} ({formatDateTime(creative.reviewedAt)})
+                        Revisado por {creative.reviewedBy.user.name} (
+                        {formatDateTime(creative.reviewedAt)})
                       </span>
                     </>
                   )}
                 </div>
                 {creative.reviewNotes && (
-                  <p className="mt-1 text-[11px] text-neutral-600">Notas: {creative.reviewNotes}</p>
+                  <p className="mt-1 text-[11px] text-neutral-600">
+                    Notas: {creative.reviewNotes}
+                  </p>
                 )}
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <CreativeStatusBadge status={creative.status} />
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" asChild>
-                <a href={creative.fileUrl} target="_blank" rel="noopener noreferrer">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[10px]"
+                asChild
+              >
+                <a
+                  href={creative.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Ver
                 </a>
               </Button>
@@ -1047,19 +1172,28 @@ function CreativeStatusBadge({ status }: { status: string }) {
   switch (status) {
     case "APPROVED":
       return (
-        <Badge variant="success" className="h-5 gap-1 px-1.5 text-[10px] shadow-sm">
+        <Badge
+          variant="success"
+          className="h-5 gap-1 px-1.5 text-[10px] shadow-sm"
+        >
           <CheckCircle2 className="h-3 w-3" /> Aprobado
         </Badge>
       );
     case "REJECTED":
       return (
-        <Badge variant="destructive" className="h-5 gap-1 px-1.5 text-[10px] shadow-sm">
+        <Badge
+          variant="destructive"
+          className="h-5 gap-1 px-1.5 text-[10px] shadow-sm"
+        >
           <X className="h-3 w-3" /> Requiere cambios
         </Badge>
       );
     default:
       return (
-        <Badge variant="warning" className="h-5 gap-1 px-1.5 text-[10px] shadow-sm">
+        <Badge
+          variant="warning"
+          className="h-5 gap-1 px-1.5 text-[10px] shadow-sm"
+        >
           <Clock className="h-3 w-3" /> En revisión
         </Badge>
       );

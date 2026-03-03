@@ -26,16 +26,21 @@ export default async function AdminDesignOrderPage({ params }: PageProps) {
   const caller = await createServerTRPCCaller();
   const profile = await caller.userProfile.current();
 
-  if (!profile || !["SUPERADMIN", "STAFF", "DESIGNER"].includes(profile.systemRole)) {
+  if (
+    !profile ||
+    !["SUPERADMIN", "STAFF", "DESIGNER"].includes(profile.systemRole)
+  ) {
     redirect("/admin/orders");
   }
 
-  const order = await caller.orders.get({ id: orderId }).catch((error: unknown) => {
-    if (error instanceof TRPCError && error.code === "NOT_FOUND") {
-      notFound();
-    }
-    throw error;
-  });
+  const order = await caller.orders
+    .get({ id: orderId })
+    .catch((error: unknown) => {
+      if (error instanceof TRPCError && error.code === "NOT_FOUND") {
+        notFound();
+      }
+      throw error;
+    });
 
   const creativeLineItems = order.lineItems.map((item) => ({
     id: item.id,
@@ -79,14 +84,16 @@ export default async function AdminDesignOrderPage({ params }: PageProps) {
 
       <AdminPageHeader
         title={`Diseño de Orden ${order.code}`}
-        description="Vista enfocada en artes, pruebas y decisiones cliente-diseno."
+        description="Vista enfocada en artes, pruebas y decisiones cliente-diseño."
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Badge variant="info" className="text-sm">
           {order.status}
         </Badge>
-        <span className="text-sm text-neutral-500">Emitida el {formatDate(order.createdAt)}</span>
+        <span className="text-sm text-neutral-500">
+          Emitida el {formatDate(order.createdAt)}
+        </span>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">

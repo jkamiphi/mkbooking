@@ -11,7 +11,10 @@ import {
   activatePrintTaskAfterDesignClosure,
   reopenPrintTaskAfterDesignReopened,
 } from "@/lib/services/print-task";
-import { createOrderNotifications, NotificationType } from "@/lib/services/notifications";
+import {
+  createOrderNotifications,
+  NotificationType,
+} from "@/lib/services/notifications";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -79,12 +82,12 @@ interface CreateOrEnsureOrderDesignTaskInput {
 }
 
 function resolveInitialTaskStatus(
-  serviceItems: CreateOrEnsureOrderDesignTaskInput["serviceItems"]
+  serviceItems: CreateOrEnsureOrderDesignTaskInput["serviceItems"],
 ): OrderDesignTaskStatus {
   const hasDesignService = serviceItems.some(
     (item) =>
       item.serviceCodeSnapshot === DESIGN_SERVICE_CODE ||
-      item.service?.code === DESIGN_SERVICE_CODE
+      item.service?.code === DESIGN_SERVICE_CODE,
   );
 
   return hasDesignService ? "CREATE_FROM_SCRATCH" : "REVIEW";
@@ -102,7 +105,7 @@ function isDesignTaskBlockedBySalesReviewStatus(status: SalesReviewStatus) {
 function assertDesignTaskNotBlockedBySales(status: SalesReviewStatus) {
   if (isDesignTaskBlockedBySalesReviewStatus(status)) {
     throw new Error(
-      "La tarea de diseno esta bloqueada hasta que Ventas apruebe la validacion de la orden."
+      "La tarea de diseño está bloqueada hasta que Ventas apruebe la validación de la orden.",
     );
   }
 }
@@ -114,7 +117,9 @@ function assertHttpsUrl(url: string) {
       throw new Error();
     }
   } catch {
-    throw new Error("La prueba de color debe ser una URL publica valida con https://.");
+    throw new Error(
+      "La prueba de color debe ser una URL pública válida con https://.",
+    );
   }
 }
 
@@ -141,7 +146,7 @@ export async function createDesignTaskEvent(
     actorId?: string | null;
     notes?: string | null;
     metadata?: Prisma.InputJsonValue | null;
-  }
+  },
 ) {
   return client.orderDesignTaskEvent.create({
     data: {
@@ -158,7 +163,7 @@ export async function createDesignTaskEvent(
 
 export async function ensureOrderDesignTask(
   client: PrismaClientLike,
-  input: CreateOrEnsureOrderDesignTaskInput
+  input: CreateOrEnsureOrderDesignTaskInput,
 ) {
   const existingTask = await client.orderDesignTask.findUnique({
     where: { orderId: input.orderId },
@@ -186,7 +191,8 @@ export async function ensureOrderDesignTask(
     eventType: "TASK_CREATED",
     toStatus: initialStatus,
     actorId: input.createdById ?? null,
-    notes: "Tarea de diseno creada automaticamente al habilitar el flujo de diseno.",
+    notes:
+      "Tarea de diseño creada automáticamente al habilitar el flujo de diseño.",
   });
 
   return createdTask;
@@ -198,7 +204,7 @@ export async function activateDesignTaskAfterSalesApproval(
     orderId: string;
     actorId?: string | null;
     serviceItems: CreateOrEnsureOrderDesignTaskInput["serviceItems"];
-  }
+  },
 ) {
   const now = new Date();
   const existingTask = await client.orderDesignTask.findUnique({
@@ -235,7 +241,7 @@ export async function activateDesignTaskAfterSalesApproval(
     toStatus: existingTask.status,
     actorId: input.actorId ?? null,
     notes:
-      "Tarea de diseno habilitada por aprobacion de Ventas. SLA reiniciado a 48 horas.",
+      "Tarea de diseño habilitada por aprobación de Ventas. SLA reiniciado a 48 horas.",
   });
 
   return updatedTask;
@@ -243,7 +249,7 @@ export async function activateDesignTaskAfterSalesApproval(
 
 async function resolveLatestProofVersion(
   client: PrismaClientLike,
-  orderId: string
+  orderId: string,
 ): Promise<{ id: string; version: number }> {
   const latestProof = await client.orderCreative.findFirst({
     where: {
@@ -268,7 +274,7 @@ async function resolveLatestProofVersion(
 async function applyDesignerDecision(
   client: PrismaClientLike,
   input: z.infer<typeof designerProofDecisionSchema>,
-  actorProfileId: string
+  actorProfileId: string,
 ) {
   const task = await client.orderDesignTask.findUnique({
     where: { orderId: input.orderId },
@@ -286,7 +292,7 @@ async function applyDesignerDecision(
   });
 
   if (!task) {
-    throw new Error("No hay tarea de diseno asociada a esta orden.");
+    throw new Error("No hay tarea de diseño asociada a esta orden.");
   }
 
   assertDesignTaskNotBlockedBySales(task.order.salesReviewStatus);
@@ -322,7 +328,7 @@ async function applyDesignerDecision(
     await reopenPrintTaskAfterDesignReopened(client, {
       orderId: input.orderId,
       actorId: actorProfileId,
-      reason: "Diseno solicito cambios en la prueba final.",
+      reason: "Diseño solicitó cambios en la prueba final.",
     });
 
     const decisionEvent = await createDesignTaskEvent(client, {
@@ -337,8 +343,9 @@ async function applyDesignerDecision(
     await createOrderNotifications(client, {
       orderId: input.orderId,
       type: NotificationType.DESIGN_RESPONSE_CHANGES_REQUESTED,
-      title: `Diseno solicito ajustes en ${task.order.code}`,
-      message: "Se solicitaron cambios en la prueba de diseno para continuar el proceso.",
+      title: `Diseño solicitó ajustes en ${task.order.code}`,
+      message:
+        "Se solicitaron cambios en la prueba de diseño para continuar el proceso.",
       actionPath: `/orders/${input.orderId}?tab=tracking`,
       sourceKey: `order:${input.orderId}:design:${decisionEvent.id}`,
       metadata: {
@@ -391,9 +398,9 @@ async function applyDesignerDecision(
   await createOrderNotifications(client, {
     orderId: input.orderId,
     type: NotificationType.DESIGN_RESPONSE_APPROVED,
-    title: `Diseno aprobo prueba en ${task.order.code}`,
+    title: `Diseño aprobó prueba en ${task.order.code}`,
     message:
-      "Diseno registro una aprobacion sobre la prueba actual. Puedes revisar el seguimiento.",
+      "Diseño registró una aprobación sobre la prueba actual. Puedes revisar el seguimiento.",
     actionPath: `/orders/${input.orderId}?tab=tracking`,
     sourceKey: `order:${input.orderId}:design:${decisionEvent.id}`,
     metadata: {
@@ -409,7 +416,7 @@ async function applyDesignerDecision(
 async function applyClientDecision(
   client: PrismaClientLike,
   input: z.infer<typeof clientProofDecisionSchema>,
-  actorProfileId: string
+  actorProfileId: string,
 ) {
   const task = await client.orderDesignTask.findUnique({
     where: { orderId: input.orderId },
@@ -427,7 +434,7 @@ async function applyClientDecision(
   });
 
   if (!task) {
-    throw new Error("No hay tarea de diseno asociada a esta orden.");
+    throw new Error("No hay tarea de diseño asociada a esta orden.");
   }
 
   assertDesignTaskNotBlockedBySales(task.order.salesReviewStatus);
@@ -462,7 +469,7 @@ async function applyClientDecision(
     await reopenPrintTaskAfterDesignReopened(client, {
       orderId: input.orderId,
       actorId: actorProfileId,
-      reason: "Cliente solicito cambios en la prueba final.",
+      reason: "Cliente solicitó cambios en la prueba final.",
     });
 
     const decisionEvent = await createDesignTaskEvent(client, {
@@ -477,8 +484,8 @@ async function applyClientDecision(
     await createOrderNotifications(client, {
       orderId: input.orderId,
       type: NotificationType.DESIGN_RESPONSE_CHANGES_REQUESTED,
-      title: `Cliente solicito ajustes en ${task.order.code}`,
-      message: "Se solicitaron ajustes en la prueba de diseno.",
+      title: `Cliente solicitó ajustes en ${task.order.code}`,
+      message: "Se solicitaron ajustes en la prueba de diseño.",
       actionPath: `/orders/${input.orderId}?tab=tracking`,
       sourceKey: `order:${input.orderId}:design:${decisionEvent.id}`,
       metadata: {
@@ -531,8 +538,9 @@ async function applyClientDecision(
   await createOrderNotifications(client, {
     orderId: input.orderId,
     type: NotificationType.DESIGN_RESPONSE_APPROVED,
-    title: `Cliente aprobo prueba en ${task.order.code}`,
-    message: "Se registro una aprobacion del cliente sobre la prueba de diseno.",
+    title: `Cliente aprobó prueba en ${task.order.code}`,
+    message:
+      "Se registró una aprobación del cliente sobre la prueba de diseño.",
     actionPath: `/orders/${input.orderId}?tab=tracking`,
     sourceKey: `order:${input.orderId}:design:${decisionEvent.id}`,
     metadata: {
@@ -547,7 +555,7 @@ async function applyClientDecision(
 
 export async function listDesignInbox(
   input: z.infer<typeof designInboxListSchema>,
-  options?: { actorUserId?: string }
+  options?: { actorUserId?: string },
 ) {
   let actorProfileId: string | null = null;
   if (input.mineOnly) {
@@ -620,7 +628,9 @@ export async function listDesignInbox(
   const now = Date.now();
   const normalizedTasks = tasks.map((task) => ({
     ...task,
-    isBlockedBySales: isDesignTaskBlockedBySalesReviewStatus(task.order.salesReviewStatus),
+    isBlockedBySales: isDesignTaskBlockedBySalesReviewStatus(
+      task.order.salesReviewStatus,
+    ),
     isOverdue:
       !task.closedAt &&
       !isDesignTaskBlockedBySalesReviewStatus(task.order.salesReviewStatus) &&
@@ -654,7 +664,7 @@ export async function claimDesignTask(taskId: string, actorUserId: string) {
     });
 
     if (!task) {
-      throw new Error("Tarea de diseno no encontrada.");
+      throw new Error("Tarea de diseño no encontrada.");
     }
 
     if (task.closedAt) {
@@ -664,7 +674,7 @@ export async function claimDesignTask(taskId: string, actorUserId: string) {
     assertDesignTaskNotBlockedBySales(task.order.salesReviewStatus);
 
     if (task.assignedToId && task.assignedToId !== actor.profileId) {
-      throw new Error("La tarea ya esta asignada a otro dissenador.");
+      throw new Error("La tarea ya está asignada a otro diseñador.");
     }
 
     const updatedTask = await tx.orderDesignTask.update({
@@ -679,7 +689,7 @@ export async function claimDesignTask(taskId: string, actorUserId: string) {
       taskId,
       eventType: "TASK_CLAIMED",
       actorId: actor.profileId,
-      notes: "Tarea tomada desde la bandeja de diseno.",
+      notes: "Tarea tomada desde la bandeja de diseño.",
     });
 
     return updatedTask;
@@ -688,7 +698,7 @@ export async function claimDesignTask(taskId: string, actorUserId: string) {
 
 export async function updateDesignTaskStatus(
   input: z.infer<typeof updateDesignTaskStatusSchema>,
-  actorUserId: string
+  actorUserId: string,
 ) {
   const actor = await resolveDesignActor(actorUserId);
 
@@ -707,13 +717,15 @@ export async function updateDesignTaskStatus(
     });
 
     if (!task) {
-      throw new Error("Tarea de diseno no encontrada.");
+      throw new Error("Tarea de diseño no encontrada.");
     }
 
     assertDesignTaskNotBlockedBySales(task.order.salesReviewStatus);
 
     if (task.status === input.status) {
-      return tx.orderDesignTask.findUniqueOrThrow({ where: { id: input.taskId } });
+      return tx.orderDesignTask.findUniqueOrThrow({
+        where: { id: input.taskId },
+      });
     }
 
     const updatedTask = await tx.orderDesignTask.update({
@@ -728,7 +740,8 @@ export async function updateDesignTaskStatus(
       await reopenPrintTaskAfterDesignReopened(tx, {
         orderId: updatedTask.orderId,
         actorId: actor.profileId,
-        reason: "La tarea de diseno cambio de estado y requiere nueva impresion final.",
+        reason:
+          "La tarea de diseño cambió de estado y requiere nueva impresión final.",
       });
     }
 
@@ -747,17 +760,19 @@ export async function updateDesignTaskStatus(
 
 export async function uploadDesignProof(
   input: z.infer<typeof uploadDesignProofSchema>,
-  actorUserId: string
+  actorUserId: string,
 ) {
   const actor = await resolveDesignActor(actorUserId);
   if (input.sourceType !== "EXTERNAL_URL") {
-    throw new Error("La prueba de color del diseno se registra solo mediante URL externa.");
+    throw new Error(
+      "La prueba de color del diseño se registra solo mediante URL externa.",
+    );
   }
   assertHttpsUrl(input.fileUrl);
 
   if (input.fileType !== "text/uri-list" || input.fileSize !== 0) {
     throw new Error(
-      "Para pruebas por URL debes enviar fileType=\"text/uri-list\" y fileSize=0."
+      'Para pruebas por URL debes enviar fileType="text/uri-list" y fileSize=0.',
     );
   }
 
@@ -845,7 +860,8 @@ export async function uploadDesignProof(
     await reopenPrintTaskAfterDesignReopened(tx, {
       orderId: input.orderId,
       actorId: actor.profileId,
-      reason: "Se publico una nueva prueba de diseno; impresion final debe revalidarse.",
+      reason:
+        "Se publicó una nueva prueba de diseño; impresión final debe revalidarse.",
       proofVersion: nextVersion,
     });
 
@@ -855,7 +871,7 @@ export async function uploadDesignProof(
       fromStatus: task.status,
       toStatus: updatedTask.status,
       actorId: actor.profileId,
-      notes: "Se subio una nueva prueba de color para revision del cliente.",
+      notes: "Se subió una nueva prueba de color para revisión del cliente.",
       metadata: {
         proofId: proof.id,
         proofVersion: nextVersion,
@@ -867,8 +883,8 @@ export async function uploadDesignProof(
     await createOrderNotifications(tx, {
       orderId: input.orderId,
       type: NotificationType.DESIGN_PROOF_PUBLISHED,
-      title: `Nueva prueba de diseno para ${order.code}`,
-      message: "Diseno publico una nueva prueba para tu revision.",
+      title: `Nueva prueba de diseño para ${order.code}`,
+      message: "Diseño publicó una nueva prueba para tu revisión.",
       actionPath: `/orders/${input.orderId}?tab=tracking`,
       sourceKey: `order:${input.orderId}:design:${proofEvent.id}`,
       metadata: {
@@ -882,18 +898,22 @@ export async function uploadDesignProof(
 
 export async function registerClientProofDecision(
   input: z.infer<typeof clientProofDecisionSchema>,
-  actorUserId: string
+  actorUserId: string,
 ) {
   const actor = await resolveDesignActor(actorUserId);
-  return db.$transaction((tx) => applyClientDecision(tx, input, actor.profileId));
+  return db.$transaction((tx) =>
+    applyClientDecision(tx, input, actor.profileId),
+  );
 }
 
 export async function registerDesignerProofDecision(
   input: z.infer<typeof designerProofDecisionSchema>,
-  actorUserId: string
+  actorUserId: string,
 ) {
   const actor = await resolveDesignActor(actorUserId);
-  return db.$transaction((tx) => applyDesignerDecision(tx, input, actor.profileId));
+  return db.$transaction((tx) =>
+    applyDesignerDecision(tx, input, actor.profileId),
+  );
 }
 
 export async function onClientArtworkUploaded(
@@ -901,7 +921,7 @@ export async function onClientArtworkUploaded(
   input: {
     orderId: string;
     actorId?: string | null;
-  }
+  },
 ) {
   const task = await client.orderDesignTask.findUnique({
     where: { orderId: input.orderId },
@@ -933,7 +953,8 @@ export async function onClientArtworkUploaded(
   await reopenPrintTaskAfterDesignReopened(client, {
     orderId: input.orderId,
     actorId: input.actorId ?? null,
-    reason: "Nuevo arte del cliente cargado. Se reactiva diseno y se invalida impresion previa.",
+    reason:
+      "Nuevo arte del cliente cargado. Se reactiva diseño y se invalida impresión previa.",
   });
 
   await createDesignTaskEvent(client, {
@@ -942,7 +963,7 @@ export async function onClientArtworkUploaded(
     fromStatus: task.status,
     toStatus: "REVIEW",
     actorId: input.actorId ?? null,
-    notes: "Nuevo arte del cliente cargado. Se reactiva revision de diseno.",
+    notes: "Nuevo arte del cliente cargado. Se reactiva revisión de diseño.",
   });
 
   return updatedTask;
@@ -1030,7 +1051,9 @@ export async function getDesignTaskByOrder(orderId: string) {
     latestProofVersion,
     clientArtworkLocked,
     canClientUploadArtwork: !clientArtworkLocked,
-    isBlockedBySales: isDesignTaskBlockedBySalesReviewStatus(task.order.salesReviewStatus),
+    isBlockedBySales: isDesignTaskBlockedBySalesReviewStatus(
+      task.order.salesReviewStatus,
+    ),
   };
 }
 
@@ -1050,7 +1073,9 @@ export async function canUserAccessOrder(userId: string, orderId: string) {
   }
 
   const orgIds = profile.organizationRoles.map((role) => role.organizationId);
-  const orderAccessFilters: Prisma.OrderWhereInput[] = [{ createdById: profile.id }];
+  const orderAccessFilters: Prisma.OrderWhereInput[] = [
+    { createdById: profile.id },
+  ];
   if (orgIds.length > 0) {
     orderAccessFilters.push({ organizationId: { in: orgIds } });
   }

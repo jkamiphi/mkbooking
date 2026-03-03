@@ -5,7 +5,10 @@ import {
   Prisma,
 } from "@prisma/client";
 import { z } from "zod";
-import { createOrderNotifications, NotificationType } from "@/lib/services/notifications";
+import {
+  createOrderNotifications,
+  NotificationType,
+} from "@/lib/services/notifications";
 import {
   cancelOperationalWorkOrdersByPrintReopen,
   createOperationalWorkOrdersForPrintCompletion,
@@ -77,7 +80,7 @@ export async function createPrintTaskEvent(
     actorId?: string | null;
     notes?: string | null;
     metadata?: Prisma.InputJsonValue | null;
-  }
+  },
 ) {
   return client.orderPrintTaskEvent.create({
     data: {
@@ -98,7 +101,7 @@ export async function activatePrintTaskAfterDesignClosure(
     orderId: string;
     actorId?: string | null;
     proofVersion?: number | null;
-  }
+  },
 ) {
   const existingTask = await client.orderPrintTask.findUnique({
     where: { orderId: input.orderId },
@@ -124,7 +127,7 @@ export async function activatePrintTaskAfterDesignClosure(
       eventType: "TASK_ACTIVATED",
       toStatus: "READY",
       actorId: input.actorId ?? null,
-      notes: "Tarea de impresion final activada al cerrar diseno.",
+      notes: "Tarea de impresión final activada al cerrar diseño.",
       metadata: {
         proofVersion: input.proofVersion ?? null,
       },
@@ -133,7 +136,8 @@ export async function activatePrintTaskAfterDesignClosure(
     return createdTask;
   }
 
-  const nextProofVersion = input.proofVersion ?? existingTask.activatedProofVersion ?? null;
+  const nextProofVersion =
+    input.proofVersion ?? existingTask.activatedProofVersion ?? null;
   if (
     existingTask.status === "READY" &&
     !existingTask.closedAt &&
@@ -163,7 +167,7 @@ export async function activatePrintTaskAfterDesignClosure(
     fromStatus: existingTask.status,
     toStatus: "READY",
     actorId: input.actorId ?? null,
-    notes: "Tarea de impresion final activada al cerrar diseno.",
+    notes: "Tarea de impresión final activada al cerrar diseño.",
     metadata: {
       proofVersion: nextProofVersion,
     },
@@ -179,7 +183,7 @@ export async function reopenPrintTaskAfterDesignReopened(
     actorId?: string | null;
     reason?: string | null;
     proofVersion?: number | null;
-  }
+  },
 ) {
   const task = await client.orderPrintTask.findUnique({
     where: { orderId: input.orderId },
@@ -197,7 +201,8 @@ export async function reopenPrintTaskAfterDesignReopened(
     return null;
   }
 
-  const nextProofVersion = input.proofVersion ?? task.activatedProofVersion ?? null;
+  const nextProofVersion =
+    input.proofVersion ?? task.activatedProofVersion ?? null;
   if (
     task.status === "READY" &&
     !task.assignedToId &&
@@ -229,7 +234,7 @@ export async function reopenPrintTaskAfterDesignReopened(
     actorId: input.actorId ?? null,
     notes:
       input.reason ??
-      "La tarea de impresion se reabre porque la etapa de diseno fue reactivada.",
+      "La tarea de impresión se reabre porque la etapa de diseño fue reactivada.",
     metadata: {
       proofVersion: nextProofVersion,
     },
@@ -248,7 +253,7 @@ export async function reopenPrintTaskAfterDesignReopened(
 
 export async function listPrintInbox(
   input: z.infer<typeof printInboxListSchema>,
-  options?: { actorUserId?: string }
+  options?: { actorUserId?: string },
 ) {
   let actorProfileId: string | null = null;
   if (input.mineOnly) {
@@ -350,19 +355,21 @@ export async function claimPrintTask(taskId: string, actorUserId: string) {
     });
 
     if (!task) {
-      throw new Error("Tarea de impresion no encontrada.");
+      throw new Error("Tarea de impresión no encontrada.");
     }
 
     if (!task.order.designTask?.closedAt) {
-      throw new Error("La impresion final se habilita cuando diseno esta cerrado.");
+      throw new Error(
+        "La impresión final se habilita cuando diseño está cerrado.",
+      );
     }
 
     if (task.closedAt || task.status === "COMPLETED") {
-      throw new Error("La tarea de impresion ya fue cerrada.");
+      throw new Error("La tarea de impresión ya fue cerrada.");
     }
 
     if (task.assignedToId && task.assignedToId !== actor.profileId) {
-      throw new Error("La tarea ya esta asignada a otro responsable.");
+      throw new Error("La tarea ya está asignada a otro responsable.");
     }
 
     const updatedTask = await tx.orderPrintTask.update({
@@ -377,7 +384,7 @@ export async function claimPrintTask(taskId: string, actorUserId: string) {
       taskId,
       eventType: "TASK_CLAIMED",
       actorId: actor.profileId,
-      notes: "Tarea tomada desde la bandeja de impresion.",
+      notes: "Tarea tomada desde la bandeja de impresión.",
     });
 
     return updatedTask;
@@ -386,12 +393,14 @@ export async function claimPrintTask(taskId: string, actorUserId: string) {
 
 export async function updatePrintTaskStatus(
   input: z.infer<typeof updatePrintTaskStatusSchema>,
-  actorUserId: string
+  actorUserId: string,
 ) {
   const actor = await resolvePrintActor(actorUserId);
 
   if (input.status === "COMPLETED") {
-    throw new Error("Debes usar la confirmacion final para cerrar la impresion.");
+    throw new Error(
+      "Debes usar la confirmación final para cerrar la impresión.",
+    );
   }
 
   return db.$transaction(async (tx) => {
@@ -416,19 +425,23 @@ export async function updatePrintTaskStatus(
     });
 
     if (!task) {
-      throw new Error("Tarea de impresion no encontrada.");
+      throw new Error("Tarea de impresión no encontrada.");
     }
 
     if (!task.order.designTask?.closedAt) {
-      throw new Error("La impresion final se habilita cuando diseno esta cerrado.");
+      throw new Error(
+        "La impresión final se habilita cuando diseño está cerrado.",
+      );
     }
 
     if (task.status === "COMPLETED" || task.closedAt) {
-      throw new Error("La tarea de impresion ya esta cerrada.");
+      throw new Error("La tarea de impresión ya está cerrada.");
     }
 
     if (task.status === input.status) {
-      return tx.orderPrintTask.findUniqueOrThrow({ where: { id: input.taskId } });
+      return tx.orderPrintTask.findUniqueOrThrow({
+        where: { id: input.taskId },
+      });
     }
 
     const updatedTask = await tx.orderPrintTask.update({
@@ -451,8 +464,8 @@ export async function updatePrintTaskStatus(
       await createOrderNotifications(tx, {
         orderId: task.order.id,
         type: NotificationType.PRINT_STARTED,
-        title: `Impresion iniciada para ${task.order.code}`,
-        message: "La etapa de impresion final ya esta en progreso.",
+        title: `Impresión iniciada para ${task.order.code}`,
+        message: "La etapa de impresión final ya está en progreso.",
         actionPath: `/orders/${task.order.id}?tab=tracking`,
         sourceKey: `order:${task.order.id}:print:${statusEvent.id}`,
         metadata: {
@@ -467,7 +480,7 @@ export async function updatePrintTaskStatus(
 
 export async function addPrintEvidence(
   input: z.infer<typeof addPrintEvidenceSchema>,
-  actorUserId: string
+  actorUserId: string,
 ) {
   const actor = await resolvePrintActor(actorUserId);
 
@@ -489,11 +502,13 @@ export async function addPrintEvidence(
     });
 
     if (!task) {
-      throw new Error("No hay tarea de impresion asociada a esta orden.");
+      throw new Error("No hay tarea de impresión asociada a esta orden.");
     }
 
     if (!task.order.designTask?.closedAt) {
-      throw new Error("La impresion final se habilita cuando diseno esta cerrado.");
+      throw new Error(
+        "La impresión final se habilita cuando diseño está cerrado.",
+      );
     }
 
     return tx.orderPrintEvidence.create({
@@ -513,7 +528,7 @@ export async function addPrintEvidence(
 
 export async function confirmFinalPrint(
   input: z.infer<typeof confirmFinalPrintSchema>,
-  actorUserId: string
+  actorUserId: string,
 ) {
   const actor = await resolvePrintActor(actorUserId);
 
@@ -539,11 +554,13 @@ export async function confirmFinalPrint(
     });
 
     if (!task) {
-      throw new Error("No hay tarea de impresion asociada a esta orden.");
+      throw new Error("No hay tarea de impresión asociada a esta orden.");
     }
 
     if (!task.order.designTask?.closedAt) {
-      throw new Error("No puedes cerrar impresion mientras diseno este abierto.");
+      throw new Error(
+        "No puedes cerrar impresión mientras diseño esté abierto.",
+      );
     }
 
     if (task.status === "COMPLETED" && task.closedAt) {
@@ -581,8 +598,8 @@ export async function confirmFinalPrint(
     await createOrderNotifications(tx, {
       orderId: task.order.id,
       type: NotificationType.PRINT_COMPLETED,
-      title: `Impresion completada para ${task.order.code}`,
-      message: "La impresion final de tu orden fue confirmada como completada.",
+      title: `Impresión completada para ${task.order.code}`,
+      message: "La impresión final de tu orden fue confirmada como completada.",
       actionPath: `/orders/${task.order.id}?tab=tracking`,
       sourceKey: `order:${task.order.id}:print:${completionEvent.id}`,
       metadata: {

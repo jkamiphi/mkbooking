@@ -78,9 +78,13 @@ export function DesignTaskPanel({ orderId }: { orderId: string }) {
   return (
     <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
       <div className="mb-4 flex items-center justify-between border-b border-neutral-100 pb-3">
-        <h2 className="text-sm font-semibold text-neutral-900">Tarea de Diseño</h2>
+        <h2 className="text-sm font-semibold text-neutral-900">
+          Tarea de Diseño
+        </h2>
         {task ? (
-          <Badge variant={statusVariant(task.status)}>{statusLabel(task.status)}</Badge>
+          <Badge variant={statusVariant(task.status)}>
+            {statusLabel(task.status)}
+          </Badge>
         ) : (
           <Badge variant="secondary">Sin tarea</Badge>
         )}
@@ -90,7 +94,8 @@ export function DesignTaskPanel({ orderId }: { orderId: string }) {
         <div className="text-xs text-neutral-500">Cargando tarea...</div>
       ) : !task ? (
         <div className="text-xs text-neutral-500">
-          La tarea de diseno se crea automaticamente cuando Ventas aprueba la validacion comercial.
+          La tarea de diseño se crea automáticamente cuando Ventas aprueba la
+          validación comercial.
         </div>
       ) : (
         <div className="space-y-3 text-sm">
@@ -101,30 +106,40 @@ export function DesignTaskPanel({ orderId }: { orderId: string }) {
           ) : null}
           <div className="flex items-center justify-between text-neutral-600">
             <span>SLA</span>
-            <span className="font-medium text-neutral-900">{formatDateTime(task.slaDueAt)}</span>
+            <span className="font-medium text-neutral-900">
+              {formatDateTime(task.slaDueAt)}
+            </span>
           </div>
           <div className="flex items-center justify-between text-neutral-600">
             <span>Responsable</span>
             <span className="font-medium text-neutral-900">
               {task.assignedTo
-                ? task.assignedTo.user?.name || task.assignedTo.user?.email || "Asignado"
+                ? task.assignedTo.user?.name ||
+                  task.assignedTo.user?.email ||
+                  "Asignado"
                 : "Sin asignar"}
             </span>
           </div>
           <div className="flex items-center justify-between text-neutral-600">
             <span>Cierre</span>
-            <span className="font-medium text-neutral-900">{formatDateTime(task.closedAt)}</span>
+            <span className="font-medium text-neutral-900">
+              {formatDateTime(task.closedAt)}
+            </span>
           </div>
           <div className="flex items-center justify-between text-neutral-600">
             <span>Aprobación diseño</span>
             <span className="font-medium text-neutral-900">
-              {task.designerApprovedProofVersion ? `v${task.designerApprovedProofVersion}` : "Pendiente"}
+              {task.designerApprovedProofVersion
+                ? `v${task.designerApprovedProofVersion}`
+                : "Pendiente"}
             </span>
           </div>
           <div className="flex items-center justify-between text-neutral-600">
             <span>Aprobación cliente</span>
             <span className="font-medium text-neutral-900">
-              {task.clientApprovedProofVersion ? `v${task.clientApprovedProofVersion}` : "Pendiente"}
+              {task.clientApprovedProofVersion
+                ? `v${task.clientApprovedProofVersion}`
+                : "Pendiente"}
             </span>
           </div>
 
