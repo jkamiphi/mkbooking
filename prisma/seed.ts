@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { hashPassword } from "better-auth/crypto";
+import crypto from "crypto";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -210,6 +212,96 @@ const structureBasePrice: Record<string, number> = {
   Parada: 90,
 };
 
+interface InstallerSeedCoverage {
+  provinceName: string;
+  zoneName: string;
+}
+
+interface InstallerSeedUser {
+  email: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  password: string;
+  isEnabled: boolean;
+  maxActiveWorkOrders: number;
+  coverage: InstallerSeedCoverage[];
+  notes?: string;
+  isActive?: boolean;
+}
+
+interface ZoneWithProvince {
+  id: string;
+  name: string;
+  province: {
+    name: string;
+  };
+}
+
+const defaultInstallerPassword =
+  process.env.SEED_INSTALLER_PASSWORD || "Installer123!";
+
+const installerUsers: InstallerSeedUser[] = [
+  {
+    email: "instalador.panama@mkbooking.com",
+    name: "Carlos Morales",
+    firstName: "Carlos",
+    lastName: "Morales",
+    password: defaultInstallerPassword,
+    isEnabled: true,
+    maxActiveWorkOrders: 4,
+    notes: "Cobertura principal en ciudad y costa este.",
+    coverage: [
+      { provinceName: "Panamá", zoneName: "Ciudad de Panamá" },
+      { provinceName: "Panamá", zoneName: "Costa del Este" },
+    ],
+  },
+  {
+    email: "instalador.oeste@mkbooking.com",
+    name: "María González",
+    firstName: "María",
+    lastName: "González",
+    password: defaultInstallerPassword,
+    isEnabled: true,
+    maxActiveWorkOrders: 5,
+    notes: "Cobertura en Panamá Oeste.",
+    coverage: [
+      { provinceName: "Panamá Oeste", zoneName: "Arraiján" },
+      { provinceName: "Panamá Oeste", zoneName: "La Chorrera" },
+      { provinceName: "Panamá Oeste", zoneName: "Costa Verde" },
+    ],
+  },
+  {
+    email: "instalador.colon@mkbooking.com",
+    name: "Luis Castillo",
+    firstName: "Luis",
+    lastName: "Castillo",
+    password: defaultInstallerPassword,
+    isEnabled: true,
+    maxActiveWorkOrders: 3,
+    notes: "Cobertura operativa para provincia de Colón.",
+    coverage: [
+      { provinceName: "Colón", zoneName: "Colón Centro" },
+      { provinceName: "Colón", zoneName: "Sabanitas" },
+    ],
+  },
+  {
+    email: "instalador.chiriqui@mkbooking.com",
+    name: "Ana Sánchez",
+    firstName: "Ana",
+    lastName: "Sánchez",
+    password: defaultInstallerPassword,
+    isEnabled: true,
+    maxActiveWorkOrders: 2,
+    notes: "Cobertura para Chiriquí y apoyo en Veraguas.",
+    coverage: [
+      { provinceName: "Chiriquí", zoneName: "David" },
+      { provinceName: "Chiriquí", zoneName: "Boquete" },
+      { provinceName: "Veraguas", zoneName: "Santiago" },
+    ],
+  },
+];
+
 function slugify(value: string): string {
   return value
     .normalize("NFD")
@@ -256,6 +348,150 @@ function buildAddress(zone: string, roadType: string): string {
 
 function buildLandmark(zone: string, province: string): string {
   return `Cerca de ${zone}, ${province}`;
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function buildZoneCoverageKey(provinceName: string, zoneName: string): string {
+  return `${slugify(provinceName)}::${slugify(zoneName)}`;
+}
+
+async function upsertCredentialAccount(userId: string, password: string) {
+  const passwordHash = await hashPassword(password);
+  const now = new Date();
+  const account = await prisma.account.findFirst({
+    where: {
+      userId,
+      providerId: "credential",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (account) {
+    await prisma.account.update({
+      where: { id: account.id },
+      data: {
+        password: passwordHash,
+        updatedAt: now,
+      },
+    });
+    return;
+  }
+
+  await prisma.account.create({
+    data: {
+      id: crypto.randomUUID(),
+      accountId: userId,
+      providerId: "credential",
+      userId,
+      password: passwordHash,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+}
+
+async function upsertInstallerUsers(zones: ZoneWithProvince[]) {
+  const zoneMap = new Map(
+    zones.map((zone) => [
+      buildZoneCoverageKey(zone.province.name, zone.name),
+      zone.id,
+    ]),
+  );
+
+  for (const installer of installerUsers) {
+    const now = new Date();
+    const user = await prisma.user.upsert({
+      where: { email: normalizeEmail(installer.email) },
+      update: {
+        name: installer.name,
+        emailVerified: true,
+        updatedAt: now,
+      },
+      create: {
+        id: crypto.randomUUID(),
+        email: normalizeEmail(installer.email),
+        name: installer.name,
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await upsertCredentialAccount(user.id, installer.password);
+
+    const profile = await prisma.userProfile.upsert({
+      where: { userId: user.id },
+      update: {
+        systemRole: "INSTALLER",
+        firstName: installer.firstName,
+        lastName: installer.lastName,
+        isActive: installer.isActive ?? true,
+        isVerified: true,
+      },
+      create: {
+        userId: user.id,
+        systemRole: "INSTALLER",
+        firstName: installer.firstName,
+        lastName: installer.lastName,
+        isActive: installer.isActive ?? true,
+        isVerified: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await prisma.installerConfig.upsert({
+      where: { userProfileId: profile.id },
+      update: {
+        isEnabled: installer.isEnabled,
+        maxActiveWorkOrders: installer.maxActiveWorkOrders,
+        notes: installer.notes ?? null,
+      },
+      create: {
+        userProfileId: profile.id,
+        isEnabled: installer.isEnabled,
+        maxActiveWorkOrders: installer.maxActiveWorkOrders,
+        notes: installer.notes ?? null,
+      },
+    });
+
+    const zoneIds = installer.coverage.map((coverage) => {
+      const zoneId = zoneMap.get(
+        buildZoneCoverageKey(coverage.provinceName, coverage.zoneName),
+      );
+
+      if (!zoneId) {
+        throw new Error(
+          `Coverage zone not found: ${coverage.provinceName} / ${coverage.zoneName}`,
+        );
+      }
+
+      return zoneId;
+    });
+
+    await prisma.installerCoverageZone.deleteMany({
+      where: { installerId: profile.id },
+    });
+
+    if (zoneIds.length > 0) {
+      await prisma.installerCoverageZone.createMany({
+        data: zoneIds.map((zoneId) => ({
+          installerId: profile.id,
+          zoneId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+  }
 }
 
 async function upsertProvinces() {
@@ -743,6 +979,10 @@ async function main() {
     include: { province: true },
     orderBy: [{ province: { name: "asc" } }, { name: "asc" }],
   });
+
+  console.log("Seeding installer users...");
+  await upsertInstallerUsers(zones);
+
   const structureTypesList = await prisma.structureType.findMany({
     where: { name: { in: structureTypes } },
     orderBy: { name: "asc" },
