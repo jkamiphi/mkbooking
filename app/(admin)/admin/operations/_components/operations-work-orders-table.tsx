@@ -2,12 +2,22 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronRight, RefreshCw, UserPlus } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SelectNative } from "@/components/ui/select-native";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 type WorkOrderStatus =
@@ -60,9 +70,10 @@ export function OperationsWorkOrdersTable() {
   const [zoneId, setZoneId] = useState("");
   const [installerId, setInstallerId] = useState("");
   const [unassignedOnly, setUnassignedOnly] = useState(false);
-  const [installerDraftByWorkOrder, setInstallerDraftByWorkOrder] = useState<
-    Record<string, string>
-  >({});
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
+  const [selectedInstallerId, setSelectedInstallerId] = useState("");
+  const [assignNotes, setAssignNotes] = useState("");
 
   const zonesQuery = trpc.inventory.zones.publicList.useQuery();
   const installersQuery = trpc.operations.installers.list.useQuery();
@@ -103,6 +114,10 @@ export function OperationsWorkOrdersTable() {
         utils.operations.workOrders.byOrder.invalidate(),
         utils.operations.installers.list.invalidate(),
       ]);
+      setIsAssignDialogOpen(false);
+      setSelectedWorkOrderId(null);
+      setSelectedInstallerId("");
+      setAssignNotes("");
       toast.success("OT operativa reasignada.");
     },
     onError: (error) => {
@@ -128,11 +143,23 @@ export function OperationsWorkOrdersTable() {
     },
   });
 
-  const workOrders = workOrdersQuery.data?.workOrders ?? [];
+  const workOrders = useMemo(() => workOrdersQuery.data?.workOrders ?? [], [workOrdersQuery.data]);
   const isLoading = workOrdersQuery.isLoading || workOrdersQuery.isRefetching;
+  const selectedWorkOrder = useMemo(
+    () => workOrders.find((workOrder) => workOrder.id === selectedWorkOrderId) ?? null,
+    [selectedWorkOrderId, workOrders]
+  );
+
+  function openAssignDialog(workOrder: (typeof workOrders)[number]) {
+    setSelectedWorkOrderId(workOrder.id);
+    setSelectedInstallerId(workOrder.assignedInstallerId ?? "");
+    setAssignNotes("");
+    setIsAssignDialogOpen(true);
+  }
 
   return (
-    <div className="space-y-4">
+    <>
+      <div className="space-y-4">
       <div className="grid gap-3 rounded-xl border border-neutral-200 bg-white p-4 md:grid-cols-4">
         <div>
           <label className="mb-1 block text-xs font-medium text-neutral-600">Estado</label>
@@ -196,8 +223,6 @@ export function OperationsWorkOrdersTable() {
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {workOrders.map((workOrder) => {
-                  const currentDraftInstaller =
-                    installerDraftByWorkOrder[workOrder.id] ?? workOrder.assignedInstallerId ?? "";
                   const isClosed =
                     workOrder.status === "COMPLETED" || workOrder.status === "CANCELLED";
 
@@ -227,26 +252,6 @@ export function OperationsWorkOrdersTable() {
                               workOrder.assignedInstaller.user.email
                             : "Sin asignar"}
                         </div>
-                        <div className="mt-2">
-                          <SelectNative
-                            value={currentDraftInstaller}
-                            onChange={(event) =>
-                              setInstallerDraftByWorkOrder((prev) => ({
-                                ...prev,
-                                [workOrder.id]: event.target.value,
-                              }))
-                            }
-                            disabled={isClosed}
-                            className="h-8 min-w-[190px] text-xs"
-                          >
-                            <option value="">Seleccionar instalador</option>
-                            {(installersQuery.data ?? []).map((installer) => (
-                              <option key={installer.id} value={installer.id}>
-                                {installer.user.name || installer.user.email}
-                              </option>
-                            ))}
-                          </SelectNative>
-                        </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-neutral-500">
                         {formatDateTime(workOrder.updatedAt)}
@@ -272,23 +277,14 @@ export function OperationsWorkOrdersTable() {
                           </SelectNative>
 
                           <Button
-                            size="sm"
+                            size="icon-sm"
                             variant="outline"
-                            className="h-8 px-2 text-xs"
-                            onClick={() =>
-                              reassignManual.mutate({
-                                workOrderId: workOrder.id,
-                                installerId: currentDraftInstaller,
-                              })
-                            }
-                            disabled={
-                              reassignManual.isPending ||
-                              !currentDraftInstaller ||
-                              currentDraftInstaller === workOrder.assignedInstallerId ||
-                              isClosed
-                            }
+                            className="h-8 w-8"
+                            onClick={() => openAssignDialog(workOrder)}
+                            disabled={isClosed}
+                            title={workOrder.assignedInstallerId ? "Reasignar instalador" : "Asignar instalador"}
                           >
-                            Reasignar
+                            <UserPlus className="h-4 w-4" />
                           </Button>
 
                           <Button
@@ -320,7 +316,87 @@ export function OperationsWorkOrdersTable() {
           </div>
         )}
       </Card>
-    </div>
+      </div>
+
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedWorkOrder?.assignedInstallerId ? "Reasignar instalador" : "Asignar instalador"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedWorkOrder
+                ? `Orden ${selectedWorkOrder.order.code} · Cara ${selectedWorkOrder.face.code}`
+                : "Selecciona el instalador para esta OT operativa."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <Label className="mb-1 block">Instalador</Label>
+              <SelectNative
+                value={selectedInstallerId}
+                onChange={(event) => setSelectedInstallerId(event.target.value)}
+              >
+                <option value="">Seleccionar instalador</option>
+                {(installersQuery.data ?? []).map((installer) => (
+                  <option key={installer.id} value={installer.id}>
+                    {installer.user.name || installer.user.email}
+                  </option>
+                ))}
+              </SelectNative>
+            </div>
+
+            <div>
+              <Label htmlFor="assign-notes" className="mb-1 block">
+                Notas (opcional)
+              </Label>
+              <Textarea
+                id="assign-notes"
+                rows={3}
+                value={assignNotes}
+                onChange={(event) => setAssignNotes(event.target.value)}
+                placeholder="Motivo o contexto de la asignación"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsAssignDialogOpen(false);
+                setSelectedWorkOrderId(null);
+                setSelectedInstallerId("");
+                setAssignNotes("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!selectedWorkOrderId || !selectedInstallerId) return;
+                reassignManual.mutate({
+                  workOrderId: selectedWorkOrderId,
+                  installerId: selectedInstallerId,
+                  notes: assignNotes.trim() || undefined,
+                });
+              }}
+              disabled={
+                reassignManual.isPending ||
+                !selectedWorkOrderId ||
+                !selectedInstallerId ||
+                selectedInstallerId === selectedWorkOrder?.assignedInstallerId
+              }
+            >
+              {selectedWorkOrder?.assignedInstallerId ? "Guardar reasignación" : "Guardar asignación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
