@@ -34,10 +34,8 @@ function formatCurrency(value: string | number) {
 
 export function DraftEditor({
   orderId,
-  initialOrder,
 }: {
   orderId: string;
-  initialOrder: OrderGetOutput;
 }) {
   const router = useRouter();
   const utils = trpc.useUtils();
@@ -45,7 +43,6 @@ export function DraftEditor({
   const { data: order } = trpc.orders.get.useQuery(
     { id: orderId },
     {
-      initialData: initialOrder,
       refetchOnWindowFocus: false,
     }
   );

@@ -131,7 +131,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             </div>
 
             {order.status === "DRAFT" ? (
-                <DraftEditor orderId={order.id} initialOrder={order} />
+                <DraftEditor orderId={order.id} />
             ) : (
                 <div className="grid gap-5 lg:grid-cols-3">
                     {/* Main Content: Line items */}
