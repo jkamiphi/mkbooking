@@ -17,6 +17,7 @@ import {
 import { signOut } from "@/lib/auth-client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +54,8 @@ export function UserHeaderActions({ user }: UserHeaderActionsProps) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const userInitials = getUserInitials(user.name, user.email);
+  const { data: unreadData } = trpc.notifications.unreadCount.useQuery();
+  const unreadCount = unreadData?.count ?? 0;
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -69,14 +72,19 @@ export function UserHeaderActions({ user }: UserHeaderActionsProps) {
   return (
     <div className="flex items-center gap-2">
       <Button
-        type="button"
+        asChild
         variant="ghost"
         size="icon-sm"
         className="relative rounded-full border border-neutral-200 bg-white/85 text-neutral-600 shadow-sm hover:bg-white hover:text-neutral-900"
-        aria-label="Notificaciones"
       >
-        <Bell className="h-4 w-4" />
-        <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#fcb814]" />
+        <Link href="/notifications" aria-label="Abrir notificaciones">
+          <Bell className="h-4 w-4" />
+          {unreadCount > 0 ? (
+            <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[#fcb814] px-1 text-[10px] font-semibold text-neutral-900">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          ) : null}
+        </Link>
       </Button>
 
       <DropdownMenu>
@@ -137,6 +145,12 @@ export function UserHeaderActions({ user }: UserHeaderActionsProps) {
             <Link href="/orders" className="cursor-pointer">
               <Package className="h-4 w-4" />
               Mis órdenes
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/notifications" className="cursor-pointer">
+              <Bell className="h-4 w-4" />
+              Notificaciones
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

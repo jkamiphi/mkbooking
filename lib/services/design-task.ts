@@ -11,6 +11,7 @@ import {
   activatePrintTaskAfterDesignClosure,
   reopenPrintTaskAfterDesignReopened,
 } from "@/lib/services/print-task";
+import { createOrderNotifications, NotificationType } from "@/lib/services/notifications";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -277,6 +278,7 @@ async function applyDesignerDecision(
       clientApprovedProofVersion: true,
       order: {
         select: {
+          code: true,
           salesReviewStatus: true,
         },
       },
@@ -323,13 +325,25 @@ async function applyDesignerDecision(
       reason: "Diseno solicito cambios en la prueba final.",
     });
 
-    await createDesignTaskEvent(client, {
+    const decisionEvent = await createDesignTaskEvent(client, {
       taskId: task.id,
       eventType: "DESIGNER_CHANGES_REQUESTED",
       fromStatus: task.status,
       toStatus: "ADJUST",
       actorId: actorProfileId,
       notes: input.notes?.trim() || null,
+    });
+
+    await createOrderNotifications(client, {
+      orderId: input.orderId,
+      type: NotificationType.DESIGN_RESPONSE_CHANGES_REQUESTED,
+      title: `Diseno solicito ajustes en ${task.order.code}`,
+      message: "Se solicitaron cambios en la prueba de diseno para continuar el proceso.",
+      actionPath: `/orders/${input.orderId}?tab=tracking`,
+      sourceKey: `order:${input.orderId}:design:${decisionEvent.id}`,
+      metadata: {
+        decision: input.decision,
+      },
     });
 
     return updatedTask;
@@ -361,7 +375,7 @@ async function applyDesignerDecision(
     });
   }
 
-  await createDesignTaskEvent(client, {
+  const decisionEvent = await createDesignTaskEvent(client, {
     taskId: task.id,
     eventType: "DESIGNER_APPROVED",
     fromStatus: task.status,
@@ -369,6 +383,21 @@ async function applyDesignerDecision(
     actorId: actorProfileId,
     notes: input.notes?.trim() || null,
     metadata: {
+      proofVersion: latestProof.version,
+      closedAt: shouldClose ? now.toISOString() : null,
+    },
+  });
+
+  await createOrderNotifications(client, {
+    orderId: input.orderId,
+    type: NotificationType.DESIGN_RESPONSE_APPROVED,
+    title: `Diseno aprobo prueba en ${task.order.code}`,
+    message:
+      "Diseno registro una aprobacion sobre la prueba actual. Puedes revisar el seguimiento.",
+    actionPath: `/orders/${input.orderId}?tab=tracking`,
+    sourceKey: `order:${input.orderId}:design:${decisionEvent.id}`,
+    metadata: {
+      decision: input.decision,
       proofVersion: latestProof.version,
       closedAt: shouldClose ? now.toISOString() : null,
     },
@@ -390,6 +419,7 @@ async function applyClientDecision(
       designerApprovedProofVersion: true,
       order: {
         select: {
+          code: true,
           salesReviewStatus: true,
         },
       },
@@ -435,13 +465,25 @@ async function applyClientDecision(
       reason: "Cliente solicito cambios en la prueba final.",
     });
 
-    await createDesignTaskEvent(client, {
+    const decisionEvent = await createDesignTaskEvent(client, {
       taskId: task.id,
       eventType: "CLIENT_CHANGES_REQUESTED",
       fromStatus: task.status,
       toStatus: "ADJUST",
       actorId: actorProfileId,
       notes: input.notes?.trim() || null,
+    });
+
+    await createOrderNotifications(client, {
+      orderId: input.orderId,
+      type: NotificationType.DESIGN_RESPONSE_CHANGES_REQUESTED,
+      title: `Cliente solicito ajustes en ${task.order.code}`,
+      message: "Se solicitaron ajustes en la prueba de diseno.",
+      actionPath: `/orders/${input.orderId}?tab=tracking`,
+      sourceKey: `order:${input.orderId}:design:${decisionEvent.id}`,
+      metadata: {
+        decision: input.decision,
+      },
     });
 
     return updatedTask;
@@ -473,7 +515,7 @@ async function applyClientDecision(
     });
   }
 
-  await createDesignTaskEvent(client, {
+  const decisionEvent = await createDesignTaskEvent(client, {
     taskId: task.id,
     eventType: "CLIENT_APPROVED",
     fromStatus: task.status,
@@ -481,6 +523,20 @@ async function applyClientDecision(
     actorId: actorProfileId,
     notes: input.notes?.trim() || null,
     metadata: {
+      proofVersion: latestProof.version,
+      closedAt: shouldClose ? now.toISOString() : null,
+    },
+  });
+
+  await createOrderNotifications(client, {
+    orderId: input.orderId,
+    type: NotificationType.DESIGN_RESPONSE_APPROVED,
+    title: `Cliente aprobo prueba en ${task.order.code}`,
+    message: "Se registro una aprobacion del cliente sobre la prueba de diseno.",
+    actionPath: `/orders/${input.orderId}?tab=tracking`,
+    sourceKey: `order:${input.orderId}:design:${decisionEvent.id}`,
+    metadata: {
+      decision: input.decision,
       proofVersion: latestProof.version,
       closedAt: shouldClose ? now.toISOString() : null,
     },
@@ -710,6 +766,7 @@ export async function uploadDesignProof(
       where: { id: input.orderId },
       select: {
         id: true,
+        code: true,
         salesReviewStatus: true,
         serviceItems: {
           include: {
@@ -792,7 +849,7 @@ export async function uploadDesignProof(
       proofVersion: nextVersion,
     });
 
-    await createDesignTaskEvent(tx, {
+    const proofEvent = await createDesignTaskEvent(tx, {
       taskId: task.id,
       eventType: "PROOF_UPLOADED",
       fromStatus: task.status,
@@ -804,6 +861,18 @@ export async function uploadDesignProof(
         proofVersion: nextVersion,
         sourceType: input.sourceType,
         url: input.fileUrl,
+      },
+    });
+
+    await createOrderNotifications(tx, {
+      orderId: input.orderId,
+      type: NotificationType.DESIGN_PROOF_PUBLISHED,
+      title: `Nueva prueba de diseno para ${order.code}`,
+      message: "Diseno publico una nueva prueba para tu revision.",
+      actionPath: `/orders/${input.orderId}?tab=tracking`,
+      sourceKey: `order:${input.orderId}:design:${proofEvent.id}`,
+      metadata: {
+        proofVersion: nextVersion,
       },
     });
 

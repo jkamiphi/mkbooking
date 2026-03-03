@@ -143,6 +143,7 @@ model UserProfile {
   completedOrderPrintTasks OrderPrintTask[]        @relation("OrderPrintTaskCompleter")
   orderPrintTaskEvents     OrderPrintTaskEvent[]   @relation("OrderPrintTaskEventActor")
   uploadedPrintEvidences   OrderPrintEvidence[]    @relation("OrderPrintEvidenceUploader")
+  notifications            UserNotification[]
 
   @@index([userId])
   @@index([isActive])
@@ -224,6 +225,7 @@ model Organization {
   catalogHolds      CatalogHold[]
   campaignRequests  CampaignRequest[]
   orders            Order[]
+  notifications     UserNotification[]
 
   @@index([organizationType])
   @@index([isActive])
@@ -904,6 +906,19 @@ enum OrderPrintTaskEventType {
   @@map("order_print_task_event_type")
 }
 
+enum NotificationType {
+  ORDER_CONFIRMED
+  SALES_REVIEW_APPROVED
+  SALES_REVIEW_CHANGES_REQUESTED
+  DESIGN_PROOF_PUBLISHED
+  DESIGN_RESPONSE_APPROVED
+  DESIGN_RESPONSE_CHANGES_REQUESTED
+  PRINT_STARTED
+  PRINT_COMPLETED
+
+  @@map("notification_type")
+}
+
 model Order {
   id   String @id @default(cuid())
   code String @unique @default(dbgenerated("concat('ORD-', lpad(cast(nextval('order_code_seq') as text), 6, '0'))"))
@@ -956,6 +971,7 @@ model Order {
   salesReviewEvents OrderSalesReviewEvent[]
   designTask        OrderDesignTask?
   printTask         OrderPrintTask?
+  notifications     UserNotification[]
 
   @@index([status])
   @@index([organizationId])
@@ -1431,4 +1447,34 @@ model OrderSalesReviewEvent {
   @@index([eventType])
   @@index([createdAt])
   @@map("order_sales_review_event")
+}
+
+model UserNotification {
+  id String @id @default(cuid())
+
+  userProfileId  String
+  organizationId String?
+  orderId        String?
+
+  type       NotificationType
+  title      String
+  message    String           @db.Text
+  actionPath String?
+  isRead     Boolean          @default(false)
+  readAt     DateTime?
+  sourceKey  String
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userProfile  UserProfile   @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  order        Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([userProfileId, sourceKey])
+  @@index([userProfileId, isRead])
+  @@index([userProfileId, createdAt])
+  @@index([orderId, createdAt])
+  @@map("user_notification")
 }

@@ -5,6 +5,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { z } from "zod";
+import { createOrderNotifications, NotificationType } from "@/lib/services/notifications";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -390,6 +391,8 @@ export async function updatePrintTaskStatus(
         closedAt: true,
         order: {
           select: {
+            id: true,
+            code: true,
             designTask: {
               select: {
                 closedAt: true,
@@ -423,7 +426,7 @@ export async function updatePrintTaskStatus(
       },
     });
 
-    await createPrintTaskEvent(tx, {
+    const statusEvent = await createPrintTaskEvent(tx, {
       taskId: input.taskId,
       eventType: "STATUS_CHANGED",
       fromStatus: task.status,
@@ -431,6 +434,20 @@ export async function updatePrintTaskStatus(
       actorId: actor.profileId,
       notes: input.notes?.trim() || null,
     });
+
+    if (input.status === "IN_PROGRESS") {
+      await createOrderNotifications(tx, {
+        orderId: task.order.id,
+        type: NotificationType.PRINT_STARTED,
+        title: `Impresion iniciada para ${task.order.code}`,
+        message: "La etapa de impresion final ya esta en progreso.",
+        actionPath: `/orders/${task.order.id}?tab=tracking`,
+        sourceKey: `order:${task.order.id}:print:${statusEvent.id}`,
+        metadata: {
+          status: input.status,
+        },
+      });
+    }
 
     return updatedTask;
   });
@@ -497,6 +514,8 @@ export async function confirmFinalPrint(
         closedAt: true,
         order: {
           select: {
+            id: true,
+            code: true,
             designTask: {
               select: {
                 closedAt: true,
@@ -530,13 +549,25 @@ export async function confirmFinalPrint(
       },
     });
 
-    await createPrintTaskEvent(tx, {
+    const completionEvent = await createPrintTaskEvent(tx, {
       taskId: task.id,
       eventType: "FINAL_PRINT_CONFIRMED",
       fromStatus: task.status,
       toStatus: "COMPLETED",
       actorId: actor.profileId,
       notes: input.notes?.trim() || null,
+    });
+
+    await createOrderNotifications(tx, {
+      orderId: task.order.id,
+      type: NotificationType.PRINT_COMPLETED,
+      title: `Impresion completada para ${task.order.code}`,
+      message: "La impresion final de tu orden fue confirmada como completada.",
+      actionPath: `/orders/${task.order.id}?tab=tracking`,
+      sourceKey: `order:${task.order.id}:print:${completionEvent.id}`,
+      metadata: {
+        status: "COMPLETED",
+      },
     });
 
     return updatedTask;

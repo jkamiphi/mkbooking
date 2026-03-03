@@ -16,6 +16,7 @@ import {
     SalesReviewResult,
     SalesReviewStatus,
     PurchaseOrderReviewStatus,
+    SystemRole,
 } from "@prisma/client";
 import {
     calculateOrderTotals,
@@ -31,8 +32,13 @@ import {
 } from "@/lib/services/sales-review";
 import {
     activateDesignTaskAfterSalesApproval,
+    canUserAccessOrder,
     onClientArtworkUploaded,
 } from "@/lib/services/design-task";
+import {
+    createOrderNotifications,
+    NotificationType,
+} from "@/lib/services/notifications";
 
 function resolveOrderDays(fromDate: Date | null, toDate: Date | null) {
     if (!fromDate || !toDate) return 30;
@@ -56,6 +62,33 @@ function faceMatchesRequestCriteria(request: { zoneId?: string | null; structure
         !request.structureTypeId || request.structureTypeId === face.asset.structureTypeId;
 
     return matchesZone && matchesStructure;
+}
+
+async function resolveSystemRole(userId: string): Promise<SystemRole | null> {
+    const profile = await db.userProfile.findUnique({
+        where: { userId },
+        select: { systemRole: true },
+    });
+
+    return profile?.systemRole ?? null;
+}
+
+async function assertOrderReadAccess(userId: string, orderId: string) {
+    const systemRole = await resolveSystemRole(userId);
+    if (
+        systemRole &&
+        ["SUPERADMIN", "STAFF", "DESIGNER", "SALES", "OPERATIONS_PRINT"].includes(systemRole)
+    ) {
+        return;
+    }
+
+    const hasAccess = await canUserAccessOrder(userId, orderId);
+    if (!hasAccess) {
+        throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "No tienes acceso a esta orden.",
+        });
+    }
 }
 
 export const ordersRouter = router({
@@ -321,7 +354,9 @@ export const ordersRouter = router({
 
     get: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
+            await assertOrderReadAccess(ctx.user.id, input.id);
+
             const order = await db.order.findUnique({
                 where: { id: input.id },
                 include: {
@@ -361,6 +396,23 @@ export const ordersRouter = router({
                                     email: true,
                                 },
                             },
+                        },
+                    },
+                    designTask: {
+                        select: {
+                            status: true,
+                            closedAt: true,
+                            designerApprovedProofVersion: true,
+                            clientApprovedProofVersion: true,
+                            updatedAt: true,
+                        },
+                    },
+                    printTask: {
+                        select: {
+                            status: true,
+                            closedAt: true,
+                            completedAt: true,
+                            updatedAt: true,
                         },
                     },
                 },
@@ -685,6 +737,19 @@ export const ordersRouter = router({
                     });
                 }
 
+                await createOrderNotifications(tx, {
+                    orderId: order.id,
+                    type: NotificationType.ORDER_CONFIRMED,
+                    title: `Orden ${order.code} confirmada`,
+                    message:
+                        "Tu orden fue confirmada. Seguimos con validacion comercial, diseno e impresion.",
+                    actionPath: `/orders/${order.id}?tab=tracking`,
+                    sourceKey: `order:${order.id}:confirmed`,
+                    metadata: {
+                        orderCode: order.code,
+                    },
+                });
+
                 return {
                     order: confirmedOrder,
                     createdHolds,
@@ -712,7 +777,9 @@ export const ordersRouter = router({
 
     getCreatives: protectedProcedure
         .input(z.object({ orderId: z.string() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
+            await assertOrderReadAccess(ctx.user.id, input.orderId);
+
             const creatives = await db.orderCreative.findMany({
                 where: { orderId: input.orderId },
                 include: {
@@ -726,7 +793,9 @@ export const ordersRouter = router({
 
     getPurchaseOrders: protectedProcedure
         .input(z.object({ orderId: z.string() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
+            await assertOrderReadAccess(ctx.user.id, input.orderId);
+
             const purchaseOrders = await db.orderPurchaseOrder.findMany({
                 where: { orderId: input.orderId },
                 include: {
@@ -1168,6 +1237,7 @@ export const ordersRouter = router({
                 where: { id: input.orderId },
                 select: {
                     id: true,
+                    code: true,
                     status: true,
                     salesReviewStatus: true,
                     serviceItems: {
@@ -1213,7 +1283,7 @@ export const ordersRouter = router({
                     },
                 });
 
-                await createSalesReviewEvent(tx, {
+                const reviewEvent = await createSalesReviewEvent(tx, {
                     orderId: input.orderId,
                     eventType: resolveOrderEventType(input.result),
                     targetType: "ORDER",
@@ -1230,6 +1300,28 @@ export const ordersRouter = router({
                         serviceItems: order.serviceItems,
                     });
                 }
+
+                await createOrderNotifications(tx, {
+                    orderId: input.orderId,
+                    type:
+                        nextStatus === SalesReviewStatus.APPROVED
+                            ? NotificationType.SALES_REVIEW_APPROVED
+                            : NotificationType.SALES_REVIEW_CHANGES_REQUESTED,
+                    title:
+                        nextStatus === SalesReviewStatus.APPROVED
+                            ? `Ventas aprobó la orden ${order.code}`
+                            : `Ventas solicitó cambios en ${order.code}`,
+                    message:
+                        nextStatus === SalesReviewStatus.APPROVED
+                            ? "La validacion comercial fue aprobada. Continuamos con la ejecucion de la orden."
+                            : "Ventas solicitó cambios para continuar con la orden.",
+                    actionPath: `/orders/${input.orderId}?tab=tracking`,
+                    sourceKey: `order:${input.orderId}:sales-review:${reviewEvent.id}`,
+                    metadata: {
+                        orderCode: order.code,
+                        salesReviewStatus: nextStatus,
+                    },
+                });
 
                 return updated;
             });

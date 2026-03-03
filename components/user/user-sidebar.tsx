@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
+  Bell,
   ClipboardList,
   Home,
   LogOut,
@@ -34,6 +35,12 @@ const navItems = [
     label: "Órdenes",
     icon: Package,
     match: (path: string) => path.startsWith("/orders"),
+  },
+  {
+    href: "/notifications",
+    label: "Notificaciones",
+    icon: Bell,
+    match: (path: string) => path.startsWith("/notifications"),
   },
 ] as const;
 

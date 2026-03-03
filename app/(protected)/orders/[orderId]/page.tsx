@@ -11,6 +11,7 @@ import { OrderDetailTabs } from "./_components/order-detail-tabs";
 
 type PageProps = {
     params: Promise<{ orderId: string }>;
+    searchParams: Promise<{ tab?: string | string[] }>;
 };
 
 function formatDate(value: Date | null) {
@@ -27,6 +28,11 @@ function formatCurrency(value: string | number) {
         style: "currency",
         currency: "USD",
     }).format(Number(value));
+}
+
+function getParamValue(value?: string | string[]) {
+    if (Array.isArray(value)) return value[0];
+    return value;
 }
 
 const STATUS_CONFIG: Record<
@@ -50,8 +56,28 @@ const SALES_REVIEW_STATUS_CONFIG: Record<
     CHANGES_REQUESTED: { label: "Requiere cambios", variant: "destructive" },
 };
 
-export default async function OrderDetailPage({ params }: PageProps) {
+function resolveDesignTrackingStatus(status: string | null | undefined) {
+    if (!status) return "Pendiente";
+    if (status === "REVIEW") return "En revisión";
+    if (status === "ADJUST") return "Ajustes requeridos";
+    if (status === "CREATE_FROM_SCRATCH") return "Creación en progreso";
+    if (status === "COLOR_PROOF_READY") return "Prueba de color lista";
+    return status;
+}
+
+function resolvePrintTrackingStatus(status: string | null | undefined) {
+    if (!status) return "Pendiente";
+    if (status === "READY") return "Lista para iniciar";
+    if (status === "IN_PROGRESS") return "En progreso";
+    if (status === "COMPLETED") return "Completada";
+    return status;
+}
+
+export default async function OrderDetailPage({ params, searchParams }: PageProps) {
     const { orderId } = await params;
+    const tabParam = getParamValue((await searchParams).tab);
+    const defaultTab =
+        tabParam === "tracking" || tabParam === "design" ? tabParam : "detail";
     const caller = await createServerTRPCCaller();
 
     const order = await caller.orders.get({ id: orderId }).catch((error: unknown) => {
@@ -199,6 +225,87 @@ export default async function OrderDetailPage({ params }: PageProps) {
                 El flujo de diseño se habilita cuando la orden está confirmada.
             </section>
         );
+    const isOrderConfirmed = order.status === "CONFIRMED";
+    const isSalesApproved = order.salesReviewStatus === "APPROVED";
+    const isDesignClosed = Boolean(order.designTask?.closedAt);
+    const isPrintCompleted = order.printTask?.status === "COMPLETED";
+
+    const trackingStages = [
+        {
+            id: "order",
+            title: "Orden Confirmada",
+            status: isOrderConfirmed ? "Completada" : "Pendiente",
+            updatedAt: order.companyConfirmedAt,
+            nextStep: isOrderConfirmed
+                ? "Siguiente paso: validacion de Ventas."
+                : "Siguiente paso: confirmacion interna de la orden.",
+        },
+        {
+            id: "sales",
+            title: "Validación de Ventas",
+            status: salesReviewConfig.label,
+            updatedAt: order.salesReviewUpdatedAt,
+            nextStep: !isOrderConfirmed
+                ? "Se habilita cuando la orden esté confirmada."
+                : order.salesReviewStatus === "APPROVED"
+                    ? "Siguiente paso: activacion de diseno."
+                    : order.salesReviewStatus === "CHANGES_REQUESTED"
+                        ? "Revisa observaciones para continuar."
+                        : "Ventas continua validando la orden.",
+        },
+        {
+            id: "design",
+            title: "Diseño",
+            status: !isSalesApproved
+                ? "Bloqueada por Ventas"
+                : isDesignClosed
+                    ? "Cerrada"
+                    : resolveDesignTrackingStatus(order.designTask?.status),
+            updatedAt: order.designTask?.updatedAt ?? null,
+            nextStep: !isSalesApproved
+                ? "Esperando aprobacion comercial."
+                : isDesignClosed
+                    ? "Siguiente paso: impresion final."
+                    : "Diseno esta trabajando la prueba de color.",
+        },
+        {
+            id: "print",
+            title: "Impresión",
+            status: !isDesignClosed
+                ? "Bloqueada por Diseño"
+                : isPrintCompleted
+                    ? "Completada"
+                    : resolvePrintTrackingStatus(order.printTask?.status),
+            updatedAt: order.printTask?.updatedAt ?? null,
+            nextStep: !isDesignClosed
+                ? "Se habilita al cerrar diseno."
+                : isPrintCompleted
+                    ? "Orden lista para ejecucion operativa."
+                    : "Impresion en curso.",
+        },
+    ] as const;
+
+    const trackingContent = (
+        <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+            <h2 className="mb-4 border-b border-neutral-100 pb-3 text-sm font-semibold text-neutral-900">
+                Seguimiento de ejecución
+            </h2>
+            <div className="space-y-3">
+                {trackingStages.map((stage) => (
+                    <div key={stage.id} className="rounded-xl border border-neutral-200/80 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-neutral-900">{stage.title}</p>
+                            <Badge variant="secondary">{stage.status}</Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-neutral-500">
+                            Actualización: {formatDate(stage.updatedAt)}
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-700">{stage.nextStep}</p>
+                    </div>
+                ))}
+            </div>
+        </section>
+    );
 
     return (
         <div>
@@ -227,7 +334,12 @@ export default async function OrderDetailPage({ params }: PageProps) {
             <div className="grid gap-5 lg:grid-cols-3">
                 {/* Main Content: Line items */}
                 <div className="lg:col-span-2 space-y-5">
-                    <OrderDetailTabs detailContent={detailContent} designContent={designContent} />
+                    <OrderDetailTabs
+                        detailContent={detailContent}
+                        trackingContent={trackingContent}
+                        designContent={designContent}
+                        defaultTab={defaultTab}
+                    />
                 </div>
 
                 {/* Sidebar: Totals & Actions */}

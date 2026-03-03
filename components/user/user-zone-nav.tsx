@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Package, UserRound } from "lucide-react";
+import { Bell, ClipboardList, Package, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -20,6 +20,11 @@ const navItems = [
     href: "/orders",
     label: "Órdenes",
     icon: Package,
+  },
+  {
+    href: "/notifications",
+    label: "Notificaciones",
+    icon: Bell,
   },
 ] as const;
 
