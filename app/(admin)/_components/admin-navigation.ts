@@ -10,6 +10,7 @@ import {
   PackageCheck,
   Palette,
   Printer,
+  Wrench,
   FileText,
   Settings,
 } from "lucide-react";
@@ -77,6 +78,12 @@ export const adminNavigation: AdminNavigationItem[] = [
     roles: ["SUPERADMIN", "STAFF", "OPERATIONS_PRINT"],
   },
   {
+    name: "Operativa",
+    href: "/admin/operations",
+    icon: Wrench,
+    roles: ["SUPERADMIN", "STAFF", "SALES"],
+  },
+  {
     name: "Registros de Auditoría",
     href: "/admin/audit-logs",
     icon: FileText,
@@ -109,6 +116,9 @@ export function getSystemRoleLabel(systemRole: SystemRole): string {
   }
   if (systemRole === "OPERATIONS_PRINT") {
     return "Impresión";
+  }
+  if (systemRole === "INSTALLER") {
+    return "Instalador";
   }
   return "Cliente";
 }

@@ -100,6 +100,7 @@ export function UserFilters({ filters, onFiltersChange, actions }: UserFiltersPr
               <option value="DESIGNER">Diseñador</option>
               <option value="SALES">Ventas</option>
               <option value="OPERATIONS_PRINT">Impresión</option>
+              <option value="INSTALLER">Instalador</option>
               <option value="SUPERADMIN">Superadmin</option>
             </SelectNative>
           </div>

@@ -381,6 +381,7 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
                   "DESIGNER",
                   "SALES",
                   "OPERATIONS_PRINT",
+                  "INSTALLER",
                   "SUPERADMIN",
                 ] as SystemRole[]
               ).map(
@@ -413,6 +414,8 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
                               ? "Ventas"
                             : role === "OPERATIONS_PRINT"
                               ? "Impresión"
+                            : role === "INSTALLER"
+                              ? "Instalador"
                             : "Customer"}
                       </p>
                       <p className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -426,6 +429,8 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
                               ? "Commercial review access for orders and requests"
                             : role === "OPERATIONS_PRINT"
                               ? "Print workflow access for final production confirmation"
+                            : role === "INSTALLER"
+                              ? "Operational installer role for field execution tasks"
                             : "Regular user access"}
                       </p>
                     </div>
@@ -475,6 +480,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
     DESIGNER: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400",
     SALES: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400",
     OPERATIONS_PRINT: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-400",
+    INSTALLER: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400",
     CUSTOMER:
       "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400",
   };
@@ -485,6 +491,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
     DESIGNER: "Diseño",
     SALES: "Ventas",
     OPERATIONS_PRINT: "Impresión",
+    INSTALLER: "Instalador",
     CUSTOMER: "Customer",
   };
 
@@ -494,6 +501,7 @@ function RoleBadge({ role }: { role: SystemRole }) {
     DESIGNER: "Design workflow access - can review artworks and publish color proofs",
     SALES: "Commercial access - can validate orders and purchase orders",
     OPERATIONS_PRINT: "Print workflow access - can confirm final production and evidences",
+    INSTALLER: "Operational installer role - executes field work orders",
     CUSTOMER: "Regular user - can only access customer features",
   };
 

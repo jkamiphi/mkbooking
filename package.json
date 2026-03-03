@@ -15,6 +15,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "admin:create": "tsx scripts/create-admin.ts",
+    "ops:backfill:work-orders": "tsx scripts/backfill-operational-work-orders.ts",
     "storage:migrate:blob-to-s3": "tsx scripts/migrate-blob-to-s3.ts",
     "storage:migrate:s3-to-cloudfront": "tsx scripts/migrate-s3-urls-to-cloudfront.ts"
   },

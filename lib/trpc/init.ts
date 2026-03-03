@@ -34,7 +34,8 @@ type AllowedSystemRole =
   | "STAFF"
   | "DESIGNER"
   | "SALES"
-  | "OPERATIONS_PRINT";
+  | "OPERATIONS_PRINT"
+  | "INSTALLER";
 
 async function resolveUserSystemRole(
   ctx: Context
@@ -184,6 +185,30 @@ const isPrintOperator = t.middleware(async ({ ctx, next }) => {
   });
 });
 
+// Middleware for operational workflow actions
+const isOperationsOperator = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.session || !ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const systemRole = await resolveUserSystemRole(ctx);
+
+  if (!systemRole || !["SUPERADMIN", "STAFF", "SALES"].includes(systemRole)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Operational workflow access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      session: ctx.session,
+      user: ctx.user,
+      systemRole,
+    },
+  });
+});
+
 // Middleware to check if user is superadmin only
 const isSuperAdmin = t.middleware(async ({ ctx, next }) => {
   if (!ctx.session || !ctx.user) {
@@ -214,4 +239,5 @@ export const commercialProcedure = t.procedure.use(isCommercial);
 export const salesReviewProcedure = t.procedure.use(isSalesReviewer);
 export const designProcedure = t.procedure.use(isDesignReviewer);
 export const printProcedure = t.procedure.use(isPrintOperator);
+export const operationsProcedure = t.procedure.use(isOperationsOperator);
 export const superAdminProcedure = t.procedure.use(isSuperAdmin);

@@ -86,6 +86,7 @@ enum SystemRole {
   DESIGNER // Design workflow role for order creatives and color proofs
   SALES // Commercial validation role for orders and requests
   OPERATIONS_PRINT // Final print workflow role
+  INSTALLER // Installer role for field operational work orders
   CUSTOMER // Regular users (advertisers, agencies) - default
 
   @@map("system_role")
@@ -143,6 +144,13 @@ model UserProfile {
   completedOrderPrintTasks OrderPrintTask[]        @relation("OrderPrintTaskCompleter")
   orderPrintTaskEvents     OrderPrintTaskEvent[]   @relation("OrderPrintTaskEventActor")
   uploadedPrintEvidences   OrderPrintEvidence[]    @relation("OrderPrintEvidenceUploader")
+  installerConfig          InstallerConfig?
+  installerCoverageZones   InstallerCoverageZone[]    @relation("InstallerCoverageInstaller")
+  assignedOperationalWorkOrders OrderOperationalWorkOrder[] @relation("OperationalWorkOrderAssignee")
+  createdOperationalWorkOrders  OrderOperationalWorkOrder[] @relation("OperationalWorkOrderCreator")
+  operationalWorkOrderEvents     OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventActor")
+  operationalWorkOrderReassignmentsFrom OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventFromInstaller")
+  operationalWorkOrderReassignmentsTo   OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventToInstaller")
   notifications            UserNotification[]
 
   @@index([userId])
@@ -332,6 +340,8 @@ model Zone {
   assets            Asset[]
   catalogPriceRules CatalogPriceRule[]
   campaignRequests  CampaignRequest[]
+  installerCoverageZones InstallerCoverageZone[]
+  operationalWorkOrders  OrderOperationalWorkOrder[]
 
   @@unique([provinceId, name])
   @@index([provinceId])
@@ -443,6 +453,7 @@ model AssetFace {
   catalogFace                CatalogFace?
   campaignRequestAssignments CampaignRequestFaceAssignment[]
   orderLineItems             OrderLineItem[]
+  operationalWorkOrders      OrderOperationalWorkOrder[]
 
   @@unique([assetId, code])
   @@index([assetId])
@@ -906,6 +917,28 @@ enum OrderPrintTaskEventType {
   @@map("order_print_task_event_type")
 }
 
+enum OperationalWorkOrderStatus {
+  PENDING_ASSIGNMENT
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("operational_work_order_status")
+}
+
+enum OperationalWorkOrderEventType {
+  WORK_ORDER_CREATED
+  AUTO_ASSIGNED
+  AUTO_ASSIGNMENT_SKIPPED
+  MANUAL_REASSIGNED
+  STATUS_CHANGED
+  CANCELLED_BY_PRINT_REOPEN
+  AUTO_ASSIGNMENT_RETRIED
+
+  @@map("operational_work_order_event_type")
+}
+
 enum NotificationType {
   ORDER_CONFIRMED
   SALES_REVIEW_APPROVED
@@ -971,6 +1004,7 @@ model Order {
   salesReviewEvents OrderSalesReviewEvent[]
   designTask        OrderDesignTask?
   printTask         OrderPrintTask?
+  operationalWorkOrders OrderOperationalWorkOrder[]
   notifications     UserNotification[]
 
   @@index([status])
@@ -999,6 +1033,7 @@ model OrderLineItem {
   order     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   face      AssetFace       @relation(fields: [faceId], references: [id], onDelete: Restrict)
   creatives OrderCreative[]
+  operationalWorkOrders OrderOperationalWorkOrder[]
 
   @@index([orderId])
   @@index([faceId])
@@ -1341,6 +1376,7 @@ model OrderPrintTask {
   completedBy UserProfile?       @relation("OrderPrintTaskCompleter", fields: [completedById], references: [id], onDelete: SetNull)
   events      OrderPrintTaskEvent[]
   evidences   OrderPrintEvidence[]
+  operationalWorkOrders OrderOperationalWorkOrder[]
 
   @@index([status])
   @@index([assignedToId])
@@ -1393,6 +1429,106 @@ model OrderPrintEvidence {
   @@index([taskId])
   @@index([uploadedById])
   @@map("order_print_evidence")
+}
+
+model InstallerConfig {
+  id String @id @default(cuid())
+
+  userProfileId String @unique
+  isEnabled Boolean @default(true)
+  maxActiveWorkOrders Int @default(5)
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@index([isEnabled])
+  @@index([maxActiveWorkOrders])
+  @@map("installer_config")
+}
+
+model InstallerCoverageZone {
+  id String @id @default(cuid())
+
+  installerId String
+  zoneId String
+  createdAt DateTime @default(now())
+
+  installer UserProfile @relation("InstallerCoverageInstaller", fields: [installerId], references: [id], onDelete: Cascade)
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@unique([installerId, zoneId])
+  @@index([installerId])
+  @@index([zoneId])
+  @@map("installer_coverage_zone")
+}
+
+model OrderOperationalWorkOrder {
+  id String @id @default(cuid())
+
+  orderId String
+  lineItemId String
+  faceId String
+  zoneId String
+  printTaskId String
+  printTaskCompletedAt DateTime
+
+  status OperationalWorkOrderStatus @default(PENDING_ASSIGNMENT)
+  assignedInstallerId String?
+  assignedAt DateTime?
+  startedAt DateTime?
+  completedAt DateTime?
+  closedAt DateTime?
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  lineItem OrderLineItem @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+  face AssetFace @relation(fields: [faceId], references: [id], onDelete: Restrict)
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  printTask OrderPrintTask @relation(fields: [printTaskId], references: [id], onDelete: Cascade)
+  assignedInstaller UserProfile? @relation("OperationalWorkOrderAssignee", fields: [assignedInstallerId], references: [id], onDelete: SetNull)
+  createdBy UserProfile? @relation("OperationalWorkOrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  events OrderOperationalWorkOrderEvent[]
+
+  @@unique([printTaskId, lineItemId, printTaskCompletedAt])
+  @@index([assignedInstallerId, status])
+  @@index([zoneId, status])
+  @@index([printTaskId])
+  @@index([lineItemId])
+  @@index([closedAt])
+  @@index([status])
+  @@map("order_operational_work_order")
+}
+
+model OrderOperationalWorkOrderEvent {
+  id String @id @default(cuid())
+
+  workOrderId String
+  eventType OperationalWorkOrderEventType
+  fromStatus OperationalWorkOrderStatus?
+  toStatus OperationalWorkOrderStatus?
+  fromInstallerId String?
+  toInstallerId String?
+  notes String? @db.Text
+  metadata Json?
+  actorId String?
+  createdAt DateTime @default(now())
+
+  workOrder OrderOperationalWorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  actor UserProfile? @relation("OperationalWorkOrderEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  fromInstaller UserProfile? @relation("OperationalWorkOrderEventFromInstaller", fields: [fromInstallerId], references: [id], onDelete: SetNull)
+  toInstaller UserProfile? @relation("OperationalWorkOrderEventToInstaller", fields: [toInstallerId], references: [id], onDelete: SetNull)
+
+  @@index([workOrderId])
+  @@index([eventType])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("order_operational_work_order_event")
 }
 
 model OrderPurchaseOrder {

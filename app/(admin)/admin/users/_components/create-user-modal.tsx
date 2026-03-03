@@ -48,6 +48,7 @@ const roleLabels: Record<SystemRole, string> = {
   DESIGNER: "Diseñador",
   SALES: "Ventas",
   OPERATIONS_PRINT: "Impresión",
+  INSTALLER: "Instalador",
   SUPERADMIN: "Superadmin",
 };
 
@@ -77,7 +78,15 @@ export function CreateUserModal({ onCreated }: CreateUserModalProps) {
 
   const canCreateUsers = me?.systemRole === "SUPERADMIN";
   const availableRoles = useMemo<SystemRole[]>(
-    () => ["CUSTOMER", "STAFF", "DESIGNER", "SALES", "OPERATIONS_PRINT", "SUPERADMIN"],
+    () => [
+      "CUSTOMER",
+      "STAFF",
+      "DESIGNER",
+      "SALES",
+      "OPERATIONS_PRINT",
+      "INSTALLER",
+      "SUPERADMIN",
+    ],
     []
   );
 

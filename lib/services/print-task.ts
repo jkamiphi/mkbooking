@@ -6,6 +6,10 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 import { createOrderNotifications, NotificationType } from "@/lib/services/notifications";
+import {
+  cancelOperationalWorkOrdersByPrintReopen,
+  createOperationalWorkOrdersForPrintCompletion,
+} from "@/lib/services/operations";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -229,6 +233,14 @@ export async function reopenPrintTaskAfterDesignReopened(
     metadata: {
       proofVersion: nextProofVersion,
     },
+  });
+
+  await cancelOperationalWorkOrdersByPrintReopen(client, {
+    orderId: input.orderId,
+    printTaskId: task.id,
+    actorId: input.actorId ?? null,
+    reason: input.reason ?? null,
+    source: "print-reopened-by-design",
   });
 
   return updatedTask;
@@ -556,6 +568,14 @@ export async function confirmFinalPrint(
       toStatus: "COMPLETED",
       actorId: actor.profileId,
       notes: input.notes?.trim() || null,
+    });
+
+    await createOperationalWorkOrdersForPrintCompletion(tx, {
+      orderId: task.order.id,
+      printTaskId: task.id,
+      printTaskCompletedAt: now,
+      actorId: actor.profileId,
+      source: "print-confirmation",
     });
 
     await createOrderNotifications(tx, {
