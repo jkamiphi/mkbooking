@@ -250,31 +250,37 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
   }
 
   const checklistProgress = `${task.validation.requiredChecklistCompleted}/${task.validation.requiredChecklistTotal}`;
+  const isTaskClosed = task.status === "COMPLETED" || task.status === "CANCELLED";
 
   return (
     <>
-      <div className="space-y-4 pb-24">
+      <div className="space-y-4 pb-28 lg:pb-6">
         <Card className="rounded-2xl border-neutral-200 p-4">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-mono text-xs font-semibold text-neutral-900">{task.orderCode}</p>
-              <h2 className="mt-1 text-lg font-semibold text-neutral-900">Cara {task.face.code}</h2>
-              <p className="mt-1 text-xs text-neutral-500">{task.face.structureTypeName}</p>
+            <div className="min-w-0">
+              <p className="truncate font-mono text-xs font-semibold text-neutral-900">{task.orderCode}</p>
+              <h2 className="mt-1 truncate text-lg font-semibold text-neutral-900">Cara {task.face.code}</h2>
+              <p className="mt-1 truncate text-xs text-neutral-500">{task.face.structureTypeName}</p>
             </div>
-            <Badge variant={statusVariant(task.status)}>{statusLabel(task.status)}</Badge>
+            <Badge variant={statusVariant(task.status)} className="shrink-0 whitespace-nowrap">
+              {statusLabel(task.status)}
+            </Badge>
           </div>
 
           <div className="mt-3 space-y-2 text-sm text-neutral-700">
-            <p className="flex items-start gap-2">
-              <MapPin className="mt-0.5 h-4 w-4 text-neutral-400" />
-              <span>
-                {task.zone.name}, {task.zone.provinceName}
-                <br />
-                {task.face.address || "Dirección no disponible"}
+            <p className="flex min-w-0 items-start gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
+              <span className="min-w-0">
+                <span className="block truncate">
+                  {task.zone.name}, {task.zone.provinceName}
+                </span>
+                <span className="block truncate text-xs text-neutral-600">
+                  {task.face.address || "Dirección no disponible"}
+                </span>
               </span>
             </p>
-            <p className="flex items-center gap-2 text-xs text-neutral-500">
-              <Clock3 className="h-3.5 w-3.5" />
+            <p className="flex items-center gap-2 whitespace-nowrap text-xs text-neutral-500">
+              <Clock3 className="h-3.5 w-3.5 shrink-0" />
               Actualizada: {formatDateTime(task.updatedAt)}
             </p>
           </div>
@@ -293,10 +299,52 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
           )}
         </Card>
 
+        <Card className="hidden rounded-2xl border-neutral-200 p-4 lg:block">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="whitespace-nowrap text-sm font-semibold text-neutral-900">Acción de estado</h3>
+            <Badge variant={statusVariant(task.status)} className="whitespace-nowrap">
+              {statusLabel(task.status)}
+            </Badge>
+          </div>
+          <div className="mt-3">
+            {task.status === "ASSIGNED" ? (
+              <Button
+                type="button"
+                className="h-11 w-full rounded-xl"
+                onClick={() => startTask.mutate({ workOrderId })}
+                disabled={startTask.isPending}
+              >
+                <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                {startTask.isPending ? "Iniciando..." : "Iniciar trabajo"}
+              </Button>
+            ) : null}
+
+            {task.status === "IN_PROGRESS" ? (
+              <Button
+                type="button"
+                className="h-11 w-full rounded-xl"
+                onClick={handleCompleteAction}
+                disabled={completeTask.isPending || !task.validation.canComplete}
+              >
+                <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                {completeTask.isPending ? "Completando..." : "Completar OT"}
+              </Button>
+            ) : null}
+
+            {task.status !== "ASSIGNED" && task.status !== "IN_PROGRESS" ? (
+              <div className="flex h-11 items-center justify-center rounded-xl border border-neutral-200 px-3 text-sm text-neutral-600">
+                OT en estado {statusLabel(task.status)}
+              </div>
+            ) : null}
+          </div>
+        </Card>
+
         <Card className="rounded-2xl border-neutral-200 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-neutral-900">Checklist</h3>
-            <Badge variant="secondary">{checklistProgress}</Badge>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="truncate whitespace-nowrap text-sm font-semibold text-neutral-900">Checklist</h3>
+            <Badge variant="secondary" className="shrink-0 whitespace-nowrap">
+              {checklistProgress}
+            </Badge>
           </div>
 
           <div className="space-y-2">
@@ -314,10 +362,10 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
                       isChecked: Boolean(checked),
                     })
                   }
-                  disabled={toggleChecklist.isPending || task.status === "COMPLETED" || task.status === "CANCELLED"}
+                  disabled={toggleChecklist.isPending || isTaskClosed}
                   className="mt-1 h-5 w-5"
                 />
-                <span className="text-sm text-neutral-800">{item.label}</span>
+                <span className="min-w-0 text-sm text-neutral-800">{item.label}</span>
               </label>
             ))}
           </div>
@@ -325,7 +373,9 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
 
         <Card className="rounded-2xl border-neutral-200 p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-neutral-900">Evidencias ({task.evidences.length})</h3>
+            <h3 className="truncate whitespace-nowrap text-sm font-semibold text-neutral-900">
+              Evidencias ({task.evidences.length})
+            </h3>
             <input
               ref={uploadInputRef}
               type="file"
@@ -342,9 +392,9 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-xl"
+              className="h-11 shrink-0 whitespace-nowrap rounded-xl"
               onClick={() => uploadInputRef.current?.click()}
-              disabled={isUploadingPhoto || task.status === "COMPLETED" || task.status === "CANCELLED"}
+              disabled={isUploadingPhoto || isTaskClosed}
             >
               <Camera className="mr-1.5 h-4 w-4" />
               {isUploadingPhoto ? "Subiendo" : "Tomar foto"}
@@ -360,22 +410,22 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
               {task.evidences.map((evidence) => (
                 <div key={evidence.id} className="rounded-xl border border-neutral-200 bg-white p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-neutral-900">{evidence.fileName}</p>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-neutral-900">{evidence.fileName}</p>
                       <p className="text-xs text-neutral-500">{formatDateTime(evidence.receivedAt)}</p>
                     </div>
                     {evidence.withinExpectedRadius === true ? (
-                      <Badge variant="success">
+                      <Badge variant="success" className="shrink-0 whitespace-nowrap">
                         <ShieldCheck className="mr-1 h-3 w-3" />
                         Dentro de radio
                       </Badge>
                     ) : evidence.withinExpectedRadius === false ? (
-                      <Badge variant="destructive">
+                      <Badge variant="destructive" className="shrink-0 whitespace-nowrap">
                         <ShieldAlert className="mr-1 h-3 w-3" />
                         Fuera de radio
                       </Badge>
                     ) : (
-                      <Badge variant="warning">
+                      <Badge variant="warning" className="shrink-0 whitespace-nowrap">
                         <TriangleAlert className="mr-1 h-3 w-3" />
                         Sin validar geo
                       </Badge>
@@ -399,18 +449,18 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
         </Card>
 
         <Card className="rounded-2xl border-neutral-200 p-4">
-          <h3 className="text-sm font-semibold text-neutral-900">Historial reciente</h3>
+          <h3 className="whitespace-nowrap text-sm font-semibold text-neutral-900">Historial reciente</h3>
           <div className="mt-3 space-y-2">
             {task.events.length === 0 ? (
               <p className="text-xs text-neutral-500">Sin eventos registrados.</p>
             ) : (
               task.events.map((event) => (
                 <div key={event.id} className="rounded-xl border border-neutral-200 bg-white px-3 py-2">
-                  <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-900">
-                    <CircleDot className="h-3.5 w-3.5 text-neutral-400" />
-                    {event.eventType}
+                  <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-neutral-900">
+                    <CircleDot className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                    <span className="truncate">{event.eventType}</span>
                   </div>
-                  <p className="mt-1 text-xs text-neutral-500">
+                  <p className="mt-1 truncate text-xs text-neutral-500">
                     {formatDateTime(event.createdAt)} · {event.actor?.user?.name || event.actor?.user?.email || "Sistema"}
                   </p>
                 </div>
@@ -420,7 +470,7 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
         </Card>
       </div>
 
-      <div className="fixed inset-x-0 bottom-[max(4.3rem,env(safe-area-inset-bottom))] z-30 border-t border-neutral-200 bg-white/95 p-3 backdrop-blur lg:hidden">
+      <div className="fixed inset-x-0 bottom-[max(4.3rem,env(safe-area-inset-bottom))] z-30 border-t border-neutral-200 bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
         <div className="mx-auto flex w-full max-w-3xl gap-2">
           {task.status === "ASSIGNED" ? (
             <Button
@@ -447,7 +497,7 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
           ) : null}
 
           {task.status !== "ASSIGNED" && task.status !== "IN_PROGRESS" ? (
-            <div className="flex h-11 flex-1 items-center justify-center rounded-xl border border-neutral-200 text-sm text-neutral-600">
+            <div className="flex h-11 flex-1 items-center justify-center rounded-xl border border-neutral-200 px-2 text-xs text-neutral-600">
               OT en estado {statusLabel(task.status)}
             </div>
           ) : null}
