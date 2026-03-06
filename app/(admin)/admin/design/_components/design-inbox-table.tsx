@@ -4,10 +4,18 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, Clock3, RefreshCw } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import { countActiveFilters, toSummaryChips } from "@/lib/navigation/filter-state";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
 import { SelectNative } from "@/components/ui/select-native";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
 const statusOptions = [
@@ -51,6 +59,11 @@ export function DesignInboxTable() {
   const [mineOnly, setMineOnly] = useState(false);
   const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [overdueOnly, setOverdueOnly] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [draftStatus, setDraftStatus] = useState("");
+  const [draftMineOnly, setDraftMineOnly] = useState(false);
+  const [draftUnassignedOnly, setDraftUnassignedOnly] = useState(false);
+  const [draftOverdueOnly, setDraftOverdueOnly] = useState(false);
 
   const queryInput = useMemo(
     () => ({
@@ -95,35 +108,125 @@ export function DesignInboxTable() {
   const tasks = inboxQuery.data?.tasks ?? [];
   const loading = inboxQuery.isLoading || inboxQuery.isRefetching;
 
+  const activeCount = countActiveFilters({
+    status: status || undefined,
+    mineOnly: mineOnly ? true : undefined,
+    unassignedOnly: unassignedOnly ? true : undefined,
+    overdueOnly: overdueOnly ? true : undefined,
+  });
+
+  const summaryChips = useMemo(
+    () =>
+      toSummaryChips(
+        { status, mineOnly, unassignedOnly, overdueOnly },
+        [
+          {
+            key: "status",
+            isActive: (state) => Boolean(state.status),
+            getLabel: (state) => `Estado: ${statusLabel(state.status)}`,
+          },
+          {
+            key: "mineOnly",
+            isActive: (state) => state.mineOnly,
+            getLabel: () => "Solo mías",
+          },
+          {
+            key: "unassignedOnly",
+            isActive: (state) => state.unassignedOnly,
+            getLabel: () => "No asignadas",
+          },
+          {
+            key: "overdueOnly",
+            isActive: (state) => state.overdueOnly,
+            getLabel: () => "Vencidas SLA",
+          },
+        ],
+      ).map((chip) => ({
+        ...chip,
+        onRemove: () => {
+          if (chip.key === "status") setStatus("");
+          if (chip.key === "mineOnly") setMineOnly(false);
+          if (chip.key === "unassignedOnly") setUnassignedOnly(false);
+          if (chip.key === "overdueOnly") setOverdueOnly(false);
+        },
+      })),
+    [mineOnly, overdueOnly, status, unassignedOnly],
+  );
+
+  function openFilters() {
+    setDraftStatus(status);
+    setDraftMineOnly(mineOnly);
+    setDraftUnassignedOnly(unassignedOnly);
+    setDraftOverdueOnly(overdueOnly);
+    setIsFiltersOpen(true);
+  }
+
+  function applyFilters() {
+    setStatus(draftStatus);
+    setMineOnly(draftMineOnly);
+    setUnassignedOnly(draftUnassignedOnly);
+    setOverdueOnly(draftOverdueOnly);
+    setIsFiltersOpen(false);
+  }
+
+  function clearFilters() {
+    setDraftStatus("");
+    setDraftMineOnly(false);
+    setDraftUnassignedOnly(false);
+    setDraftOverdueOnly(false);
+    setStatus("");
+    setMineOnly(false);
+    setUnassignedOnly(false);
+    setOverdueOnly(false);
+    setIsFiltersOpen(false);
+  }
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-neutral-600">Estado</label>
-          <SelectNative value={status} onChange={(event) => setStatus(event.target.value)}>
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectNative>
-        </div>
-        <ToggleFilter
-          label="Solo mias"
-          checked={mineOnly}
-          onChange={setMineOnly}
-        />
-        <ToggleFilter
-          label="No asignadas"
-          checked={unassignedOnly}
-          onChange={setUnassignedOnly}
-        />
-        <ToggleFilter
-          label="Vencidas SLA"
-          checked={overdueOnly}
-          onChange={setOverdueOnly}
-        />
-      </div>
+      <Sheet
+        open={isFiltersOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            openFilters();
+            return;
+          }
+          setIsFiltersOpen(false);
+        }}
+      >
+        <FilterSheetToolbar
+          summaryChips={summaryChips}
+          onClearAll={activeCount > 0 ? clearFilters : undefined}
+        >
+          <SheetTrigger asChild>
+            <FilterSheetTriggerButton activeCount={activeCount} />
+          </SheetTrigger>
+        </FilterSheetToolbar>
+
+        <FilterSheetPanel
+          title="Filtrar bandeja de diseño"
+          description="Ajusta estado y reglas de asignación antes de refrescar la bandeja."
+          onApply={applyFilters}
+          onClear={clearFilters}
+        >
+          <FilterSheetSection title="Estado">
+            <SelectNative value={draftStatus} onChange={(event) => setDraftStatus(event.target.value)}>
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </SelectNative>
+          </FilterSheetSection>
+
+          <FilterSheetSection title="Asignación">
+            <div className="space-y-3">
+              <ToggleFilter label="Solo mías" checked={draftMineOnly} onChange={setDraftMineOnly} />
+              <ToggleFilter label="No asignadas" checked={draftUnassignedOnly} onChange={setDraftUnassignedOnly} />
+              <ToggleFilter label="Vencidas SLA" checked={draftOverdueOnly} onChange={setDraftOverdueOnly} />
+            </div>
+          </FilterSheetSection>
+        </FilterSheetPanel>
+      </Sheet>
 
       <Card>
         {loading ? (

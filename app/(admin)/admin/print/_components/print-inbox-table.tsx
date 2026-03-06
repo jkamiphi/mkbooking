@@ -4,10 +4,18 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, RefreshCw } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import { countActiveFilters, toSummaryChips } from "@/lib/navigation/filter-state";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
 import { SelectNative } from "@/components/ui/select-native";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
 const statusOptions = [
@@ -46,6 +54,10 @@ export function PrintInboxTable() {
   const [status, setStatus] = useState<string>("");
   const [mineOnly, setMineOnly] = useState(false);
   const [unassignedOnly, setUnassignedOnly] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [draftStatus, setDraftStatus] = useState("");
+  const [draftMineOnly, setDraftMineOnly] = useState(false);
+  const [draftUnassignedOnly, setDraftUnassignedOnly] = useState(false);
 
   const queryInput = useMemo(
     () => ({
@@ -87,26 +99,112 @@ export function PrintInboxTable() {
   const tasks = inboxQuery.data?.tasks ?? [];
   const loading = inboxQuery.isLoading || inboxQuery.isRefetching;
 
+  const activeCount = countActiveFilters({
+    status: status || undefined,
+    mineOnly: mineOnly ? true : undefined,
+    unassignedOnly: unassignedOnly ? true : undefined,
+  });
+
+  const summaryChips = useMemo(
+    () =>
+      toSummaryChips(
+        { status, mineOnly, unassignedOnly },
+        [
+          {
+            key: "status",
+            isActive: (state) => Boolean(state.status),
+            getLabel: (state) => `Estado: ${statusLabel(state.status)}`,
+          },
+          {
+            key: "mineOnly",
+            isActive: (state) => state.mineOnly,
+            getLabel: () => "Solo mías",
+          },
+          {
+            key: "unassignedOnly",
+            isActive: (state) => state.unassignedOnly,
+            getLabel: () => "No asignadas",
+          },
+        ],
+      ).map((chip) => ({
+        ...chip,
+        onRemove: () => {
+          if (chip.key === "status") setStatus("");
+          if (chip.key === "mineOnly") setMineOnly(false);
+          if (chip.key === "unassignedOnly") setUnassignedOnly(false);
+        },
+      })),
+    [mineOnly, status, unassignedOnly],
+  );
+
+  function openFilters() {
+    setDraftStatus(status);
+    setDraftMineOnly(mineOnly);
+    setDraftUnassignedOnly(unassignedOnly);
+    setIsFiltersOpen(true);
+  }
+
+  function applyFilters() {
+    setStatus(draftStatus);
+    setMineOnly(draftMineOnly);
+    setUnassignedOnly(draftUnassignedOnly);
+    setIsFiltersOpen(false);
+  }
+
+  function clearFilters() {
+    setDraftStatus("");
+    setDraftMineOnly(false);
+    setDraftUnassignedOnly(false);
+    setStatus("");
+    setMineOnly(false);
+    setUnassignedOnly(false);
+    setIsFiltersOpen(false);
+  }
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-3">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-neutral-600">Estado</label>
-          <SelectNative value={status} onChange={(event) => setStatus(event.target.value)}>
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectNative>
-        </div>
-        <ToggleFilter label="Solo mías" checked={mineOnly} onChange={setMineOnly} />
-        <ToggleFilter
-          label="No asignadas"
-          checked={unassignedOnly}
-          onChange={setUnassignedOnly}
-        />
-      </div>
+      <Sheet
+        open={isFiltersOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            openFilters();
+            return;
+          }
+          setIsFiltersOpen(false);
+        }}
+      >
+        <FilterSheetToolbar
+          summaryChips={summaryChips}
+          onClearAll={activeCount > 0 ? clearFilters : undefined}
+        >
+          <SheetTrigger asChild>
+            <FilterSheetTriggerButton activeCount={activeCount} />
+          </SheetTrigger>
+        </FilterSheetToolbar>
+
+        <FilterSheetPanel
+          title="Filtrar bandeja de impresión"
+          description="Refina por estado y asignación antes de actualizar la bandeja."
+          onApply={applyFilters}
+          onClear={clearFilters}
+        >
+          <FilterSheetSection title="Estado">
+            <SelectNative value={draftStatus} onChange={(event) => setDraftStatus(event.target.value)}>
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </SelectNative>
+          </FilterSheetSection>
+          <FilterSheetSection title="Asignación">
+            <div className="space-y-3">
+              <ToggleFilter label="Solo mías" checked={draftMineOnly} onChange={setDraftMineOnly} />
+              <ToggleFilter label="No asignadas" checked={draftUnassignedOnly} onChange={setDraftUnassignedOnly} />
+            </div>
+          </FilterSheetSection>
+        </FilterSheetPanel>
+      </Sheet>
 
       <Card>
         {loading ? (

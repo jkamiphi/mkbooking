@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -9,8 +10,19 @@ import {
   MoreHorizontal,
   Pencil,
   RotateCcw,
-  X,
 } from "lucide-react";
+import {
+  countActiveFilters,
+  parseFilterState,
+  serializeFilterState,
+  toSummaryChips,
+} from "@/lib/navigation/filter-state";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +34,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -63,17 +75,25 @@ async function copyToClipboard(text: string) {
 }
 
 export function FacesContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const parsedFilters = parseFilterState(searchParams, ["assetId", "status"] as const);
+  const appliedFilters = {
+    assetId: parsedFilters.assetId || "",
+    status: (parsedFilters.status as FaceStatus | "" | undefined) || "",
+  };
   const utils = trpc.useUtils();
-  const [assetId, setAssetId] = useState("");
-  const [status, setStatus] = useState<FaceStatus | "">("");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(appliedFilters);
   const [page, setPage] = useState(0);
   const [updatingFaceId, setUpdatingFaceId] = useState<string | null>(null);
 
   const assetsQuery = trpc.inventory.assets.list.useQuery({ take: 100 });
   const facesQuery = trpc.inventory.faces.list.useQuery(
     {
-      assetId: assetId || undefined,
-      status: status || undefined,
+      assetId: appliedFilters.assetId || undefined,
+      status: (appliedFilters.status || undefined) as FaceStatus | undefined,
       skip: page * PAGE_SIZE,
       take: PAGE_SIZE,
     },
@@ -93,7 +113,6 @@ export function FacesContent() {
   const hasMore = facesQuery.data?.hasMore ?? false;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasPrevious = page > 0;
-  const hasFilters = assetId || status;
 
   const rangeLabel = useMemo(() => {
     if (total === 0) return "0 resultados";
@@ -102,10 +121,29 @@ export function FacesContent() {
     return `Mostrando ${start}-${end} de ${total}`;
   }, [page, total]);
 
-  function clearFilters() {
-    setAssetId("");
-    setStatus("");
+  function navigateWithFilters(nextFilters: typeof appliedFilters) {
+    const params = serializeFilterState({
+      assetId: nextFilters.assetId || undefined,
+      status: nextFilters.status || undefined,
+    });
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.push(nextUrl);
+  }
+
+  function applyFilters() {
     setPage(0);
+    navigateWithFilters(draftFilters);
+    setIsFiltersOpen(false);
+  }
+
+  function clearFilters() {
+    setDraftFilters({
+      assetId: "",
+      status: "",
+    });
+    setPage(0);
+    router.push(pathname);
+    setIsFiltersOpen(false);
   }
 
   async function handleCopyCode(code: string, label: string) {
@@ -138,31 +176,72 @@ export function FacesContent() {
     );
   }
 
+  const activeCount = countActiveFilters({
+    assetId: appliedFilters.assetId || undefined,
+    status: appliedFilters.status || undefined,
+  });
+
+  const summaryChips = toSummaryChips(appliedFilters, [
+        {
+          key: "assetId",
+          isActive: (state) => Boolean(state.assetId),
+          getLabel: (state) =>
+            `Activo: ${assetsQuery.data?.assets.find((asset) => asset.id === state.assetId)?.code ?? "Activo"}`,
+        },
+        {
+          key: "status",
+          isActive: (state) => Boolean(state.status),
+          getLabel: (state) => `Estado: ${statusLabels[state.status as FaceStatus]}`,
+        },
+      ]).map((chip) => ({
+    ...chip,
+    onRemove: () => {
+      setPage(0);
+      navigateWithFilters({
+        ...appliedFilters,
+        [chip.key]: "",
+      });
+    },
+  }));
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle>Filtros de caras</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Segmenta por activo y estado operativo.
-            </p>
-          </div>
-          <Button asChild className="w-full shrink-0 sm:w-auto">
-            <Link href="/admin/inventory/faces/new">Nueva Cara</Link>
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="face-asset">Activo</Label>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <Sheet
+          open={isFiltersOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              setDraftFilters(appliedFilters);
+              setIsFiltersOpen(true);
+              return;
+            }
+            setIsFiltersOpen(false);
+          }}
+        >
+          <FilterSheetToolbar
+            summaryChips={summaryChips}
+            onClearAll={activeCount > 0 ? clearFilters : undefined}
+          >
+            <SheetTrigger asChild>
+              <FilterSheetTriggerButton activeCount={activeCount} />
+            </SheetTrigger>
+          </FilterSheetToolbar>
+
+          <FilterSheetPanel
+            title="Filtrar caras"
+            description="Segmenta por activo y estado operativo."
+            onApply={applyFilters}
+            onClear={clearFilters}
+          >
+            <FilterSheetSection title="Activo">
               <SelectNative
-                id="face-asset"
-                value={assetId}
-                onChange={(event) => {
-                  setAssetId(event.target.value);
-                  setPage(0);
-                }}
+                value={draftFilters.assetId}
+                onChange={(event) =>
+                  setDraftFilters((current) => ({
+                    ...current,
+                    assetId: event.target.value,
+                  }))
+                }
               >
                 <option value="">Todos los activos</option>
                 {assetsQuery.data?.assets.map((asset) => (
@@ -171,17 +250,17 @@ export function FacesContent() {
                   </option>
                 ))}
               </SelectNative>
-            </div>
+            </FilterSheetSection>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="face-status">Estado</Label>
+            <FilterSheetSection title="Estado">
               <SelectNative
-                id="face-status"
-                value={status}
-                onChange={(event) => {
-                  setStatus(event.target.value as FaceStatus | "");
-                  setPage(0);
-                }}
+                value={draftFilters.status}
+                onChange={(event) =>
+                  setDraftFilters((current) => ({
+                    ...current,
+                    status: event.target.value as FaceStatus | "",
+                  }))
+                }
               >
                 <option value="">Todos los estados</option>
                 {statusOptions.map((option) => (
@@ -190,19 +269,14 @@ export function FacesContent() {
                   </option>
                 ))}
               </SelectNative>
-            </div>
-          </div>
+            </FilterSheetSection>
+          </FilterSheetPanel>
+        </Sheet>
 
-          {hasFilters ? (
-            <div className="flex justify-end border-t pt-4">
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                <X className="mr-2 h-4 w-4" />
-                Limpiar filtros
-              </Button>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+        <Button asChild className="w-full shrink-0 sm:w-auto">
+          <Link href="/admin/inventory/faces/new">Nueva Cara</Link>
+        </Button>
+      </div>
 
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between gap-3">

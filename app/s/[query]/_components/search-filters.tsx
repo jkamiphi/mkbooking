@@ -2,17 +2,23 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, MapPin, SlidersHorizontal, X } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import {
   CampaignDateRangePicker,
   formatShortDateLabel,
 } from "@/components/campaign/campaign-date-range-picker";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  countActiveFilters,
+  toSummaryChips,
+} from "@/lib/navigation/filter-state";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
+import { SelectNative } from "@/components/ui/select-native";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 
 type StructureType = {
   id: string;
@@ -49,6 +55,7 @@ export function SearchFilters({
 }: SearchFiltersProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [draftTypeId, setDraftTypeId] = useState(selectedTypeId ?? "");
   const [draftZoneId, setDraftZoneId] = useState(selectedZoneId ?? "");
   const [draftFromDate, setDraftFromDate] = useState(selectedFromDate ?? "");
   const [draftToDate, setDraftToDate] = useState(selectedToDate ?? "");
@@ -91,6 +98,7 @@ export function SearchFilters({
     }
 
     navigateWithFilters({
+      typeId: draftTypeId || null,
       zoneId: draftZoneId || null,
       fromDate: normalizedFrom,
       toDate: normalizedTo,
@@ -99,6 +107,7 @@ export function SearchFilters({
   }
 
   function clearAllFilters() {
+    setDraftTypeId("");
     setDraftZoneId("");
     setDraftFromDate("");
     setDraftToDate("");
@@ -111,6 +120,7 @@ export function SearchFilters({
     setIsOpen(false);
   }
 
+  const selectedType = structureTypes.find((type) => type.id === selectedTypeId);
   const selectedZone = zones.find((zone) => zone.id === selectedZoneId);
   const dateBadgeLabel = useMemo(() => {
     if (!selectedFromDate && !selectedToDate) return null;
@@ -121,155 +131,136 @@ export function SearchFilters({
     return selectedToDate ? formatShortDateLabel(selectedToDate) : null;
   }, [selectedFromDate, selectedToDate]);
 
+  const activeCount = countActiveFilters({
+    typeId: selectedTypeId || undefined,
+    zoneId: selectedZoneId || undefined,
+    dates: dateBadgeLabel || undefined,
+  });
+
+  const summaryChips = toSummaryChips(
+    {
+      selectedTypeId,
+      selectedZoneId,
+      dateBadgeLabel,
+    },
+    [
+      {
+        key: "type",
+        isActive: (state) => Boolean(state.selectedTypeId),
+        getLabel: () => `Tipo: ${selectedType?.name ?? "Tipo"}`,
+      },
+      {
+        key: "zone",
+        isActive: (state) => Boolean(state.selectedZoneId),
+        getLabel: () => `Zona: ${selectedZone?.name ?? "Zona"}`,
+      },
+      {
+        key: "dates",
+        isActive: (state) => Boolean(state.dateBadgeLabel),
+        getLabel: () => `Fechas: ${dateBadgeLabel}`,
+      },
+    ],
+  ).map((chip) => ({
+    ...chip,
+    onRemove: () => {
+      if (chip.key === "type") {
+        navigateWithFilters({ typeId: null });
+        return;
+      }
+      if (chip.key === "zone") {
+        navigateWithFilters({ zoneId: null });
+        return;
+      }
+      navigateWithFilters({ fromDate: null, toDate: null });
+    },
+  }));
+
   return (
     <div className="border-b border-neutral-200 bg-white px-6 py-3">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
+      <Sheet
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setDraftTypeId(selectedTypeId ?? "");
+            setDraftZoneId(selectedZoneId ?? "");
+            setDraftFromDate(selectedFromDate ?? "");
+            setDraftToDate(selectedToDate ?? "");
+            setIsOpen(true);
+            return;
+          }
+          setIsOpen(false);
+        }}
+      >
+        <FilterSheetToolbar
+          summaryChips={summaryChips}
+          onClearAll={activeCount > 0 ? clearAllFilters : undefined}
         >
-          <SlidersHorizontal className="h-4 w-4" />
-          Filtros
-        </button>
+          <SheetTrigger asChild>
+            <FilterSheetTriggerButton activeCount={activeCount} />
+          </SheetTrigger>
+        </FilterSheetToolbar>
 
-        <div className="h-6 w-px bg-neutral-200" />
-
-        <div className="flex flex-1 items-center gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
-          {selectedZone ? (
-            <button
-              type="button"
-              onClick={() => navigateWithFilters({ zoneId: null })}
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-[#0359A8] bg-[#0359A8]/10 px-3 py-1.5 text-xs font-semibold text-[#0359A8] transition hover:bg-[#0359A8]/20"
-            >
-              <MapPin className="h-3 w-3" />
-              {selectedZone.name}
-              <X className="h-3 w-3" />
-            </button>
-          ) : null}
-
-          {dateBadgeLabel ? (
-            <button
-              type="button"
-              onClick={() => navigateWithFilters({ fromDate: null, toDate: null })}
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-[#0359A8] bg-[#0359A8]/10 px-3 py-1.5 text-xs font-semibold text-[#0359A8] transition hover:bg-[#0359A8]/20"
-            >
-              <CalendarDays className="h-3 w-3" />
-              {dateBadgeLabel}
-              <X className="h-3 w-3" />
-            </button>
-          ) : null}
-
-          {structureTypes.map((type) => {
-            const isSelected = type.id === selectedTypeId;
-
-            return (
-              <button
-                key={type.id}
-                type="button"
-                onClick={() =>
-                  navigateWithFilters({ typeId: isSelected ? null : type.id })
-                }
-                className={`
-                  flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition
-                  ${
-                    isSelected
-                      ? "border-neutral-900 bg-neutral-900 text-white"
-                      : "border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"
-                  }
-                `}
-              >
-                {type.name}
-                {isSelected ? <X className="h-3 w-3" /> : null}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent
-          showCloseButton={false}
-          className="!top-0 !left-auto !right-0 !h-dvh !w-full !max-w-md !translate-x-0 !translate-y-0 !gap-0 !rounded-none !border-y-0 !border-r-0 !p-0 data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right"
+        <FilterSheetPanel
+          title="Filtros de búsqueda"
+          description="Ajusta tipo de estructura, zona y rango de fechas."
+          onApply={applyAdvancedFilters}
+          onClear={clearAllFilters}
         >
-          <div className="flex h-full flex-col bg-white">
-            <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
-              <div>
-                <DialogTitle className="text-base font-semibold text-neutral-900">
-                  Filtros de búsqueda
-                </DialogTitle>
-                <DialogDescription className="mt-1 text-xs text-neutral-500">
-                  Ajusta zona y rango de fechas.
-                </DialogDescription>
+          <FilterSheetSection title="Tipo de estructura">
+            <SelectNative
+              value={draftTypeId}
+              onChange={(event) => setDraftTypeId(event.target.value)}
+            >
+              <option value="">Todos los tipos</option>
+              {structureTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </SelectNative>
+          </FilterSheetSection>
+
+          <FilterSheetSection title="Zona">
+            <SelectNative
+              value={draftZoneId}
+              onChange={(event) => setDraftZoneId(event.target.value)}
+            >
+              <option value="">Todas las zonas</option>
+              {zones.map((zone) => (
+                <option key={zone.id} value={zone.id}>
+                  {zone.name} - {zone.province.name}
+                </option>
+              ))}
+            </SelectNative>
+          </FilterSheetSection>
+
+          <FilterSheetSection title="Disponibilidad">
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-neutral-600">
+                <span className="inline-flex items-center gap-1">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Desde
+                </span>
+                <span>Hasta</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-full border border-neutral-200 p-2 text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700"
-                aria-label="Cerrar filtros"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <CampaignDateRangePicker
+                variant="inputs"
+                fromDate={draftFromDate || undefined}
+                toDate={draftToDate || undefined}
+                minimumStartDate={minimumStartDate}
+                minimumDurationDays={1}
+                onChange={(from, to) => {
+                  setDraftFromDate(from ?? "");
+                  setDraftToDate(to ?? "");
+                }}
+              />
+              <p className="text-xs text-neutral-500">
+                Inicio disponible desde {formatShortDateLabel(minimumStartDate)}.
+              </p>
             </div>
-
-            <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-neutral-600">Zona</span>
-                <select
-                  value={draftZoneId}
-                  onChange={(event) => setDraftZoneId(event.target.value)}
-                  className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none"
-                >
-                  <option value="">Todas las zonas</option>
-                  {zones.map((zone) => (
-                    <option key={zone.id} value={zone.id}>
-                      {zone.name} - {zone.province.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="space-y-1.5">
-                <div className="grid grid-cols-2 gap-3">
-                  <span className="text-xs font-semibold text-neutral-600">Desde</span>
-                  <span className="text-xs font-semibold text-neutral-600">Hasta</span>
-                </div>
-                <CampaignDateRangePicker
-                  variant="inputs"
-                  fromDate={draftFromDate || undefined}
-                  toDate={draftToDate || undefined}
-                  minimumStartDate={minimumStartDate}
-                  minimumDurationDays={1}
-                  onChange={(from, to) => {
-                    setDraftFromDate(from ?? "");
-                    setDraftToDate(to ?? "");
-                  }}
-                />
-                <p className="text-xs text-neutral-500">
-                  Inicio disponible desde {formatShortDateLabel(minimumStartDate)}.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 border-t border-neutral-200 px-5 py-4">
-              <button
-                type="button"
-                onClick={clearAllFilters}
-                className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100"
-              >
-                Limpiar
-              </button>
-              <button
-                type="button"
-                onClick={applyAdvancedFilters}
-                className="rounded-full bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#024a8c]"
-              >
-                Aplicar filtros
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </FilterSheetSection>
+        </FilterSheetPanel>
+      </Sheet>
     </div>
   );
 }

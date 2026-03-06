@@ -1,19 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, FileText, PackageSearch, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc/client";
 import { Badge } from "@/components/ui/badge";
+import {
+  countActiveFilters,
+  parseFilterState,
+  serializeFilterState,
+  toSummaryChips,
+} from "@/lib/navigation/filter-state";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 
 export function AdminOrdersTable() {
-    const [statusFilter, setStatusFilter] = useState<string>("");
-
-    const { data, isLoading } = trpc.orders.list.useQuery({
-        status: statusFilter ? (statusFilter as any) : undefined,
-        take: 50,
-    });
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const parsedFilters = parseFilterState(searchParams, ["status"] as const);
+    const appliedStatus = parsedFilters.status ?? "";
+    const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+    const [draftStatus, setDraftStatus] = useState(appliedStatus);
 
     const statusOptions = [
         "DRAFT",
@@ -21,7 +36,17 @@ export function AdminOrdersTable() {
         "CLIENT_APPROVED",
         "CONFIRMED",
         "CANCELLED",
-    ];
+    ] as const;
+    type OrderStatus = (typeof statusOptions)[number];
+
+    useEffect(() => {
+        setDraftStatus(appliedStatus);
+    }, [appliedStatus]);
+
+    const { data, isLoading } = trpc.orders.list.useQuery({
+        status: appliedStatus ? (appliedStatus as OrderStatus) : undefined,
+        take: 50,
+    });
 
     function statusLabel(status: string) {
         if (status === "DRAFT") return "Borrador";
@@ -47,30 +72,104 @@ export function AdminOrdersTable() {
         }).format(Number(value));
     }
 
+    const activeCount = countActiveFilters({
+        status: appliedStatus || undefined,
+    });
+
+    const summaryChips = useMemo(
+        () =>
+            toSummaryChips(
+                { status: appliedStatus },
+                [
+                    {
+                        key: "status",
+                        isActive: (state) => Boolean(state.status),
+                        getLabel: (state) => `Estado: ${statusLabel(state.status)}`,
+                    },
+                ],
+            ).map((chip) => ({
+                ...chip,
+                onRemove: () => {
+                    router.push(pathname);
+                },
+            })),
+        [appliedStatus, pathname, router],
+    );
+
+    function navigateWithStatus(nextStatus: string) {
+        const params = serializeFilterState({
+            status: nextStatus || undefined,
+        });
+        const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+        router.push(nextUrl);
+    }
+
+    function applyFilters() {
+        navigateWithStatus(draftStatus);
+        setIsFiltersOpen(false);
+    }
+
+    function clearFilters() {
+        setDraftStatus("");
+        router.push(pathname);
+        setIsFiltersOpen(false);
+    }
+
     return (
         <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-                <button
-                    onClick={() => setStatusFilter("")}
-                    className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${statusFilter === ""
-                            ? "bg-[#0359A8] text-white"
-                            : "bg-white text-neutral-600 hover:bg-neutral-100"
-                        }`}
-                >
-                    Todas
-                </button>
-                {statusOptions.map((status) => (
-                    <button
-                        key={status}
-                        onClick={() => setStatusFilter(status)}
-                        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${statusFilter === status
-                                ? "bg-[#0359A8] text-white"
-                                : "bg-white text-neutral-600 hover:bg-neutral-100"
-                            }`}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <p className="pt-2 text-sm text-neutral-500">
+                    {data ? `${data.orders.length} órdenes encontradas` : "Cargando órdenes..."}
+                </p>
+
+                <Sheet open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+                    <FilterSheetToolbar
+                        summaryChips={summaryChips}
+                        onClearAll={activeCount > 0 ? clearFilters : undefined}
                     >
-                        {statusLabel(status)}
-                    </button>
-                ))}
+                        <SheetTrigger asChild>
+                            <FilterSheetTriggerButton activeCount={activeCount} />
+                        </SheetTrigger>
+                    </FilterSheetToolbar>
+
+                    <FilterSheetPanel
+                        title="Filtrar órdenes"
+                        description="Refina la bandeja por estado comercial."
+                        onApply={applyFilters}
+                        onClear={clearFilters}
+                    >
+                        <FilterSheetSection
+                            title="Estado"
+                            description="Muestra únicamente las órdenes en la etapa seleccionada."
+                        >
+                            <div className="space-y-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setDraftStatus("")}
+                                    className={`block w-full rounded-xl border px-4 py-3 text-left text-sm transition ${draftStatus === ""
+                                        ? "border-[#0359A8] bg-[#0359A8]/6 font-medium text-[#0359A8]"
+                                        : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50"
+                                        }`}
+                                >
+                                    Todos los estados
+                                </button>
+                                {statusOptions.map((status) => (
+                                    <button
+                                        key={status}
+                                        type="button"
+                                        onClick={() => setDraftStatus(status)}
+                                        className={`block w-full rounded-xl border px-4 py-3 text-left text-sm transition ${draftStatus === status
+                                            ? "border-[#0359A8] bg-[#0359A8]/6 font-medium text-[#0359A8]"
+                                            : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50"
+                                            }`}
+                                    >
+                                        {statusLabel(status)}
+                                    </button>
+                                ))}
+                            </div>
+                        </FilterSheetSection>
+                    </FilterSheetPanel>
+                </Sheet>
             </div>
 
             <Card>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
+import { parseFilterState, serializeFilterState } from "@/lib/navigation/filter-state";
 import { UserListTable } from "./_components/user-list-table";
 import { UserFilters } from "./_components/user-filters";
 import { UserStats } from "./_components/user-stats";
@@ -10,20 +11,27 @@ import { CreateUserModal } from "./_components/create-user-modal";
 import type { SystemRole } from "@prisma/client";
 
 export function UsersContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  // Initialize filters from URL params
-  const initialRole = searchParams.get("systemRole") as SystemRole | null;
-  const initialActive = searchParams.get("isActive");
-
-  const [filters, setFilters] = useState<{
+  const parsedFilters = parseFilterState(
+    searchParams,
+    ["systemRole", "isActive", "search"] as const,
+  );
+  const filters: {
     systemRole?: SystemRole;
     isActive?: boolean;
     search?: string;
-  }>({
-    systemRole: initialRole || undefined,
-    isActive: initialActive === "true" ? true : initialActive === "false" ? false : undefined,
-  });
+  } = {
+    systemRole: (parsedFilters.systemRole as SystemRole | undefined) || undefined,
+    isActive:
+      parsedFilters.isActive === "true"
+        ? true
+        : parsedFilters.isActive === "false"
+          ? false
+          : undefined,
+    search: parsedFilters.search || undefined,
+  };
   const [page, setPage] = useState(0);
   const pageSize = 20;
 
@@ -38,8 +46,16 @@ export function UsersContent() {
   );
 
   function handleFiltersChange(newFilters: typeof filters) {
-    setFilters(newFilters);
-    setPage(0); // Reset to first page when filters change
+    setPage(0);
+    const params = serializeFilterState({
+      systemRole: newFilters.systemRole,
+      isActive:
+        newFilters.isActive === undefined ? undefined : String(newFilters.isActive),
+      search: newFilters.search,
+    });
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.push(nextUrl);
   }
 
   return (

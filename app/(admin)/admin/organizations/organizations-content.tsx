@@ -1,19 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BadgeCheck, RotateCcw, Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AlertTriangle, RotateCcw } from "lucide-react";
+import {
+  countActiveFilters,
+  parseFilterState,
+  serializeFilterState,
+  toSummaryChips,
+} from "@/lib/navigation/filter-state";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SelectNative } from "@/components/ui/select-native";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -70,36 +76,43 @@ const legalEntityLabel: Record<string, string> = {
 const pageSize = 15;
 
 export function OrganizationsContent() {
-  const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [organizationType, setOrganizationType] =
-    useState<OrganizationTypeFilter>("ALL");
-  const [legalEntityType, setLegalEntityType] =
-    useState<LegalEntityTypeFilter>("ALL");
-  const [status, setStatus] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
-  const [verified, setVerified] = useState<"ALL" | "VERIFIED" | "NOT_VERIFIED">(
-    "ALL",
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const parsedFilters = parseFilterState(
+    searchParams,
+    ["search", "organizationType", "legalEntityType", "status", "verified"] as const,
   );
+  const appliedFilters = {
+    search: parsedFilters.search || "",
+    organizationType:
+      (parsedFilters.organizationType as OrganizationTypeFilter | undefined) || "ALL",
+    legalEntityType:
+      (parsedFilters.legalEntityType as LegalEntityTypeFilter | undefined) || "ALL",
+    status: (parsedFilters.status as "ALL" | "ACTIVE" | "INACTIVE" | undefined) || "ALL",
+    verified:
+      (parsedFilters.verified as "ALL" | "VERIFIED" | "NOT_VERIFIED" | undefined) || "ALL",
+  };
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(appliedFilters);
   const [page, setPage] = useState(0);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(searchInput.trim());
-      setPage(0);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
-
-  const isSearchMode = debouncedSearch.length >= 2;
+  const isSearchMode = appliedFilters.search.trim().length >= 2;
 
   const listQuery = trpc.organization.list.useQuery(
     {
       organizationType:
-        organizationType === "ALL" ? undefined : organizationType,
-      legalEntityType: legalEntityType === "ALL" ? undefined : legalEntityType,
-      isActive: status === "ALL" ? undefined : status === "ACTIVE",
+        appliedFilters.organizationType === "ALL" ? undefined : appliedFilters.organizationType,
+      legalEntityType:
+        appliedFilters.legalEntityType === "ALL" ? undefined : appliedFilters.legalEntityType,
+      isActive:
+        appliedFilters.status === "ALL" ? undefined : appliedFilters.status === "ACTIVE",
       isVerified:
-        verified === "ALL" ? undefined : verified === "VERIFIED" ? true : false,
+        appliedFilters.verified === "ALL"
+          ? undefined
+          : appliedFilters.verified === "VERIFIED"
+            ? true
+            : false,
       skip: page * pageSize,
       take: pageSize,
     },
@@ -108,7 +121,7 @@ export function OrganizationsContent() {
 
   const searchQuery = trpc.organization.search.useQuery(
     {
-      query: debouncedSearch,
+      query: appliedFilters.search.trim(),
       take: 100,
     },
     { enabled: isSearchMode },
@@ -136,62 +149,146 @@ export function OrganizationsContent() {
     return `Mostrando ${start}-${end} de ${total}`;
   }, [isSearchMode, page, rows.length, total]);
 
-  function clearFilters() {
-    setSearchInput("");
-    setDebouncedSearch("");
-    setOrganizationType("ALL");
-    setLegalEntityType("ALL");
-    setStatus("ALL");
-    setVerified("ALL");
-    setPage(0);
+  function navigateWithFilters(nextFilters: typeof appliedFilters) {
+    const params = serializeFilterState({
+      search: nextFilters.search.trim() || undefined,
+      organizationType:
+        nextFilters.organizationType === "ALL" ? undefined : nextFilters.organizationType,
+      legalEntityType:
+        nextFilters.legalEntityType === "ALL" ? undefined : nextFilters.legalEntityType,
+      status: nextFilters.status === "ALL" ? undefined : nextFilters.status,
+      verified: nextFilters.verified === "ALL" ? undefined : nextFilters.verified,
+    });
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.push(nextUrl);
   }
 
-  const hasFilters =
-    searchInput.length > 0 ||
-    organizationType !== "ALL" ||
-    legalEntityType !== "ALL" ||
-    status !== "ALL" ||
-    verified !== "ALL";
+  function applyFilters() {
+    setPage(0);
+    navigateWithFilters(draftFilters);
+    setIsFiltersOpen(false);
+  }
+
+  function clearFilters() {
+    const clearedFilters = {
+      search: "",
+      organizationType: "ALL" as OrganizationTypeFilter,
+      legalEntityType: "ALL" as LegalEntityTypeFilter,
+      status: "ALL" as const,
+      verified: "ALL" as const,
+    };
+    setDraftFilters(clearedFilters);
+    setPage(0);
+    router.push(pathname);
+    setIsFiltersOpen(false);
+  }
+
+  const activeCount = countActiveFilters({
+    search: appliedFilters.search || undefined,
+    organizationType:
+      appliedFilters.organizationType === "ALL" ? undefined : appliedFilters.organizationType,
+    legalEntityType:
+      appliedFilters.legalEntityType === "ALL" ? undefined : appliedFilters.legalEntityType,
+    status: appliedFilters.status === "ALL" ? undefined : appliedFilters.status,
+    verified: appliedFilters.verified === "ALL" ? undefined : appliedFilters.verified,
+  });
+
+  const summaryChips = toSummaryChips(appliedFilters, [
+        {
+          key: "search",
+          isActive: (state) => state.search.trim().length > 0,
+          getLabel: (state) => `Buscar: ${state.search}`,
+        },
+        {
+          key: "organizationType",
+          isActive: (state) => state.organizationType !== "ALL",
+          getLabel: (state) =>
+            `Tipo: ${organizationTypeOptions.find((option) => option.value === state.organizationType)?.label ?? state.organizationType}`,
+        },
+        {
+          key: "legalEntityType",
+          isActive: (state) => state.legalEntityType !== "ALL",
+          getLabel: (state) =>
+            `Entidad: ${legalEntityTypeOptions.find((option) => option.value === state.legalEntityType)?.label ?? state.legalEntityType}`,
+        },
+        {
+          key: "status",
+          isActive: (state) => state.status !== "ALL",
+          getLabel: (state) =>
+            `Estado: ${statusOptions.find((option) => option.value === state.status)?.label ?? state.status}`,
+        },
+        {
+          key: "verified",
+          isActive: (state) => state.verified !== "ALL",
+          getLabel: (state) =>
+            `Verificación: ${verifiedOptions.find((option) => option.value === state.verified)?.label ?? state.verified}`,
+        },
+      ]).map((chip) => ({
+    ...chip,
+    onRemove: () => {
+      setPage(0);
+      navigateWithFilters({
+        ...appliedFilters,
+        [chip.key]:
+          chip.key === "search"
+            ? ""
+            : "ALL",
+      });
+    },
+  }));
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle>Filtros de organizaciones</CardTitle>
-            <CardDescription>
-              Busca y segmenta por tipo, entidad legal, estado y verificación.
-            </CardDescription>
-          </div>
-          <div className="w-full sm:w-auto">
-            <OrganizationFormDialog mode="create" />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="organizations-search">Buscar</Label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="organizations-search"
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Nombre, razón social, RUC o cédula"
-                  className="pl-9"
-                />
-              </div>
-            </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <Sheet
+          open={isFiltersOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              setDraftFilters(appliedFilters);
+              setIsFiltersOpen(true);
+              return;
+            }
+            setIsFiltersOpen(false);
+          }}
+        >
+          <FilterSheetToolbar
+            summaryChips={summaryChips}
+            onClearAll={activeCount > 0 ? clearFilters : undefined}
+          >
+            <SheetTrigger asChild>
+              <FilterSheetTriggerButton activeCount={activeCount} />
+            </SheetTrigger>
+          </FilterSheetToolbar>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="organizations-type">Tipo</Label>
-              <SelectNative
-                id="organizations-type"
-                value={organizationType}
+          <FilterSheetPanel
+            title="Filtrar organizaciones"
+            description="Busca y segmenta por tipo, entidad legal, estado y verificación."
+            onApply={applyFilters}
+            onClear={clearFilters}
+          >
+            <FilterSheetSection title="Búsqueda" description="Nombre, razón social, RUC o cédula.">
+              <input
+                value={draftFilters.search}
                 onChange={(event) =>
-                  setOrganizationType(
-                    event.target.value as OrganizationTypeFilter,
-                  )
+                  setDraftFilters((current) => ({
+                    ...current,
+                    search: event.target.value,
+                  }))
+                }
+                placeholder="Nombre, razón social, RUC o cédula"
+                className="h-10 w-full rounded-md border border-neutral-200 px-3 text-sm outline-none transition focus:border-[#0359A8]"
+              />
+            </FilterSheetSection>
+
+            <FilterSheetSection title="Tipo">
+              <SelectNative
+                value={draftFilters.organizationType}
+                onChange={(event) =>
+                  setDraftFilters((current) => ({
+                    ...current,
+                    organizationType: event.target.value as OrganizationTypeFilter,
+                  }))
                 }
               >
                 {organizationTypeOptions.map((option) => (
@@ -200,17 +297,16 @@ export function OrganizationsContent() {
                   </option>
                 ))}
               </SelectNative>
-            </div>
+            </FilterSheetSection>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="organizations-legal">Entidad legal</Label>
+            <FilterSheetSection title="Entidad legal">
               <SelectNative
-                id="organizations-legal"
-                value={legalEntityType}
+                value={draftFilters.legalEntityType}
                 onChange={(event) =>
-                  setLegalEntityType(
-                    event.target.value as LegalEntityTypeFilter,
-                  )
+                  setDraftFilters((current) => ({
+                    ...current,
+                    legalEntityType: event.target.value as LegalEntityTypeFilter,
+                  }))
                 }
               >
                 {legalEntityTypeOptions.map((option) => (
@@ -219,15 +315,16 @@ export function OrganizationsContent() {
                   </option>
                 ))}
               </SelectNative>
-            </div>
+            </FilterSheetSection>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="organizations-status">Estado</Label>
+            <FilterSheetSection title="Estado">
               <SelectNative
-                id="organizations-status"
-                value={status}
+                value={draftFilters.status}
                 onChange={(event) =>
-                  setStatus(event.target.value as "ALL" | "ACTIVE" | "INACTIVE")
+                  setDraftFilters((current) => ({
+                    ...current,
+                    status: event.target.value as "ALL" | "ACTIVE" | "INACTIVE",
+                  }))
                 }
               >
                 {statusOptions.map((option) => (
@@ -236,17 +333,16 @@ export function OrganizationsContent() {
                   </option>
                 ))}
               </SelectNative>
-            </div>
+            </FilterSheetSection>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="organizations-verified">Verificación</Label>
+            <FilterSheetSection title="Verificación">
               <SelectNative
-                id="organizations-verified"
-                value={verified}
+                value={draftFilters.verified}
                 onChange={(event) =>
-                  setVerified(
-                    event.target.value as "ALL" | "VERIFIED" | "NOT_VERIFIED",
-                  )
+                  setDraftFilters((current) => ({
+                    ...current,
+                    verified: event.target.value as "ALL" | "VERIFIED" | "NOT_VERIFIED",
+                  }))
                 }
               >
                 {verifiedOptions.map((option) => (
@@ -255,19 +351,14 @@ export function OrganizationsContent() {
                   </option>
                 ))}
               </SelectNative>
-            </div>
-          </div>
+            </FilterSheetSection>
+          </FilterSheetPanel>
+        </Sheet>
 
-          {hasFilters ? (
-            <div className="flex justify-end border-t pt-4">
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                <X className="mr-2 h-4 w-4" />
-                Limpiar filtros
-              </Button>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+        <div className="w-full sm:w-auto">
+          <OrganizationFormDialog mode="create" />
+        </div>
+      </div>
 
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between gap-3">

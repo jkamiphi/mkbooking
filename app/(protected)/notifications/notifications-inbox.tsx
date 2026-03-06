@@ -4,8 +4,17 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCheck, Clock3, ExternalLink } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import { countActiveFilters, toSummaryChips } from "@/lib/navigation/filter-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
+import { SelectNative } from "@/components/ui/select-native";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
 const FILTERS = [
@@ -43,6 +52,8 @@ export function NotificationsInbox() {
   const router = useRouter();
   const utils = trpc.useUtils();
   const [filter, setFilter] = useState<NotificationFilter>("ALL");
+  const [draftFilter, setDraftFilter] = useState<NotificationFilter>("ALL");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const notificationsQuery = trpc.notifications.list.useQuery({
     filter,
@@ -107,6 +118,39 @@ export function NotificationsInbox() {
   }
 
   const unreadCount = unreadCountQuery.data?.count ?? 0;
+  const activeCount = countActiveFilters({
+    filter: filter === "ALL" ? undefined : filter,
+  });
+
+  const summaryChips = toSummaryChips(
+    { filter },
+    [
+      {
+        key: "filter",
+        isActive: (state) => state.filter !== "ALL",
+        getLabel: () => `Filtro: ${FILTERS.find((item) => item.value === filter)?.label ?? filter}`,
+      },
+    ],
+  ).map((chip) => ({
+    ...chip,
+    onRemove: () => setFilter("ALL"),
+  }));
+
+  function openFilters() {
+    setDraftFilter(filter);
+    setIsFiltersOpen(true);
+  }
+
+  function applyFilters() {
+    setFilter(draftFilter);
+    setIsFiltersOpen(false);
+  }
+
+  function clearFilters() {
+    setDraftFilter("ALL");
+    setFilter("ALL");
+    setIsFiltersOpen(false);
+  }
 
   return (
     <div className="space-y-5">
@@ -138,21 +182,46 @@ export function NotificationsInbox() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {FILTERS.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() => setFilter(item.value)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                filter === item.value
-                  ? "bg-[#0359A8] text-white"
-                  : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
-              }`}
+        <div className="mt-4">
+          <Sheet
+            open={isFiltersOpen}
+            onOpenChange={(open) => {
+              if (open) {
+                openFilters();
+                return;
+              }
+              setIsFiltersOpen(false);
+            }}
+          >
+            <FilterSheetToolbar
+              summaryChips={summaryChips}
+              onClearAll={activeCount > 0 ? clearFilters : undefined}
             >
-              {item.label}
-            </button>
-          ))}
+              <SheetTrigger asChild>
+                <FilterSheetTriggerButton activeCount={activeCount} />
+              </SheetTrigger>
+            </FilterSheetToolbar>
+
+            <FilterSheetPanel
+              title="Filtrar notificaciones"
+              description="Muestra todas las notificaciones o únicamente las no leídas."
+              onApply={applyFilters}
+              onClear={clearFilters}
+            >
+              <FilterSheetSection title="Estado de lectura">
+                <SelectNative
+                  value={draftFilter}
+                  onChange={(event) => setDraftFilter(event.target.value as NotificationFilter)}
+                >
+                  {FILTERS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </SelectNative>
+              </FilterSheetSection>
+            </FilterSheetPanel>
+          </Sheet>
         </div>
 
         <div className="mt-4 space-y-2">

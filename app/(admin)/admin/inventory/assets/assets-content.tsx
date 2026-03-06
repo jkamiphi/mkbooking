@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   Copy,
@@ -10,9 +11,19 @@ import {
   MoreHorizontal,
   Pencil,
   RotateCcw,
-  Search,
-  X,
 } from "lucide-react";
+import {
+  countActiveFilters,
+  parseFilterState,
+  serializeFilterState,
+  toSummaryChips,
+} from "@/lib/navigation/filter-state";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,9 +35,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -95,32 +105,34 @@ async function copyToClipboard(text: string) {
 }
 
 export function AssetsContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const parsedFilters = parseFilterState(
+    searchParams,
+    ["search", "status", "structureTypeId", "zoneId"] as const,
+  );
+  const appliedFilters = {
+    search: parsedFilters.search || "",
+    status: (parsedFilters.status as AssetStatus | "" | undefined) || "",
+    structureTypeId: parsedFilters.structureTypeId || "",
+    zoneId: parsedFilters.zoneId || "",
+  };
   const utils = trpc.useUtils();
-  const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [status, setStatus] = useState<AssetStatus | "">("");
-  const [structureTypeId, setStructureTypeId] = useState("");
-  const [zoneId, setZoneId] = useState("");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(appliedFilters);
   const [page, setPage] = useState(0);
   const [updatingAssetId, setUpdatingAssetId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(searchInput.trim());
-      setPage(0);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
 
   const structureTypesQuery = trpc.inventory.structureTypes.list.useQuery();
   const zonesQuery = trpc.inventory.zones.list.useQuery();
 
   const assetsQuery = trpc.inventory.assets.list.useQuery(
     {
-      search: debouncedSearch || undefined,
-      status: status || undefined,
-      structureTypeId: structureTypeId || undefined,
-      zoneId: zoneId || undefined,
+      search: appliedFilters.search.trim() || undefined,
+      status: (appliedFilters.status || undefined) as AssetStatus | undefined,
+      structureTypeId: appliedFilters.structureTypeId || undefined,
+      zoneId: appliedFilters.zoneId || undefined,
       skip: page * PAGE_SIZE,
       take: PAGE_SIZE,
     },
@@ -140,8 +152,6 @@ export function AssetsContent() {
   const hasMore = assetsQuery.data?.hasMore ?? false;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasPrevious = page > 0;
-  const hasFilters =
-    searchInput.length > 0 || status || structureTypeId || zoneId;
 
   const rangeLabel = useMemo(() => {
     if (total === 0) return "0 resultados";
@@ -150,13 +160,33 @@ export function AssetsContent() {
     return `Mostrando ${start}-${end} de ${total}`;
   }, [page, total]);
 
-  function clearFilters() {
-    setSearchInput("");
-    setDebouncedSearch("");
-    setStatus("");
-    setStructureTypeId("");
-    setZoneId("");
+  function navigateWithFilters(nextFilters: typeof appliedFilters) {
+    const params = serializeFilterState({
+      search: nextFilters.search.trim() || undefined,
+      status: nextFilters.status || undefined,
+      structureTypeId: nextFilters.structureTypeId || undefined,
+      zoneId: nextFilters.zoneId || undefined,
+    });
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.push(nextUrl);
+  }
+
+  function applyFilters() {
     setPage(0);
+    navigateWithFilters(draftFilters);
+    setIsFiltersOpen(false);
+  }
+
+  function clearFilters() {
+    setDraftFilters({
+      search: "",
+      status: "",
+      structureTypeId: "",
+      zoneId: "",
+    });
+    setPage(0);
+    router.push(pathname);
+    setIsFiltersOpen(false);
   }
 
   async function handleCopyAssetCode(code: string) {
@@ -193,45 +223,101 @@ export function AssetsContent() {
     );
   }
 
+  const activeCount = countActiveFilters({
+    search: appliedFilters.search || undefined,
+    status: appliedFilters.status || undefined,
+    structureTypeId: appliedFilters.structureTypeId || undefined,
+    zoneId: appliedFilters.zoneId || undefined,
+  });
+
+  const summaryChips = toSummaryChips(appliedFilters, [
+        {
+          key: "search",
+          isActive: (state) => state.search.trim().length > 0,
+          getLabel: (state) => `Buscar: ${state.search}`,
+        },
+        {
+          key: "status",
+          isActive: (state) => Boolean(state.status),
+          getLabel: (state) => `Estado: ${statusLabels[state.status as AssetStatus]}`,
+        },
+        {
+          key: "structureTypeId",
+          isActive: (state) => Boolean(state.structureTypeId),
+          getLabel: (state) =>
+            `Estructura: ${structureTypesQuery.data?.find((type) => type.id === state.structureTypeId)?.name ?? "Tipo"}`,
+        },
+        {
+          key: "zoneId",
+          isActive: (state) => Boolean(state.zoneId),
+          getLabel: (state) => {
+            const zone = zonesQuery.data?.find((item) => item.id === state.zoneId);
+            return `Zona: ${zone ? `${zone.province.name} - ${zone.name}` : "Zona"}`;
+          },
+        },
+      ]).map((chip) => ({
+    ...chip,
+    onRemove: () => {
+      setPage(0);
+      navigateWithFilters({
+        ...appliedFilters,
+        [chip.key]: "",
+      });
+    },
+  }));
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle>Filtros de activos</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Busca y segmenta por estado, estructura y zona.
-            </p>
-          </div>
-          <Button asChild className="w-full shrink-0 sm:w-auto">
-            <Link href="/admin/inventory/assets/new">Nuevo Activo</Link>
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="asset-search">Buscar</Label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="asset-search"
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Código, dirección o referencia"
-                  className="pl-9"
-                />
-              </div>
-            </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <Sheet
+          open={isFiltersOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              setDraftFilters(appliedFilters);
+              setIsFiltersOpen(true);
+              return;
+            }
+            setIsFiltersOpen(false);
+          }}
+        >
+          <FilterSheetToolbar
+            summaryChips={summaryChips}
+            onClearAll={activeCount > 0 ? clearFilters : undefined}
+          >
+            <SheetTrigger asChild>
+              <FilterSheetTriggerButton activeCount={activeCount} />
+            </SheetTrigger>
+          </FilterSheetToolbar>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="asset-status">Estado</Label>
+          <FilterSheetPanel
+            title="Filtrar activos"
+            description="Busca y segmenta por estado, estructura y zona."
+            onApply={applyFilters}
+            onClear={clearFilters}
+          >
+            <FilterSheetSection title="Búsqueda" description="Código, dirección o referencia.">
+              <input
+                value={draftFilters.search}
+                onChange={(event) =>
+                  setDraftFilters((current) => ({
+                    ...current,
+                    search: event.target.value,
+                  }))
+                }
+                placeholder="Código, dirección o referencia"
+                className="h-10 w-full rounded-md border border-neutral-200 px-3 text-sm outline-none transition focus:border-[#0359A8]"
+              />
+            </FilterSheetSection>
+
+            <FilterSheetSection title="Estado">
               <SelectNative
-                id="asset-status"
-                value={status}
-                onChange={(event) => {
-                  setStatus(event.target.value as AssetStatus | "");
-                  setPage(0);
-                }}
+                value={draftFilters.status}
+                onChange={(event) =>
+                  setDraftFilters((current) => ({
+                    ...current,
+                    status: event.target.value as AssetStatus | "",
+                  }))
+                }
               >
                 <option value="">Todos los estados</option>
                 {statusOptions.map((option) => (
@@ -240,17 +326,17 @@ export function AssetsContent() {
                   </option>
                 ))}
               </SelectNative>
-            </div>
+            </FilterSheetSection>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="asset-structure-type">Tipo de estructura</Label>
+            <FilterSheetSection title="Tipo de estructura">
               <SelectNative
-                id="asset-structure-type"
-                value={structureTypeId}
-                onChange={(event) => {
-                  setStructureTypeId(event.target.value);
-                  setPage(0);
-                }}
+                value={draftFilters.structureTypeId}
+                onChange={(event) =>
+                  setDraftFilters((current) => ({
+                    ...current,
+                    structureTypeId: event.target.value,
+                  }))
+                }
               >
                 <option value="">Todos los tipos de estructura</option>
                 {structureTypesQuery.data?.map((type) => (
@@ -259,17 +345,17 @@ export function AssetsContent() {
                   </option>
                 ))}
               </SelectNative>
-            </div>
+            </FilterSheetSection>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="asset-zone">Zona</Label>
+            <FilterSheetSection title="Zona">
               <SelectNative
-                id="asset-zone"
-                value={zoneId}
-                onChange={(event) => {
-                  setZoneId(event.target.value);
-                  setPage(0);
-                }}
+                value={draftFilters.zoneId}
+                onChange={(event) =>
+                  setDraftFilters((current) => ({
+                    ...current,
+                    zoneId: event.target.value,
+                  }))
+                }
               >
                 <option value="">Todas las zonas</option>
                 {zonesQuery.data?.map((zone) => (
@@ -278,19 +364,14 @@ export function AssetsContent() {
                   </option>
                 ))}
               </SelectNative>
-            </div>
-          </div>
+            </FilterSheetSection>
+          </FilterSheetPanel>
+        </Sheet>
 
-          {hasFilters ? (
-            <div className="flex justify-end border-t pt-4">
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                <X className="mr-2 h-4 w-4" />
-                Limpiar filtros
-              </Button>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+        <Button asChild className="w-full shrink-0 sm:w-auto">
+          <Link href="/admin/inventory/assets/new">Nuevo Activo</Link>
+        </Button>
+      </div>
 
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between gap-3">

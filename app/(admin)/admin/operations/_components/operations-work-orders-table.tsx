@@ -11,18 +11,26 @@ import {
   MapPin,
   RefreshCw,
   RotateCcw,
-  Search,
   ShieldAlert,
   ShieldCheck,
   TriangleAlert,
   UserPlus,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import {
+  countActiveFilters,
+  toSummaryChips,
+} from "@/lib/navigation/filter-state";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SelectNative } from "@/components/ui/select-native";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +48,7 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -115,6 +124,14 @@ export function OperationsWorkOrdersTable() {
   const [historyStatus, setHistoryStatus] = useState<"" | WorkOrderStatus>("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [draftZoneId, setDraftZoneId] = useState("");
+  const [draftInstallerId, setDraftInstallerId] = useState("");
+  const [draftUnassignedOnly, setDraftUnassignedOnly] = useState(false);
+  const [draftHistoryStatus, setDraftHistoryStatus] = useState<"" | WorkOrderStatus>("");
+  const [draftDateFrom, setDraftDateFrom] = useState("");
+  const [draftDateTo, setDraftDateTo] = useState("");
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
   const [assignWorkOrderId, setAssignWorkOrderId] = useState<string | null>(null);
   const [selectedInstallerId, setSelectedInstallerId] = useState("");
@@ -217,6 +234,115 @@ export function OperationsWorkOrdersTable() {
     [assignWorkOrderId, workOrders]
   );
 
+  const activeCount = countActiveFilters({
+    search: search.trim() || undefined,
+    zoneId: zoneId || undefined,
+    installerId: installerId || undefined,
+    unassignedOnly: view === "ACTIVE" && unassignedOnly ? true : undefined,
+    historyStatus: view === "HISTORY" ? historyStatus || undefined : undefined,
+    historyDates: view === "HISTORY" && (dateFrom || dateTo) ? `${dateFrom}-${dateTo}` : undefined,
+  });
+
+  const summaryChips = useMemo(
+    () =>
+      toSummaryChips(
+        { search, zoneId, installerId, unassignedOnly, historyStatus, dateFrom, dateTo, view },
+        [
+          {
+            key: "search",
+            isActive: (state) => state.search.trim().length > 0,
+            getLabel: (state) => `Buscar: ${state.search}`,
+          },
+          {
+            key: "zoneId",
+            isActive: (state) => Boolean(state.zoneId),
+            getLabel: (state) => {
+              const zone = zonesQuery.data?.find((item) => item.id === state.zoneId);
+              return `Zona: ${zone ? `${zone.province.name} - ${zone.name}` : "Zona"}`;
+            },
+          },
+          {
+            key: "installerId",
+            isActive: (state) => Boolean(state.installerId),
+            getLabel: (state) => {
+              const installer = installersQuery.data?.find((item) => item.id === state.installerId);
+              return `Instalador: ${installer?.user.name || installer?.user.email || "Instalador"}`;
+            },
+          },
+          {
+            key: "unassignedOnly",
+            isActive: (state) => state.view === "ACTIVE" && state.unassignedOnly,
+            getLabel: () => "Solo sin asignar",
+          },
+          {
+            key: "historyStatus",
+            isActive: (state) => state.view === "HISTORY" && Boolean(state.historyStatus),
+            getLabel: (state) =>
+              `Resultado: ${HISTORY_STATUS_OPTIONS.find((option) => option.value === state.historyStatus)?.label ?? state.historyStatus}`,
+          },
+          {
+            key: "historyDates",
+            isActive: (state) => state.view === "HISTORY" && Boolean(state.dateFrom || state.dateTo),
+            getLabel: (state) => `Fechas: ${state.dateFrom || "..." } - ${state.dateTo || "..."}`,
+          },
+        ]
+      ).map((chip) => ({
+        ...chip,
+        onRemove: () => {
+          if (chip.key === "search") setSearch("");
+          if (chip.key === "zoneId") setZoneId("");
+          if (chip.key === "installerId") setInstallerId("");
+          if (chip.key === "unassignedOnly") setUnassignedOnly(false);
+          if (chip.key === "historyStatus") setHistoryStatus("");
+          if (chip.key === "historyDates") {
+            setDateFrom("");
+            setDateTo("");
+          }
+        },
+      })),
+    [dateFrom, dateTo, historyStatus, installerId, installersQuery.data, search, unassignedOnly, view, zoneId, zonesQuery.data]
+  );
+
+  function openFilters() {
+    setDraftSearch(search);
+    setDraftZoneId(zoneId);
+    setDraftInstallerId(installerId);
+    setDraftUnassignedOnly(unassignedOnly);
+    setDraftHistoryStatus(historyStatus);
+    setDraftDateFrom(dateFrom);
+    setDraftDateTo(dateTo);
+    setIsFiltersOpen(true);
+  }
+
+  function applyFilters() {
+    setSearch(draftSearch.trim());
+    setZoneId(draftZoneId);
+    setInstallerId(draftInstallerId);
+    setUnassignedOnly(draftUnassignedOnly);
+    setHistoryStatus(draftHistoryStatus);
+    setDateFrom(draftDateFrom);
+    setDateTo(draftDateTo);
+    setIsFiltersOpen(false);
+  }
+
+  function clearFilters() {
+    setDraftSearch("");
+    setDraftZoneId("");
+    setDraftInstallerId("");
+    setDraftUnassignedOnly(false);
+    setDraftHistoryStatus("");
+    setDraftDateFrom("");
+    setDraftDateTo("");
+    setSearch("");
+    setZoneId("");
+    setInstallerId("");
+    setUnassignedOnly(false);
+    setHistoryStatus("");
+    setDateFrom("");
+    setDateTo("");
+    setIsFiltersOpen(false);
+  }
+
   function openAssignDialog(workOrderId: string) {
     const workOrder = workOrders.find((item) => item.id === workOrderId);
     setAssignWorkOrderId(workOrderId);
@@ -260,76 +386,107 @@ export function OperationsWorkOrdersTable() {
           <SummaryCards view={view} summary={summary} />
         </div>
 
-        <div className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 lg:grid-cols-4">
-          <div className="lg:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Buscar</label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-neutral-400" />
-              <Input
-                className="pl-8"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Orden, cara, cliente u organizacion"
+        <Sheet
+          open={isFiltersOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              openFilters();
+              return;
+            }
+            setIsFiltersOpen(false);
+          }}
+        >
+          <FilterSheetToolbar
+            summaryChips={summaryChips}
+            onClearAll={activeCount > 0 ? clearFilters : undefined}
+          >
+            <SheetTrigger asChild>
+              <FilterSheetTriggerButton activeCount={activeCount} />
+            </SheetTrigger>
+          </FilterSheetToolbar>
+
+          <FilterSheetPanel
+            title="Filtrar órdenes de trabajo"
+            description="Busca por orden, cara, cliente o asignación, sin afectar la vista hasta aplicar."
+            onApply={applyFilters}
+            onClear={clearFilters}
+          >
+            <FilterSheetSection title="Búsqueda">
+              <input
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
+                placeholder="Orden, cara, cliente u organización"
+                className="h-10 w-full rounded-md border border-neutral-200 px-3 text-sm outline-none transition focus:border-[#0359A8]"
               />
-            </div>
-          </div>
+            </FilterSheetSection>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Zona</label>
-            <SelectNative value={zoneId} onChange={(event) => setZoneId(event.target.value)}>
-              <option value="">Todas las zonas</option>
-              {(zonesQuery.data ?? []).map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.province.name} - {zone.name}
-                </option>
-              ))}
-            </SelectNative>
-          </div>
+            <FilterSheetSection title="Zona">
+              <SelectNative value={draftZoneId} onChange={(event) => setDraftZoneId(event.target.value)}>
+                <option value="">Todas las zonas</option>
+                {(zonesQuery.data ?? []).map((zone) => (
+                  <option key={zone.id} value={zone.id}>
+                    {zone.province.name} - {zone.name}
+                  </option>
+                ))}
+              </SelectNative>
+            </FilterSheetSection>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Instalador</label>
-            <SelectNative value={installerId} onChange={(event) => setInstallerId(event.target.value)}>
-              <option value="">Todos</option>
-              {(installersQuery.data ?? []).map((installer) => (
-                <option key={installer.id} value={installer.id}>
-                  {installer.user.name || installer.user.email}
-                </option>
-              ))}
-            </SelectNative>
-          </div>
+            <FilterSheetSection title="Instalador">
+              <SelectNative value={draftInstallerId} onChange={(event) => setDraftInstallerId(event.target.value)}>
+                <option value="">Todos</option>
+                {(installersQuery.data ?? []).map((installer) => (
+                  <option key={installer.id} value={installer.id}>
+                    {installer.user.name || installer.user.email}
+                  </option>
+                ))}
+              </SelectNative>
+            </FilterSheetSection>
 
-          {view === "ACTIVE" ? (
-            <ToggleFilter label="Solo sin asignar" checked={unassignedOnly} onChange={setUnassignedOnly} />
-          ) : null}
+            {view === "ACTIVE" ? (
+              <FilterSheetSection title="Asignación">
+                <ToggleFilter
+                  label="Solo sin asignar"
+                  checked={draftUnassignedOnly}
+                  onChange={setDraftUnassignedOnly}
+                />
+              </FilterSheetSection>
+            ) : null}
 
-          {view === "HISTORY" ? (
-            <>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">Resultado</label>
-                <SelectNative
-                  value={historyStatus}
-                  onChange={(event) => setHistoryStatus(event.target.value as "" | WorkOrderStatus)}
-                >
-                  {HISTORY_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </SelectNative>
-              </div>
+            {view === "HISTORY" ? (
+              <>
+                <FilterSheetSection title="Resultado">
+                  <SelectNative
+                    value={draftHistoryStatus}
+                    onChange={(event) => setDraftHistoryStatus(event.target.value as "" | WorkOrderStatus)}
+                  >
+                    {HISTORY_STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </SelectNative>
+                </FilterSheetSection>
 
-              <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">Desde</label>
-                <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">Hasta</label>
-                <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
-              </div>
-            </>
-          ) : null}
-        </div>
+                <FilterSheetSection title="Rango de fechas">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                      type="date"
+                      value={draftDateFrom}
+                      onChange={(event) => setDraftDateFrom(event.target.value)}
+                      className="h-10 rounded-md border border-neutral-200 px-3 text-sm outline-none transition focus:border-[#0359A8]"
+                    />
+                    <input
+                      type="date"
+                      value={draftDateTo}
+                      onChange={(event) => setDraftDateTo(event.target.value)}
+                      className="h-10 rounded-md border border-neutral-200 px-3 text-sm outline-none transition focus:border-[#0359A8]"
+                    />
+                  </div>
+                </FilterSheetSection>
+              </>
+            ) : null}
+          </FilterSheetPanel>
+        </Sheet>
 
         <Card className="overflow-hidden">
           {isLoading ? (

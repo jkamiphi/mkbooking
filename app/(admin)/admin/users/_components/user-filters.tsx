@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { SystemRole } from "@prisma/client";
-import { Search, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  countActiveFilters,
+  toSummaryChips,
+} from "@/lib/navigation/filter-state";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
 import { SelectNative } from "@/components/ui/select-native";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 
 interface UserFiltersProps {
   filters: {
@@ -24,21 +30,16 @@ interface UserFiltersProps {
 }
 
 export function UserFilters({ filters, onFiltersChange, actions }: UserFiltersProps) {
-  const [searchInput, setSearchInput] = useState(filters.search ?? "");
+  const [isOpen, setIsOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(filters);
 
-  // Debounce search input
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput !== filters.search) {
-        onFiltersChange({ ...filters, search: searchInput || undefined });
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchInput, filters, onFiltersChange]);
+    setDraftFilters(filters);
+  }, [filters]);
 
   function handleRoleChange(role: string) {
     const newRole = role === "ALL" ? undefined : (role as SystemRole);
-    onFiltersChange({ ...filters, systemRole: newRole });
+    setDraftFilters((current) => ({ ...current, systemRole: newRole }));
   }
 
   function handleStatusChange(status: string) {
@@ -46,52 +47,111 @@ export function UserFilters({ filters, onFiltersChange, actions }: UserFiltersPr
     if (status === "ACTIVE") isActive = true;
     else if (status === "INACTIVE") isActive = false;
     else isActive = undefined;
-    onFiltersChange({ ...filters, isActive });
+    setDraftFilters((current) => ({ ...current, isActive }));
+  }
+
+  function applyFilters() {
+    onFiltersChange({
+      systemRole: draftFilters.systemRole,
+      isActive: draftFilters.isActive,
+      search: draftFilters.search?.trim() || undefined,
+    });
+    setIsOpen(false);
   }
 
   function clearFilters() {
-    setSearchInput("");
-    onFiltersChange({});
+    const clearedFilters = {
+      systemRole: undefined,
+      isActive: undefined,
+      search: undefined,
+    };
+    setDraftFilters(clearedFilters);
+    onFiltersChange(clearedFilters);
+    setIsOpen(false);
   }
 
-  const hasFilters =
-    filters.systemRole !== undefined ||
-    filters.isActive !== undefined ||
-    (filters.search && filters.search.length > 0);
+  const activeCount = countActiveFilters({
+    systemRole: filters.systemRole,
+    isActive:
+      filters.isActive === undefined ? undefined : String(filters.isActive),
+    search: filters.search,
+  });
+
+  const summaryChips = useMemo(
+    () =>
+      toSummaryChips(
+        filters,
+        [
+          {
+            key: "search",
+            isActive: (state) => Boolean(state.search),
+            getLabel: (state) => `Buscar: ${state.search}`,
+          },
+          {
+            key: "systemRole",
+            isActive: (state) => Boolean(state.systemRole),
+            getLabel: (state) => `Rol: ${roleLabel(state.systemRole)}`,
+          },
+          {
+            key: "isActive",
+            isActive: (state) => state.isActive !== undefined,
+            getLabel: (state) =>
+              `Estado: ${state.isActive ? "Activo" : "Inactivo"}`,
+          },
+        ],
+      ).map((chip) => ({
+        ...chip,
+        onRemove: () => {
+          if (chip.key === "search") {
+            onFiltersChange({ ...filters, search: undefined });
+            return;
+          }
+          if (chip.key === "systemRole") {
+            onFiltersChange({ ...filters, systemRole: undefined });
+            return;
+          }
+          onFiltersChange({ ...filters, isActive: undefined });
+        },
+      })),
+    [filters, onFiltersChange],
+  );
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle>Filtros de usuarios</CardTitle>
-          <CardDescription>
-            Busca y segmenta por rol y estado de la cuenta.
-          </CardDescription>
-        </div>
-        {actions ? <div className="w-full sm:w-auto">{actions}</div> : null}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="space-y-1.5 md:col-span-1">
-            <Label htmlFor="users-search">Buscar</Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="users-search"
-                type="text"
-                placeholder="Nombre o email"
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <FilterSheetToolbar
+          summaryChips={summaryChips}
+          onClearAll={activeCount > 0 ? clearFilters : undefined}
+        >
+          <SheetTrigger asChild>
+            <FilterSheetTriggerButton activeCount={activeCount} />
+          </SheetTrigger>
+        </FilterSheetToolbar>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="users-role">Rol</Label>
+        <FilterSheetPanel
+          title="Filtrar usuarios"
+          description="Busca y segmenta por rol, estado y texto libre."
+          onApply={applyFilters}
+          onClear={clearFilters}
+        >
+          <FilterSheetSection title="Búsqueda" description="Nombre o email del usuario.">
+            <input
+              type="text"
+              placeholder="Nombre o email"
+              value={draftFilters.search ?? ""}
+              onChange={(event) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  search: event.target.value || undefined,
+                }))
+              }
+              className="h-10 w-full rounded-md border border-neutral-200 px-3 text-sm outline-none transition focus:border-[#0359A8]"
+            />
+          </FilterSheetSection>
+
+          <FilterSheetSection title="Rol">
             <SelectNative
-              id="users-role"
-              value={filters.systemRole ?? "ALL"}
+              value={draftFilters.systemRole ?? "ALL"}
               onChange={(event) => handleRoleChange(event.target.value)}
             >
               <option value="ALL">Todos los roles</option>
@@ -103,16 +163,14 @@ export function UserFilters({ filters, onFiltersChange, actions }: UserFiltersPr
               <option value="INSTALLER">Instalador</option>
               <option value="SUPERADMIN">Superadmin</option>
             </SelectNative>
-          </div>
+          </FilterSheetSection>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="users-status">Estado</Label>
+          <FilterSheetSection title="Estado de cuenta">
             <SelectNative
-              id="users-status"
               value={
-                filters.isActive === true
+                draftFilters.isActive === true
                   ? "ACTIVE"
-                  : filters.isActive === false
+                  : draftFilters.isActive === false
                     ? "INACTIVE"
                     : "ALL"
               }
@@ -122,18 +180,22 @@ export function UserFilters({ filters, onFiltersChange, actions }: UserFiltersPr
               <option value="ACTIVE">Activo</option>
               <option value="INACTIVE">Inactivo</option>
             </SelectNative>
-          </div>
-        </div>
+          </FilterSheetSection>
+        </FilterSheetPanel>
+      </Sheet>
 
-        {hasFilters ? (
-          <div className="flex justify-end border-t pt-4">
-            <Button variant="outline" size="sm" onClick={clearFilters}>
-              <X className="mr-2 h-4 w-4" />
-              Limpiar filtros
-            </Button>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+      {actions ? <div className="w-full sm:w-auto">{actions}</div> : null}
+    </div>
   );
+}
+
+function roleLabel(role?: SystemRole) {
+  if (role === "CUSTOMER") return "Cliente";
+  if (role === "STAFF") return "Staff";
+  if (role === "DESIGNER") return "Diseñador";
+  if (role === "SALES") return "Ventas";
+  if (role === "OPERATIONS_PRINT") return "Impresión";
+  if (role === "INSTALLER") return "Instalador";
+  if (role === "SUPERADMIN") return "Superadmin";
+  return "";
 }

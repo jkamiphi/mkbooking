@@ -7,14 +7,23 @@ import {
   MapPinned,
   ChevronLeft,
   ChevronRight,
-  Search,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import {
+  countActiveFilters,
+  toSummaryChips,
+} from "@/lib/navigation/filter-state";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { SelectNative } from "@/components/ui/select-native";
+import {
+  FilterSheetPanel,
+  FilterSheetSection,
+  FilterSheetToolbar,
+  FilterSheetTriggerButton,
+} from "@/components/ui/filter-sheet";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -51,6 +61,10 @@ export function InstallersControlTable() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [enabledFilter, setEnabledFilter] = useState<"ALL" | "ENABLED" | "DISABLED">("ALL");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [draftActiveFilter, setDraftActiveFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
+  const [draftEnabledFilter, setDraftEnabledFilter] = useState<"ALL" | "ENABLED" | "DISABLED">("ALL");
   const [page, setPage] = useState(0);
 
   const [configInstallerId, setConfigInstallerId] = useState<string | null>(null);
@@ -157,6 +171,73 @@ export function InstallersControlTable() {
     return { total, active, enabled, withCoverage };
   }, [installers]);
 
+  const activeCount = countActiveFilters({
+    search: search.trim() || undefined,
+    activeFilter: activeFilter === "ALL" ? undefined : activeFilter,
+    enabledFilter: enabledFilter === "ALL" ? undefined : enabledFilter,
+  });
+
+  const summaryChips = useMemo(
+    () =>
+      toSummaryChips(
+        { search, activeFilter, enabledFilter },
+        [
+          {
+            key: "search",
+            isActive: (state) => state.search.trim().length > 0,
+            getLabel: (state) => `Buscar: ${state.search}`,
+          },
+          {
+            key: "activeFilter",
+            isActive: (state) => state.activeFilter !== "ALL",
+            getLabel: (state) =>
+              `Cuenta: ${state.activeFilter === "ACTIVE" ? "Activos" : "Inactivos"}`,
+          },
+          {
+            key: "enabledFilter",
+            isActive: (state) => state.enabledFilter !== "ALL",
+            getLabel: (state) =>
+              `Operativa: ${state.enabledFilter === "ENABLED" ? "Habilitados" : "Deshabilitados"}`,
+          },
+        ],
+      ).map((chip) => ({
+        ...chip,
+        onRemove: () => {
+          if (chip.key === "search") setSearch("");
+          if (chip.key === "activeFilter") setActiveFilter("ALL");
+          if (chip.key === "enabledFilter") setEnabledFilter("ALL");
+          setPage(0);
+        },
+      })),
+    [activeFilter, enabledFilter, search],
+  );
+
+  function openFilters() {
+    setDraftSearch(search);
+    setDraftActiveFilter(activeFilter);
+    setDraftEnabledFilter(enabledFilter);
+    setIsFiltersOpen(true);
+  }
+
+  function applyFilters() {
+    setSearch(draftSearch.trim());
+    setActiveFilter(draftActiveFilter);
+    setEnabledFilter(draftEnabledFilter);
+    setPage(0);
+    setIsFiltersOpen(false);
+  }
+
+  function clearFilters() {
+    setDraftSearch("");
+    setDraftActiveFilter("ALL");
+    setDraftEnabledFilter("ALL");
+    setSearch("");
+    setActiveFilter("ALL");
+    setEnabledFilter("ALL");
+    setPage(0);
+    setIsFiltersOpen(false);
+  }
+
   function openConfigDialog(installerId: string) {
     const installer = installers.find((item) => item.id === installerId);
     if (!installer) return;
@@ -218,51 +299,66 @@ export function InstallersControlTable() {
           <StatCard label="Con cobertura" value={stats.withCoverage} />
         </div>
 
-        <div className="grid gap-3 rounded-xl border border-neutral-200 bg-white p-4 md:grid-cols-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Buscar</label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-neutral-400" />
+        <Sheet
+          open={isFiltersOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              openFilters();
+              return;
+            }
+            setIsFiltersOpen(false);
+          }}
+        >
+          <FilterSheetToolbar
+            summaryChips={summaryChips}
+            onClearAll={activeCount > 0 ? clearFilters : undefined}
+          >
+            <SheetTrigger asChild>
+              <FilterSheetTriggerButton activeCount={activeCount} />
+            </SheetTrigger>
+          </FilterSheetToolbar>
+
+          <FilterSheetPanel
+            title="Filtrar instaladores"
+            description="Refina la lista por búsqueda, estado de cuenta y estado operativo."
+            onApply={applyFilters}
+            onClear={clearFilters}
+          >
+            <FilterSheetSection title="Búsqueda">
               <Input
-                className="pl-8"
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(0);
-                }}
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
                 placeholder="Nombre o email"
               />
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Estado cuenta</label>
-            <SelectNative
-              value={activeFilter}
-              onChange={(event) => {
-                setActiveFilter(event.target.value as "ALL" | "ACTIVE" | "INACTIVE");
-                setPage(0);
-              }}
-            >
-              <option value="ALL">Todos</option>
-              <option value="ACTIVE">Activos</option>
-              <option value="INACTIVE">Inactivos</option>
-            </SelectNative>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Estado operativo</label>
-            <SelectNative
-              value={enabledFilter}
-              onChange={(event) => {
-                setEnabledFilter(event.target.value as "ALL" | "ENABLED" | "DISABLED");
-                setPage(0);
-              }}
-            >
-              <option value="ALL">Todos</option>
-              <option value="ENABLED">Habilitados</option>
-              <option value="DISABLED">Deshabilitados</option>
-            </SelectNative>
-          </div>
-        </div>
+            </FilterSheetSection>
+
+            <FilterSheetSection title="Estado cuenta">
+              <SelectNative
+                value={draftActiveFilter}
+                onChange={(event) =>
+                  setDraftActiveFilter(event.target.value as "ALL" | "ACTIVE" | "INACTIVE")
+                }
+              >
+                <option value="ALL">Todos</option>
+                <option value="ACTIVE">Activos</option>
+                <option value="INACTIVE">Inactivos</option>
+              </SelectNative>
+            </FilterSheetSection>
+
+            <FilterSheetSection title="Estado operativo">
+              <SelectNative
+                value={draftEnabledFilter}
+                onChange={(event) =>
+                  setDraftEnabledFilter(event.target.value as "ALL" | "ENABLED" | "DISABLED")
+                }
+              >
+                <option value="ALL">Todos</option>
+                <option value="ENABLED">Habilitados</option>
+                <option value="DISABLED">Deshabilitados</option>
+              </SelectNative>
+            </FilterSheetSection>
+          </FilterSheetPanel>
+        </Sheet>
 
         <Card>
           <Table>
