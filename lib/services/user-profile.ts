@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import { NotificationType, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 // ============================================================================
@@ -32,6 +32,62 @@ export const updateUserProfileSchema = z.object({
 export type CreateUserProfileInput = z.infer<typeof createUserProfileSchema>;
 export type UpdateUserProfileInput = z.infer<typeof updateUserProfileSchema>;
 
+type PrismaClientLike = Prisma.TransactionClient | typeof db;
+
+const ALL_NOTIFICATION_TYPES = Object.values(NotificationType) as NotificationType[];
+
+function buildMissingNotificationPreferences(input: {
+  userProfileId: string;
+  emailEnabled: boolean;
+  existingTypes: NotificationType[];
+}) {
+  const existingTypeSet = new Set(input.existingTypes);
+
+  return ALL_NOTIFICATION_TYPES.filter((type) => !existingTypeSet.has(type)).map(
+    (type) => ({
+      userProfileId: input.userProfileId,
+      type,
+      emailEnabled: input.emailEnabled,
+      inAppEnabled: true,
+    }),
+  );
+}
+
+export async function ensureUserNotificationPreferences(
+  client: PrismaClientLike,
+  input: {
+    userProfileId: string;
+    emailEnabled: boolean;
+    existingTypes?: NotificationType[];
+  },
+) {
+  const existingTypes =
+    input.existingTypes ??
+    (
+      await client.userNotificationPreference.findMany({
+        where: { userProfileId: input.userProfileId },
+        select: { type: true },
+      })
+    ).map((preference) => preference.type);
+
+  const missingPreferences = buildMissingNotificationPreferences({
+    userProfileId: input.userProfileId,
+    emailEnabled: input.emailEnabled,
+    existingTypes,
+  });
+
+  if (missingPreferences.length === 0) {
+    return 0;
+  }
+
+  const result = await client.userNotificationPreference.createMany({
+    data: missingPreferences,
+    skipDuplicates: true,
+  });
+
+  return result.count;
+}
+
 // ============================================================================
 // Service Functions
 // ============================================================================
@@ -61,6 +117,9 @@ export async function getUserProfileByUserId(userId: string) {
           },
         },
       },
+      notificationPreferences: {
+        orderBy: { type: "asc" },
+      },
     },
   });
 }
@@ -77,11 +136,16 @@ export async function getUserProfileById(id: string) {
           image: true,
         },
       },
+      notificationPreferences: {
+        orderBy: { type: "asc" },
+      },
     },
   });
 }
 
 export async function createUserProfile(input: CreateUserProfileInput) {
+  const emailEnabled = input.emailNotifications ?? true;
+
   return db.userProfile.create({
     data: {
       userId: input.userId,
@@ -93,6 +157,13 @@ export async function createUserProfile(input: CreateUserProfileInput) {
       emailNotifications: input.emailNotifications,
       whatsappNotifications: input.whatsappNotifications,
       smsNotifications: input.smsNotifications,
+      notificationPreferences: {
+        create: ALL_NOTIFICATION_TYPES.map((type) => ({
+          type,
+          emailEnabled,
+          inAppEnabled: true,
+        })),
+      },
     },
     include: {
       user: {
@@ -102,6 +173,9 @@ export async function createUserProfile(input: CreateUserProfileInput) {
           email: true,
           image: true,
         },
+      },
+      notificationPreferences: {
+        orderBy: { type: "asc" },
       },
     },
   });
@@ -139,7 +213,112 @@ export async function getOrCreateUserProfile(userId: string) {
     profile = await getUserProfileByUserId(userId);
   }
 
+  if (!profile) {
+    return null;
+  }
+
+  const ensuredCount = await ensureUserNotificationPreferences(db, {
+    userProfileId: profile.id,
+    emailEnabled: profile.emailNotifications,
+    existingTypes: profile.notificationPreferences.map((preference) => preference.type),
+  });
+
+  if (ensuredCount > 0) {
+    profile = await getUserProfileByUserId(userId);
+  }
+
   return profile;
+}
+
+export async function updateUserNotificationPreferences(
+  userId: string,
+  preferences: Array<{
+    type: NotificationType;
+    emailEnabled: boolean;
+    inAppEnabled: boolean;
+  }>,
+  updatedBy?: string,
+) {
+  return db.$transaction(async (tx) => {
+    const profile = await tx.userProfile.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        emailNotifications: true,
+        notificationPreferences: {
+          select: { type: true },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new Error("Perfil de usuario no encontrado.");
+    }
+
+    await ensureUserNotificationPreferences(tx, {
+      userProfileId: profile.id,
+      emailEnabled: profile.emailNotifications,
+      existingTypes: profile.notificationPreferences.map((preference) => preference.type),
+    });
+
+    await Promise.all(
+      preferences.map((preference) =>
+        tx.userNotificationPreference.upsert({
+          where: {
+            userProfileId_type: {
+              userProfileId: profile.id,
+              type: preference.type,
+            },
+          },
+          create: {
+            userProfileId: profile.id,
+            type: preference.type,
+            emailEnabled: preference.emailEnabled,
+            inAppEnabled: preference.inAppEnabled,
+          },
+          update: {
+            emailEnabled: preference.emailEnabled,
+            inAppEnabled: preference.inAppEnabled,
+          },
+        }),
+      ),
+    );
+
+    await tx.userProfile.update({
+      where: { userId },
+      data: { updatedBy },
+    });
+
+    return tx.userProfile.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+        organizationRoles: {
+          where: { isActive: true },
+          include: {
+            organization: {
+              select: {
+                id: true,
+                name: true,
+                organizationType: true,
+                logoUrl: true,
+              },
+            },
+          },
+        },
+        notificationPreferences: {
+          orderBy: { type: "asc" },
+        },
+      },
+    });
+  });
 }
 
 export async function deleteUserProfile(userId: string) {

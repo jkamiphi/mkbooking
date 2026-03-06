@@ -27,18 +27,20 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fafbfc] lg:flex-row">
-      <UserSidebar
-        user={{
-          email: session.user.email,
-          name: session.user.name,
-        }}
-      />
-      <main className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
-          {children}
-        </div>
-      </main>
+    <div className="min-h-dvh bg-[#f4f7fb] lg:h-dvh lg:overflow-hidden">
+      <div className="flex min-h-dvh flex-col lg:h-dvh lg:flex-row">
+        <UserSidebar
+          user={{
+            email: session.user.email,
+            name: session.user.name,
+          }}
+        />
+        <main className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
+          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

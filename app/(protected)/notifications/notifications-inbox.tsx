@@ -45,6 +45,9 @@ function notificationTypeLabel(type: string) {
     return "Cambios de diseño solicitados";
   if (type === "PRINT_STARTED") return "Impresión iniciada";
   if (type === "PRINT_COMPLETED") return "Impresión completada";
+  if (type === "INSTALLATION_SUBMITTED") return "Instalación enviada";
+  if (type === "INSTALLATION_REPORT_ISSUED")
+    return "Reporte de instalación emitido";
   return type;
 }
 

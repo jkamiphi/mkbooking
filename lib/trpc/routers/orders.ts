@@ -38,6 +38,7 @@ import {
 import {
   createOrderNotifications,
   NotificationType,
+  sendPreparedNotificationEmails,
 } from "@/lib/services/notifications";
 import {
   getOrderOperationsSummary,
@@ -792,7 +793,7 @@ export const ordersRouter = router({
           });
         }
 
-        await createOrderNotifications(tx, {
+        const notificationResult = await createOrderNotifications(tx, {
           orderId: order.id,
           type: NotificationType.ORDER_CONFIRMED,
           title: `Orden ${order.code} confirmada`,
@@ -809,10 +810,17 @@ export const ordersRouter = router({
           order: confirmedOrder,
           createdHolds,
           skippedActiveHolds,
+          emailDeliveries: notificationResult.emailDeliveries,
         };
       });
 
-      return result;
+      await sendPreparedNotificationEmails(result.emailDeliveries);
+
+      return {
+        order: result.order,
+        createdHolds: result.createdHolds,
+        skippedActiveHolds: result.skippedActiveHolds,
+      };
     }),
 
   updateStatus: commercialProcedure
@@ -1336,7 +1344,7 @@ export const ordersRouter = router({
         nextStatus === SalesReviewStatus.APPROVED &&
         order.salesReviewStatus !== SalesReviewStatus.APPROVED;
 
-      const updatedOrder = await db.$transaction(async (tx) => {
+      const transactionResult = await db.$transaction(async (tx) => {
         const updated = await tx.order.update({
           where: { id: input.orderId },
           data: {
@@ -1365,7 +1373,7 @@ export const ordersRouter = router({
           });
         }
 
-        await createOrderNotifications(tx, {
+        const notificationResult = await createOrderNotifications(tx, {
           orderId: input.orderId,
           type:
             nextStatus === SalesReviewStatus.APPROVED
@@ -1387,10 +1395,15 @@ export const ordersRouter = router({
           },
         });
 
-        return updated;
+        return {
+          order: updated,
+          emailDeliveries: notificationResult.emailDeliveries,
+        };
       });
 
-      return updatedOrder;
+      await sendPreparedNotificationEmails(transactionResult.emailDeliveries);
+
+      return transactionResult.order;
     }),
 
   updateCreativeStatus: salesReviewProcedure

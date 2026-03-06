@@ -4,6 +4,7 @@ import {
   getUserProfileByUserId,
   getOrCreateUserProfile,
   updateUserProfile,
+  updateUserNotificationPreferences,
   updateUserProfileSchema,
   listUserProfiles,
   searchUserProfiles,
@@ -12,6 +13,7 @@ import {
   reactivateUserProfile,
 } from "@/lib/services/user-profile";
 import { TRPCError } from "@trpc/server";
+import { NotificationType } from "@prisma/client";
 
 export const userProfileRouter = router({
   // Get the current user's profile without creating one
@@ -46,16 +48,24 @@ export const userProfileRouter = router({
     }),
 
   // Update notification preferences
-  updateNotifications: protectedProcedure
+  updateNotificationPreferences: protectedProcedure
     .input(
       z.object({
-        emailNotifications: z.boolean().optional(),
-        whatsappNotifications: z.boolean().optional(),
-        smsNotifications: z.boolean().optional(),
+        preferences: z.array(
+          z.object({
+            type: z.nativeEnum(NotificationType),
+            emailEnabled: z.boolean(),
+            inAppEnabled: z.boolean(),
+          }),
+        ),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return updateUserProfile(ctx.user.id, input, ctx.user.id);
+      return updateUserNotificationPreferences(
+        ctx.user.id,
+        input.preferences,
+        ctx.user.id,
+      );
     }),
 
   // Update locale and timezone

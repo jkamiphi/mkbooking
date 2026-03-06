@@ -14,6 +14,7 @@ import {
 import {
   createOrderNotifications,
   NotificationType,
+  sendPreparedNotificationEmails,
 } from "@/lib/services/notifications";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
@@ -340,7 +341,7 @@ async function applyDesignerDecision(
       notes: input.notes?.trim() || null,
     });
 
-    await createOrderNotifications(client, {
+    const notificationResult = await createOrderNotifications(client, {
       orderId: input.orderId,
       type: NotificationType.DESIGN_RESPONSE_CHANGES_REQUESTED,
       title: `Diseño solicitó ajustes en ${task.order.code}`,
@@ -353,7 +354,10 @@ async function applyDesignerDecision(
       },
     });
 
-    return updatedTask;
+    return {
+      task: updatedTask,
+      emailDeliveries: notificationResult.emailDeliveries,
+    };
   }
 
   const latestProof = await resolveLatestProofVersion(client, input.orderId);
@@ -395,7 +399,7 @@ async function applyDesignerDecision(
     },
   });
 
-  await createOrderNotifications(client, {
+  const notificationResult = await createOrderNotifications(client, {
     orderId: input.orderId,
     type: NotificationType.DESIGN_RESPONSE_APPROVED,
     title: `Diseño aprobó prueba en ${task.order.code}`,
@@ -410,7 +414,10 @@ async function applyDesignerDecision(
     },
   });
 
-  return updatedTask;
+  return {
+    task: updatedTask,
+    emailDeliveries: notificationResult.emailDeliveries,
+  };
 }
 
 async function applyClientDecision(
@@ -481,7 +488,7 @@ async function applyClientDecision(
       notes: input.notes?.trim() || null,
     });
 
-    await createOrderNotifications(client, {
+    const notificationResult = await createOrderNotifications(client, {
       orderId: input.orderId,
       type: NotificationType.DESIGN_RESPONSE_CHANGES_REQUESTED,
       title: `Cliente solicitó ajustes en ${task.order.code}`,
@@ -493,7 +500,10 @@ async function applyClientDecision(
       },
     });
 
-    return updatedTask;
+    return {
+      task: updatedTask,
+      emailDeliveries: notificationResult.emailDeliveries,
+    };
   }
 
   const latestProof = await resolveLatestProofVersion(client, input.orderId);
@@ -535,7 +545,7 @@ async function applyClientDecision(
     },
   });
 
-  await createOrderNotifications(client, {
+  const notificationResult = await createOrderNotifications(client, {
     orderId: input.orderId,
     type: NotificationType.DESIGN_RESPONSE_APPROVED,
     title: `Cliente aprobó prueba en ${task.order.code}`,
@@ -550,7 +560,10 @@ async function applyClientDecision(
     },
   });
 
-  return updatedTask;
+  return {
+    task: updatedTask,
+    emailDeliveries: notificationResult.emailDeliveries,
+  };
 }
 
 export async function listDesignInbox(
@@ -648,7 +661,7 @@ export async function claimDesignTask(taskId: string, actorUserId: string) {
   const actor = await resolveDesignActor(actorUserId);
   const now = new Date();
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const task = await tx.orderDesignTask.findUnique({
       where: { id: taskId },
       select: {
@@ -694,6 +707,8 @@ export async function claimDesignTask(taskId: string, actorUserId: string) {
 
     return updatedTask;
   });
+
+  return result;
 }
 
 export async function updateDesignTaskStatus(
@@ -702,7 +717,7 @@ export async function updateDesignTaskStatus(
 ) {
   const actor = await resolveDesignActor(actorUserId);
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const task = await tx.orderDesignTask.findUnique({
       where: { id: input.taskId },
       select: {
@@ -756,6 +771,8 @@ export async function updateDesignTaskStatus(
 
     return updatedTask;
   });
+
+  return result;
 }
 
 export async function uploadDesignProof(
@@ -776,7 +793,7 @@ export async function uploadDesignProof(
     );
   }
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
       select: {
@@ -880,7 +897,7 @@ export async function uploadDesignProof(
       },
     });
 
-    await createOrderNotifications(tx, {
+    const notificationResult = await createOrderNotifications(tx, {
       orderId: input.orderId,
       type: NotificationType.DESIGN_PROOF_PUBLISHED,
       title: `Nueva prueba de diseño para ${order.code}`,
@@ -892,8 +909,15 @@ export async function uploadDesignProof(
       },
     });
 
-    return proof;
+    return {
+      proof,
+      emailDeliveries: notificationResult.emailDeliveries,
+    };
   });
+
+  await sendPreparedNotificationEmails(result.emailDeliveries);
+
+  return result.proof;
 }
 
 export async function registerClientProofDecision(
@@ -901,9 +925,13 @@ export async function registerClientProofDecision(
   actorUserId: string,
 ) {
   const actor = await resolveDesignActor(actorUserId);
-  return db.$transaction((tx) =>
+  const result = await db.$transaction((tx) =>
     applyClientDecision(tx, input, actor.profileId),
   );
+
+  await sendPreparedNotificationEmails(result.emailDeliveries);
+
+  return result.task;
 }
 
 export async function registerDesignerProofDecision(
@@ -911,9 +939,13 @@ export async function registerDesignerProofDecision(
   actorUserId: string,
 ) {
   const actor = await resolveDesignActor(actorUserId);
-  return db.$transaction((tx) =>
+  const result = await db.$transaction((tx) =>
     applyDesignerDecision(tx, input, actor.profileId),
   );
+
+  await sendPreparedNotificationEmails(result.emailDeliveries);
+
+  return result.task;
 }
 
 export async function onClientArtworkUploaded(

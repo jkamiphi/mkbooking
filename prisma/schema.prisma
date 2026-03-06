@@ -159,6 +159,7 @@ model UserProfile {
   operationsClosedOrders   Order[] @relation("OrderOperationsCloser")
   caseFileArchivedOrders   Order[] @relation("OrderCaseFileArchiver")
   notifications            UserNotification[]
+  notificationPreferences  UserNotificationPreference[]
 
   @@index([userId])
   @@index([isActive])
@@ -1743,4 +1744,23 @@ model UserNotification {
   @@index([userProfileId, createdAt])
   @@index([orderId, createdAt])
   @@map("user_notification")
+}
+
+model UserNotificationPreference {
+  id String @id @default(cuid())
+
+  userProfileId String
+  type          NotificationType
+
+  emailEnabled Boolean @default(true)
+  inAppEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([userProfileId, type])
+  @@index([userProfileId])
+  @@map("user_notification_preference")
 }

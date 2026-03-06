@@ -10,6 +10,7 @@ import {
 import {
   createOrderNotifications,
   NotificationType,
+  sendPreparedNotificationEmails,
 } from "@/lib/services/notifications";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
@@ -1108,7 +1109,7 @@ export async function approveOperationalWorkOrderReview(
 ) {
   const actor = await resolveOperationsActor(actorUserId);
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const workOrder = await tx.orderOperationalWorkOrder.findUnique({
       where: { id: input.workOrderId },
       select: {
@@ -1166,7 +1167,7 @@ export async function approveOperationalWorkOrderReview(
       },
     });
 
-    await createOrderNotifications(tx, {
+    const notificationResult = await createOrderNotifications(tx, {
       orderId: updated.orderId,
       type: NotificationType.INSTALLATION_REPORT_ISSUED,
       title: `Reporte de instalación emitido para ${workOrder.order.code}`,
@@ -1191,8 +1192,17 @@ export async function approveOperationalWorkOrderReview(
       workOrder: updated,
       installationReport,
       closure,
+      emailDeliveries: notificationResult.emailDeliveries,
     };
   });
+
+  await sendPreparedNotificationEmails(result.emailDeliveries);
+
+  return {
+    workOrder: result.workOrder,
+    installationReport: result.installationReport,
+    closure: result.closure,
+  };
 }
 
 export async function reopenOperationalWorkOrderForRework(

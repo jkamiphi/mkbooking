@@ -1,85 +1,140 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   Building2,
   Check,
-  Globe,
   Mail,
-  MessageCircle,
-  Pencil,
+  PencilLine,
   Phone,
-  Smartphone,
+  Save,
+  UserRound,
   X,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
-/* ── Toggle Switch ─────────────────────────────────────── */
+const NOTIFICATION_ROWS = [
+  {
+    type: "ORDER_CONFIRMED",
+    label: "Orden confirmada",
+    description: "Cuando MK Booking confirma la orden y arranca el flujo interno.",
+  },
+  {
+    type: "SALES_REVIEW_APPROVED",
+    label: "Validación comercial aprobada",
+    description: "Cuando Ventas aprueba la revisión comercial.",
+  },
+  {
+    type: "SALES_REVIEW_CHANGES_REQUESTED",
+    label: "Cambios solicitados por Ventas",
+    description: "Cuando Ventas pide ajustes antes de continuar.",
+  },
+  {
+    type: "DESIGN_PROOF_PUBLISHED",
+    label: "Nueva prueba de diseño",
+    description: "Cuando diseño publica una nueva prueba para revisión.",
+  },
+  {
+    type: "DESIGN_RESPONSE_APPROVED",
+    label: "Diseño aprobado",
+    description: "Cuando una prueba queda aprobada por diseño o cliente.",
+  },
+  {
+    type: "DESIGN_RESPONSE_CHANGES_REQUESTED",
+    label: "Cambios de diseño solicitados",
+    description: "Cuando diseño o cliente pide ajustes en la prueba.",
+  },
+  {
+    type: "PRINT_STARTED",
+    label: "Impresión iniciada",
+    description: "Cuando la producción final entra en ejecución.",
+  },
+  {
+    type: "PRINT_COMPLETED",
+    label: "Impresión completada",
+    description: "Cuando la impresión final queda confirmada.",
+  },
+  {
+    type: "INSTALLATION_SUBMITTED",
+    label: "Instalación enviada a revisión",
+    description: "Cuando el instalador entrega la instalación a Ops.",
+  },
+  {
+    type: "INSTALLATION_REPORT_ISSUED",
+    label: "Reporte de instalación emitido",
+    description: "Cuando Ops valida la instalación y emite el reporte final.",
+  },
+] as const;
 
-function ToggleSwitch({
-  checked,
-  disabled,
-  onChange,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0359A8]/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${checked ? "bg-[#0359A8]" : "bg-neutral-200"
-        }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${checked ? "translate-x-5" : "translate-x-0.5"
-          }`}
-      />
-    </button>
-  );
+type NotificationType = (typeof NOTIFICATION_ROWS)[number]["type"];
+
+type NotificationDraft = Record<
+  NotificationType,
+  {
+    emailEnabled: boolean;
+    inAppEnabled: boolean;
+  }
+>;
+
+function formatDate(value: Date | string) {
+  return new Date(value).toLocaleDateString("es-PA", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
 
-/* ── Section Card ──────────────────────────────────────── */
-
-function SectionCard({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      className={`rounded-2xl border border-neutral-200/80 bg-white p-5 ${className}`}
-    >
-      {children}
-    </section>
-  );
+function createEmptyNotificationDraft(): NotificationDraft {
+  return Object.fromEntries(
+    NOTIFICATION_ROWS.map((row) => [
+      row.type,
+      {
+        emailEnabled: true,
+        inAppEnabled: true,
+      },
+    ]),
+  ) as NotificationDraft;
 }
 
-function SectionTitle({
-  icon: Icon,
-  children,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mb-4 flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500">
-        <Icon className="h-4 w-4" />
-      </span>
-      <h2 className="text-sm font-semibold text-neutral-900">{children}</h2>
-    </div>
-  );
+function buildNotificationDraft(
+  preferences:
+    | Array<{
+        type: string;
+        emailEnabled: boolean;
+        inAppEnabled: boolean;
+      }>
+    | undefined,
+) {
+  const nextDraft = createEmptyNotificationDraft();
+
+  for (const preference of preferences ?? []) {
+    if (preference.type in nextDraft) {
+      nextDraft[preference.type as NotificationType] = {
+        emailEnabled: preference.emailEnabled,
+        inAppEnabled: preference.inAppEnabled,
+      };
+    }
+  }
+
+  return nextDraft;
 }
 
-/* ── Field Display ─────────────────────────────────────── */
+function buildPersonalDraft(profile: {
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+}) {
+  return {
+    firstName: profile.firstName ?? "",
+    lastName: profile.lastName ?? "",
+    phone: profile.phone ?? "",
+  };
+}
 
 function FieldRow({
   label,
@@ -89,71 +144,66 @@ function FieldRow({
   value: string | null | undefined;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-2.5">
-      <dt className="text-sm text-neutral-500">{label}</dt>
-      <dd className="text-right text-sm font-medium text-neutral-900">
-        {value || <span className="text-neutral-300">—</span>}
+    <div className="flex items-start justify-between gap-4 border-t border-neutral-200/70 py-3 first:border-t-0 first:pt-0 last:pb-0">
+      <dt className="text-sm font-medium text-neutral-500">{label}</dt>
+      <dd className="max-w-[18rem] text-right text-sm text-neutral-900">
+        {value?.trim() ? value : <span className="text-neutral-400">Sin registrar</span>}
       </dd>
     </div>
   );
 }
 
-/* ── Main Component ────────────────────────────────────── */
-
 export function ProfileContent() {
-  const { data: profile, isLoading, error } = trpc.userProfile.me.useQuery();
   const utils = trpc.useUtils();
+  const { data: profile, isLoading, error } = trpc.userProfile.me.useQuery();
+
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [personalDraft, setPersonalDraft] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+  });
+  const [notificationDraft, setNotificationDraft] = useState<NotificationDraft | null>(
+    null,
+  );
 
   const updateProfile = trpc.userProfile.update.useMutation({
-    onSuccess: () => {
-      utils.userProfile.me.invalidate();
-      setIsEditing(false);
-      setSuccessMessage("Perfil actualizado");
-      setTimeout(() => setSuccessMessage(""), 3000);
+    onSuccess: async () => {
+      await utils.userProfile.me.invalidate();
+      setIsEditingPersonal(false);
+      setSuccessMessage("La información personal fue actualizada.");
     },
   });
 
-  const updateNotifications = trpc.userProfile.updateNotifications.useMutation({
-    onSuccess: () => {
-      utils.userProfile.me.invalidate();
-    },
-  });
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
-  function startEditing() {
-    setFirstName(profile?.firstName || "");
-    setLastName(profile?.lastName || "");
-    setPhone(profile?.phone || "");
-    setIsEditing(true);
-  }
-
-  function handleSave() {
-    updateProfile.mutate({
-      firstName: firstName || undefined,
-      lastName: lastName || undefined,
-      phone: phone || undefined,
+  const updateNotificationPreferences =
+    trpc.userProfile.updateNotificationPreferences.useMutation({
+      onSuccess: async () => {
+        await utils.userProfile.me.invalidate();
+        setNotificationDraft(null);
+        setSuccessMessage("Las preferencias de notificación fueron actualizadas.");
+      },
     });
-  }
 
-  function handleNotificationChange(
-    key: "emailNotifications" | "whatsappNotifications" | "smsNotifications",
-    value: boolean,
-  ) {
-    updateNotifications.mutate({ [key]: value });
-  }
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSuccessMessage("");
+    }, 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [successMessage]);
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3].map((item) => (
           <div
-            key={i}
-            className="h-32 animate-pulse rounded-2xl bg-neutral-100"
+            key={item}
+            className="h-36 animate-pulse rounded-3xl border border-neutral-200/70 bg-white/80"
           />
         ))}
       </div>
@@ -171,243 +221,344 @@ export function ProfileContent() {
   if (!profile) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-        Perfil no encontrado
+        Perfil no encontrado.
       </div>
     );
   }
 
-  const inputClass =
-    "w-full rounded-xl border border-neutral-200 bg-neutral-50/50 px-3.5 py-2.5 text-sm transition placeholder:text-neutral-400 focus:border-[#0359A8] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0359A8]/15";
+  const currentProfile = profile;
+  const effectiveNotificationDraft =
+    notificationDraft ?? buildNotificationDraft(currentProfile.notificationPreferences);
+
+  const hasNotificationChanges = NOTIFICATION_ROWS.some((row) => {
+    const serverPreference = currentProfile.notificationPreferences.find(
+      (preference) => preference.type === row.type,
+    );
+    const draftPreference = effectiveNotificationDraft[row.type];
+
+    return (
+      (serverPreference?.emailEnabled ?? true) !== draftPreference.emailEnabled ||
+      (serverPreference?.inAppEnabled ?? true) !== draftPreference.inAppEnabled
+    );
+  });
+
+  function handlePersonalDraftChange(
+    field: keyof typeof personalDraft,
+    value: string,
+  ) {
+    setPersonalDraft((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function handleNotificationToggle(
+    type: NotificationType,
+    field: "emailEnabled" | "inAppEnabled",
+    value: boolean,
+  ) {
+    setNotificationDraft((current) => {
+      const baseDraft =
+        current ?? buildNotificationDraft(currentProfile.notificationPreferences);
+
+      return {
+        ...baseDraft,
+        [type]: {
+          ...baseDraft[type],
+          [field]: value,
+        },
+      };
+    });
+  }
+
+  function handlePersonalEditStart() {
+    setPersonalDraft(buildPersonalDraft(currentProfile));
+    setIsEditingPersonal(true);
+  }
+
+  function handlePersonalEditCancel() {
+    setPersonalDraft(buildPersonalDraft(currentProfile));
+    setIsEditingPersonal(false);
+  }
+
+  function handlePersonalSave() {
+    updateProfile.mutate({
+      firstName: personalDraft.firstName.trim() || undefined,
+      lastName: personalDraft.lastName.trim() || undefined,
+      phone: personalDraft.phone.trim() || undefined,
+    });
+  }
+
+  function handleNotificationSave() {
+    updateNotificationPreferences.mutate({
+      preferences: NOTIFICATION_ROWS.map((row) => ({
+        type: row.type,
+        emailEnabled: effectiveNotificationDraft[row.type].emailEnabled,
+        inAppEnabled: effectiveNotificationDraft[row.type].inAppEnabled,
+      })),
+    });
+  }
 
   return (
     <div className="space-y-5">
-      {successMessage && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+      {successMessage ? (
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
           <Check className="h-4 w-4" />
           {successMessage}
         </div>
-      )}
+      ) : null}
 
-      {/* Account info */}
-      <SectionCard>
-        <SectionTitle icon={Mail}>Cuenta</SectionTitle>
-        <dl className="divide-y divide-neutral-100">
-          <FieldRow label="Correo electrónico" value={profile.user?.email} />
-          <FieldRow label="Nombre de cuenta" value={profile.user?.name} />
-          <FieldRow
-            label="Miembro desde"
-            value={new Date(profile.createdAt).toLocaleDateString("es-PA", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            })}
-          />
-        </dl>
-      </SectionCard>
-
-      {/* Personal info */}
-      <SectionCard>
-        <div className="mb-4 flex items-center justify-between">
-          <SectionTitle icon={Phone}>Información personal</SectionTitle>
-          {!isEditing && (
-            <button
-              type="button"
-              onClick={startEditing}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700"
-            >
-              <Pencil className="h-3 w-3" />
-              Editar
-            </button>
-          )}
-        </div>
-
-        {isEditing ? (
-          <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.45fr)]">
+        <Card className="overflow-hidden rounded-3xl border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
+          <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))]">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-sm shadow-[#0359A8]/25">
+                <UserRound className="h-5 w-5" />
+              </span>
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className={inputClass}
-                  placeholder="Tu nombre"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">
-                  Apellido
-                </label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className={inputClass}
-                  placeholder="Tu apellido"
-                />
+                <CardTitle>Mi cuenta</CardTitle>
+                <CardDescription>
+                  Datos base del usuario y acceso principal.
+                </CardDescription>
               </div>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-600">
-                Teléfono
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className={inputClass}
-                placeholder="+507 6000-0000"
+          </CardHeader>
+          <CardContent className="space-y-6 pt-6">
+            <dl className="space-y-0">
+              <FieldRow label="Correo electrónico" value={currentProfile.user.email} />
+              <FieldRow
+                label="Miembro desde"
+                value={formatDate(currentProfile.createdAt)}
               />
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={updateProfile.isPending}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-[#0359A8]/20 transition hover:bg-[#024a8f] disabled:opacity-50"
-              >
-                {updateProfile.isPending ? "Guardando..." : "Guardar cambios"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50"
-              >
-                <X className="h-3 w-3" />
-                Cancelar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <dl className="divide-y divide-neutral-100">
-            <FieldRow label="Nombre" value={profile.firstName} />
-            <FieldRow label="Apellido" value={profile.lastName} />
-            <FieldRow label="Teléfono" value={profile.phone} />
-          </dl>
-        )}
-      </SectionCard>
+            </dl>
 
-      {/* Notifications */}
-      <SectionCard>
-        <SectionTitle icon={Bell}>Notificaciones</SectionTitle>
-        <div className="space-y-0 divide-y divide-neutral-100">
-          <label className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-50">
-                <Mail className="h-4 w-4 text-neutral-500" />
-              </span>
-              <div>
-                <p className="text-sm font-medium text-neutral-900">
-                  Correo electrónico
-                </p>
-                <p className="text-xs text-neutral-500">
-                  Actualizaciones por email
-                </p>
-              </div>
-            </div>
-            <ToggleSwitch
-              checked={profile.emailNotifications}
-              disabled={updateNotifications.isPending}
-              onChange={(v) => handleNotificationChange("emailNotifications", v)}
-            />
-          </label>
-
-          <label className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-50">
-                <MessageCircle className="h-4 w-4 text-neutral-500" />
-              </span>
-              <div>
-                <p className="text-sm font-medium text-neutral-900">
-                  WhatsApp
-                </p>
-                <p className="text-xs text-neutral-500">
-                  Notificaciones por WhatsApp
-                </p>
-              </div>
-            </div>
-            <ToggleSwitch
-              checked={profile.whatsappNotifications}
-              disabled={updateNotifications.isPending}
-              onChange={(v) =>
-                handleNotificationChange("whatsappNotifications", v)
-              }
-            />
-          </label>
-
-          <label className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-50">
-                <Smartphone className="h-4 w-4 text-neutral-500" />
-              </span>
-              <div>
-                <p className="text-sm font-medium text-neutral-900">SMS</p>
-                <p className="text-xs text-neutral-500">
-                  Mensajes de texto
-                </p>
-              </div>
-            </div>
-            <ToggleSwitch
-              checked={profile.smsNotifications}
-              disabled={updateNotifications.isPending}
-              onChange={(v) =>
-                handleNotificationChange("smsNotifications", v)
-              }
-            />
-          </label>
-        </div>
-      </SectionCard>
-
-      {/* Organizations */}
-      {profile.organizationRoles && profile.organizationRoles.length > 0 && (
-        <SectionCard>
-          <SectionTitle icon={Building2}>Organizaciones</SectionTitle>
-          <div className="space-y-2">
-            {profile.organizationRoles.map((membership) => (
-              <div
-                key={membership.id}
-                className="flex items-center justify-between rounded-xl border border-neutral-100 bg-neutral-50/50 px-4 py-3"
-              >
-                <div className="flex items-center gap-3">
-                  {membership.organization.logoUrl ? (
-                    <img
-                      src={membership.organization.logoUrl}
-                      alt={membership.organization.name}
-                      className="h-9 w-9 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0359A8]/8 text-sm font-bold text-[#0359A8]">
-                      {membership.organization.name.charAt(0).toUpperCase()}
+            {currentProfile.organizationRoles.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+                  <Building2 className="h-4 w-4 text-[#0359A8]" />
+                  Organizaciones
+                </div>
+                <div className="space-y-2">
+                  {currentProfile.organizationRoles.map((membership) => (
+                    <div
+                      key={membership.id}
+                      className="rounded-2xl border border-neutral-200/70 bg-neutral-50/70 px-4 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-neutral-900">
+                            {membership.organization.name}
+                          </p>
+                          <p className="text-xs text-neutral-500">
+                            {membership.organization.organizationType}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-[#0359A8]/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#0359A8]">
+                          {membership.role}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">
-                      {membership.organization.name}
-                    </p>
-                    <p className="text-xs text-neutral-500">
-                      {membership.organization.organizationType}
-                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(15,23,42,0.2)]">
+          <CardHeader className="border-b border-neutral-200/70">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-neutral-900 text-white">
+                  <Phone className="h-5 w-5" />
+                </span>
+                <div>
+                  <CardTitle>Información personal</CardTitle>
+                  <CardDescription>
+                    Nombre, apellido y teléfono de contacto.
+                  </CardDescription>
+                </div>
+              </div>
+
+              {!isEditingPersonal ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePersonalEditStart}
+                  className="rounded-full"
+                >
+                  <PencilLine className="h-4 w-4" />
+                  Editar
+                </Button>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {isEditingPersonal ? (
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-neutral-700">
+                      Nombre
+                    </label>
+                    <Input
+                      value={personalDraft.firstName}
+                      onChange={(event) =>
+                        handlePersonalDraftChange("firstName", event.target.value)
+                      }
+                      placeholder="Tu nombre"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-neutral-700">
+                      Apellido
+                    </label>
+                    <Input
+                      value={personalDraft.lastName}
+                      onChange={(event) =>
+                        handlePersonalDraftChange("lastName", event.target.value)
+                      }
+                      placeholder="Tu apellido"
+                    />
                   </div>
                 </div>
-                <span className="rounded-md bg-[#0359A8]/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#0359A8]">
-                  {membership.role}
-                </span>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-neutral-700">
+                    Teléfono
+                  </label>
+                  <Input
+                    value={personalDraft.phone}
+                    onChange={(event) =>
+                      handlePersonalDraftChange("phone", event.target.value)
+                    }
+                    placeholder="+507 6000-0000"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <Button
+                    type="button"
+                    onClick={handlePersonalSave}
+                    disabled={updateProfile.isPending}
+                    className="rounded-full bg-[#0359A8] text-white hover:bg-[#024a8f]"
+                  >
+                    <Save className="h-4 w-4" />
+                    {updateProfile.isPending ? "Guardando..." : "Guardar cambios"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handlePersonalEditCancel}
+                    disabled={updateProfile.isPending}
+                    className="rounded-full"
+                  >
+                    <X className="h-4 w-4" />
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <dl className="space-y-0">
+                <FieldRow label="Nombre" value={currentProfile.firstName} />
+                <FieldRow label="Apellido" value={currentProfile.lastName} />
+                <FieldRow label="Teléfono" value={currentProfile.phone} />
+              </dl>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="rounded-3xl border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.18)]">
+        <CardHeader className="border-b border-neutral-200/70">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-sm shadow-[#0359A8]/25">
+                <Bell className="h-5 w-5" />
+              </span>
+              <div>
+                <CardTitle>Preferencias de notificación</CardTitle>
+                <CardDescription>
+                  Elige qué hitos quieres recibir por correo y cuáles mantener en tu bandeja in-app.
+                </CardDescription>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleNotificationSave}
+              disabled={!hasNotificationChanges || updateNotificationPreferences.isPending}
+              className="rounded-full bg-neutral-900 text-white hover:bg-neutral-800"
+            >
+              <Save className="h-4 w-4" />
+              {updateNotificationPreferences.isPending
+                ? "Guardando..."
+                : "Guardar preferencias"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="hidden grid-cols-[minmax(0,1fr)_88px_88px] items-center gap-4 border-b border-neutral-200/70 px-4 pb-3 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 md:grid">
+            <span>Evento</span>
+            <span className="text-center">Correo</span>
+            <span className="text-center">In-app</span>
+          </div>
+
+          <div className="divide-y divide-neutral-200/70">
+            {NOTIFICATION_ROWS.map((row) => (
+              <div
+                key={row.type}
+                className="grid gap-4 px-4 py-4 md:grid-cols-[minmax(0,1fr)_88px_88px] md:items-center"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900">{row.label}</p>
+                  <p className="mt-1 text-sm text-neutral-500">{row.description}</p>
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl border border-neutral-200/70 bg-neutral-50/70 px-3 py-2 md:justify-center md:border-0 md:bg-transparent md:px-0 md:py-0">
+                  <span className="text-xs font-medium text-neutral-500 md:hidden">
+                    Correo
+                  </span>
+                  <Checkbox
+                    checked={effectiveNotificationDraft[row.type].emailEnabled}
+                    onCheckedChange={(value) =>
+                      handleNotificationToggle(row.type, "emailEnabled", value === true)
+                    }
+                    disabled={updateNotificationPreferences.isPending}
+                    aria-label={`Recibir ${row.label} por correo`}
+                    className="h-5 w-5 rounded-md border-neutral-300 data-[state=checked]:border-[#0359A8] data-[state=checked]:bg-[#0359A8]"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl border border-neutral-200/70 bg-neutral-50/70 px-3 py-2 md:justify-center md:border-0 md:bg-transparent md:px-0 md:py-0">
+                  <span className="text-xs font-medium text-neutral-500 md:hidden">
+                    In-app
+                  </span>
+                  <Checkbox
+                    checked={effectiveNotificationDraft[row.type].inAppEnabled}
+                    onCheckedChange={(value) =>
+                      handleNotificationToggle(row.type, "inAppEnabled", value === true)
+                    }
+                    disabled={updateNotificationPreferences.isPending}
+                    aria-label={`Recibir ${row.label} en la bandeja in-app`}
+                    className="h-5 w-5 rounded-md border-neutral-300 data-[state=checked]:border-neutral-900 data-[state=checked]:bg-neutral-900"
+                  />
+                </div>
               </div>
             ))}
           </div>
-        </SectionCard>
-      )}
 
-      {/* Locale */}
-      <SectionCard>
-        <SectionTitle icon={Globe}>Configuración regional</SectionTitle>
-        <dl className="divide-y divide-neutral-100">
-          <FieldRow label="Idioma" value={profile.locale} />
-          <FieldRow label="Zona horaria" value={profile.timezone} />
-        </dl>
-      </SectionCard>
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+            <div className="flex items-start gap-2">
+              <Mail className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>
+                El correo de cuenta se mantiene como referencia y no es editable desde esta pantalla.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { z } from "zod";
 import {
   createOrderNotifications,
   NotificationType,
+  sendPreparedNotificationEmails,
 } from "@/lib/services/notifications";
 import {
   cancelOperationalWorkOrdersByPrintReopen,
@@ -334,7 +335,7 @@ export async function claimPrintTask(taskId: string, actorUserId: string) {
   const actor = await resolvePrintActor(actorUserId);
   const now = new Date();
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const task = await tx.orderPrintTask.findUnique({
       where: { id: taskId },
       select: {
@@ -389,6 +390,8 @@ export async function claimPrintTask(taskId: string, actorUserId: string) {
 
     return updatedTask;
   });
+
+  return result;
 }
 
 export async function updatePrintTaskStatus(
@@ -403,7 +406,7 @@ export async function updatePrintTaskStatus(
     );
   }
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const task = await tx.orderPrintTask.findUnique({
       where: { id: input.taskId },
       select: {
@@ -439,9 +442,12 @@ export async function updatePrintTaskStatus(
     }
 
     if (task.status === input.status) {
-      return tx.orderPrintTask.findUniqueOrThrow({
-        where: { id: input.taskId },
-      });
+      return {
+        task: await tx.orderPrintTask.findUniqueOrThrow({
+          where: { id: input.taskId },
+        }),
+        emailDeliveries: [],
+      };
     }
 
     const updatedTask = await tx.orderPrintTask.update({
@@ -461,7 +467,7 @@ export async function updatePrintTaskStatus(
     });
 
     if (input.status === "IN_PROGRESS") {
-      await createOrderNotifications(tx, {
+      const notificationResult = await createOrderNotifications(tx, {
         orderId: task.order.id,
         type: NotificationType.PRINT_STARTED,
         title: `Impresión iniciada para ${task.order.code}`,
@@ -472,10 +478,22 @@ export async function updatePrintTaskStatus(
           status: input.status,
         },
       });
+
+      return {
+        task: updatedTask,
+        emailDeliveries: notificationResult.emailDeliveries,
+      };
     }
 
-    return updatedTask;
+    return {
+      task: updatedTask,
+      emailDeliveries: [],
+    };
   });
+
+  await sendPreparedNotificationEmails(result.emailDeliveries);
+
+  return result.task;
 }
 
 export async function addPrintEvidence(
@@ -532,7 +550,7 @@ export async function confirmFinalPrint(
 ) {
   const actor = await resolvePrintActor(actorUserId);
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const task = await tx.orderPrintTask.findUnique({
       where: { orderId: input.orderId },
       select: {
@@ -564,7 +582,10 @@ export async function confirmFinalPrint(
     }
 
     if (task.status === "COMPLETED" && task.closedAt) {
-      return tx.orderPrintTask.findUniqueOrThrow({ where: { id: task.id } });
+      return {
+        task: await tx.orderPrintTask.findUniqueOrThrow({ where: { id: task.id } }),
+        emailDeliveries: [],
+      };
     }
 
     const now = new Date();
@@ -595,7 +616,7 @@ export async function confirmFinalPrint(
       source: "print-confirmation",
     });
 
-    await createOrderNotifications(tx, {
+    const notificationResult = await createOrderNotifications(tx, {
       orderId: task.order.id,
       type: NotificationType.PRINT_COMPLETED,
       title: `Impresión completada para ${task.order.code}`,
@@ -607,8 +628,15 @@ export async function confirmFinalPrint(
       },
     });
 
-    return updatedTask;
+    return {
+      task: updatedTask,
+      emailDeliveries: notificationResult.emailDeliveries,
+    };
   });
+
+  await sendPreparedNotificationEmails(result.emailDeliveries);
+
+  return result.task;
 }
 
 export async function getPrintTaskByOrder(orderId: string) {

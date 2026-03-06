@@ -6,6 +6,7 @@ import { createOperationalWorkOrderEvent } from "@/lib/services/operations";
 import {
   createOrderNotifications,
   NotificationType,
+  sendPreparedNotificationEmails,
 } from "@/lib/services/notifications";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
@@ -657,7 +658,7 @@ export async function completeInstallerTask(
 ) {
   const actor = await resolveInstallerActor(actorUserId);
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const workOrder = await findOwnedWorkOrderOrThrow(
       tx,
       input.workOrderId,
@@ -763,7 +764,7 @@ export async function completeInstallerTask(
       });
     }
 
-    await createOrderNotifications(tx, {
+    const notificationResult = await createOrderNotifications(tx, {
       orderId: workOrder.orderId,
       type: NotificationType.INSTALLATION_SUBMITTED,
       title: `Instalación enviada a validación para ${workOrder.order.code}`,
@@ -778,6 +779,13 @@ export async function completeInstallerTask(
       },
     });
 
-    return updated;
+    return {
+      workOrder: updated,
+      emailDeliveries: notificationResult.emailDeliveries,
+    };
   });
+
+  await sendPreparedNotificationEmails(result.emailDeliveries);
+
+  return result.workOrder;
 }
