@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import * as React from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,22 +19,21 @@ export interface FilterSummaryChip {
 }
 
 interface FilterSheetToolbarProps {
-  children: ReactNode;
+  children: React.ReactNode;
   summaryChips?: FilterSummaryChip[];
   onClearAll?: () => void;
   className?: string;
 }
 
-interface FilterSheetTriggerButtonProps {
+type FilterSheetTriggerButtonProps = React.ComponentProps<typeof Button> & {
   activeCount?: number;
   label?: string;
-  className?: string;
-}
+};
 
 interface FilterSheetPanelProps {
   title: string;
   description?: string;
-  children: ReactNode;
+  children: React.ReactNode;
   onApply: () => void;
   onClear: () => void;
   applyLabel?: string;
@@ -46,7 +45,7 @@ interface FilterSheetPanelProps {
 interface FilterSheetSectionProps {
   title: string;
   description?: string;
-  children: ReactNode;
+  children: React.ReactNode;
   className?: string;
 }
 
@@ -75,20 +74,32 @@ export function FilterSheetToolbar({
   );
 }
 
-export function FilterSheetTriggerButton({
-  activeCount = 0,
-  label = "Filtros",
-  className,
-}: FilterSheetTriggerButtonProps) {
+export const FilterSheetTriggerButton = React.forwardRef<
+  HTMLButtonElement,
+  FilterSheetTriggerButtonProps
+>(function FilterSheetTriggerButton(
+  {
+    activeCount = 0,
+    label = "Filtros",
+    className,
+    type = "button",
+    variant = "outline",
+    size = "sm",
+    ...props
+  },
+  ref,
+) {
   return (
     <Button
-      type="button"
-      variant="outline"
-      size="sm"
+      ref={ref}
+      type={type}
+      variant={variant}
+      size={size}
       className={cn(
         "h-9 rounded-full border-neutral-200 bg-white px-4 text-neutral-700 shadow-none hover:border-neutral-300 hover:bg-neutral-50",
         className,
       )}
+      {...props}
     >
       <SlidersHorizontal className="h-4 w-4" />
       {label}
@@ -99,7 +110,7 @@ export function FilterSheetTriggerButton({
       ) : null}
     </Button>
   );
-}
+});
 
 export function FilterSummaryChips({
   chips,
