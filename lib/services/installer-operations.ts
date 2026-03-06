@@ -3,6 +3,10 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { ensureChecklistForWorkOrder } from "@/lib/services/installer-checklist";
 import { createOperationalWorkOrderEvent } from "@/lib/services/operations";
+import {
+  createOrderNotifications,
+  NotificationType,
+} from "@/lib/services/notifications";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -758,6 +762,21 @@ export async function completeInstallerTask(
         },
       });
     }
+
+    await createOrderNotifications(tx, {
+      orderId: workOrder.orderId,
+      type: NotificationType.INSTALLATION_SUBMITTED,
+      title: `Instalación enviada a validación para ${workOrder.order.code}`,
+      message:
+        "La instalación de la orden pasó a revisión de Ops y está pendiente de validación final.",
+      actionPath: `/orders/${workOrder.orderId}?tab=tracking`,
+      sourceKey: `order:${workOrder.orderId}:installation-submitted:${workOrder.id}:${now.toISOString()}`,
+      metadata: {
+        workOrderId: workOrder.id,
+        evidenceCount,
+        evidenceWithinRadius,
+      },
+    });
 
     return updated;
   });

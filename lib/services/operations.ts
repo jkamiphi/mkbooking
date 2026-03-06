@@ -7,6 +7,10 @@ import {
   supersedeIssuedInstallationReports,
   synchronizeOrderOperationalClosure,
 } from "@/lib/services/order-traceability";
+import {
+  createOrderNotifications,
+  NotificationType,
+} from "@/lib/services/notifications";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -1111,6 +1115,12 @@ export async function approveOperationalWorkOrderReview(
         id: true,
         status: true,
         assignedInstallerId: true,
+        orderId: true,
+        order: {
+          select: {
+            code: true,
+          },
+        },
       },
     });
 
@@ -1151,6 +1161,21 @@ export async function approveOperationalWorkOrderReview(
       actorId: actor.profileId,
       notes: input.notes?.trim() || null,
       metadata: {
+        reportId: installationReport.id,
+        reportVersion: installationReport.version,
+      },
+    });
+
+    await createOrderNotifications(tx, {
+      orderId: updated.orderId,
+      type: NotificationType.INSTALLATION_REPORT_ISSUED,
+      title: `Reporte de instalación emitido para ${workOrder.order.code}`,
+      message:
+        "Ops validó la instalación y emitió el reporte final de ejecución.",
+      actionPath: `/orders/${updated.orderId}?tab=case-file`,
+      sourceKey: `order:${updated.orderId}:installation-report:${installationReport.id}`,
+      metadata: {
+        workOrderId: updated.id,
         reportId: installationReport.id,
         reportVersion: installationReport.version,
       },
