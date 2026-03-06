@@ -66,7 +66,7 @@ export const installerRouter = router({
             message:
               error instanceof Error
                 ? error.message
-                : "No se pudo completar la OT operativa.",
+                : "No se pudo enviar la OT operativa a revisión.",
           });
         }
       }),

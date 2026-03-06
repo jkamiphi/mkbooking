@@ -9,9 +9,10 @@ type PrismaClientLike = Prisma.TransactionClient | typeof db;
 const DEFAULT_GEO_RADIUS_METERS = 250;
 const CLOSED_STATUSES: OperationalWorkOrderStatus[] = ["COMPLETED", "CANCELLED"];
 const OPEN_STATUSES: OperationalWorkOrderStatus[] = [
-  "PENDING_ASSIGNMENT",
   "ASSIGNED",
   "IN_PROGRESS",
+  "REOPENED",
+  "PENDING_REVIEW",
 ];
 
 export const installerTaskListSchema = z.object({
@@ -300,19 +301,23 @@ export async function listInstallerTasksMine(
       clientEmail: workOrder.order.clientEmail ?? null,
       assignedAt: workOrder.assignedAt,
       startedAt: workOrder.startedAt,
+      submittedAt: workOrder.submittedAt,
       completedAt: workOrder.completedAt,
+      lastReopenReason: workOrder.lastReopenReason,
+      reopenCount: workOrder.reopenCount,
       updatedAt: workOrder.updatedAt,
     })),
     stats: {
-      pending:
-        (countByStatus.get("ASSIGNED") ?? 0) +
-        (countByStatus.get("PENDING_ASSIGNMENT") ?? 0),
+      pending: countByStatus.get("ASSIGNED") ?? 0,
+      reopened: countByStatus.get("REOPENED") ?? 0,
       inProgress: countByStatus.get("IN_PROGRESS") ?? 0,
+      inReview: countByStatus.get("PENDING_REVIEW") ?? 0,
       completedToday: completedTodayCount,
       openTotal:
         (countByStatus.get("ASSIGNED") ?? 0) +
-        (countByStatus.get("PENDING_ASSIGNMENT") ?? 0) +
-        (countByStatus.get("IN_PROGRESS") ?? 0),
+        (countByStatus.get("REOPENED") ?? 0) +
+        (countByStatus.get("IN_PROGRESS") ?? 0) +
+        (countByStatus.get("PENDING_REVIEW") ?? 0),
     },
   };
 }
@@ -433,8 +438,11 @@ export async function getInstallerTaskById(actorUserId: string, workOrderId: str
     clientEmail: workOrder.order.clientEmail ?? null,
     assignedAt: workOrder.assignedAt,
     startedAt: workOrder.startedAt,
+    submittedAt: workOrder.submittedAt,
     completedAt: workOrder.completedAt,
     closedAt: workOrder.closedAt,
+    lastReopenReason: workOrder.lastReopenReason,
+    reopenCount: workOrder.reopenCount,
     updatedAt: workOrder.updatedAt,
     checklistItems: workOrder.checklistItems,
     evidences: workOrder.evidences.map((evidence) => ({
@@ -453,7 +461,7 @@ export async function getInstallerTaskById(actorUserId: string, workOrderId: str
       hasExpectedCoordinates: expectedCoordinatesAvailable,
       hasEvidenceWithinRadius,
       requiresGeoOverride: expectedCoordinatesAvailable && !hasEvidenceWithinRadius,
-      canStart: workOrder.status === "ASSIGNED",
+      canStart: workOrder.status === "ASSIGNED" || workOrder.status === "REOPENED",
       canComplete:
         workOrder.status === "IN_PROGRESS" &&
         requiredChecklistCompleted === requiredChecklistItems.length &&
@@ -486,8 +494,8 @@ export async function startInstallerTask(
       throw new Error("No puedes iniciar una OT cerrada.");
     }
 
-    if (workOrder.status !== "ASSIGNED") {
-      throw new Error("La OT debe estar asignada para iniciar trabajo.");
+    if (workOrder.status !== "ASSIGNED" && workOrder.status !== "REOPENED") {
+      throw new Error("La OT debe estar asignada o reabierta para iniciar trabajo.");
     }
 
     const now = new Date();
@@ -496,6 +504,7 @@ export async function startInstallerTask(
       data: {
         status: "IN_PROGRESS",
         startedAt: now,
+        submittedAt: null,
       },
     });
 
@@ -510,6 +519,7 @@ export async function startInstallerTask(
       notes: normalizeOptionalText(input.notes),
       metadata: {
         source: "installer-app",
+        resumedFromReopen: workOrder.status === "REOPENED",
       },
     });
 
@@ -689,11 +699,11 @@ export async function completeInstallerTask(
       ]);
 
     if (requiredChecklistCompleted < requiredChecklistTotal) {
-      throw new Error("Debes completar todo el checklist obligatorio antes de cerrar la OT.");
+      throw new Error("Debes completar todo el checklist obligatorio antes de enviarla a revisión.");
     }
 
     if (evidenceCount < 1) {
-      throw new Error("Debes subir al menos 1 evidencia fotográfica para completar la OT.");
+      throw new Error("Debes subir al menos 1 evidencia fotográfica para enviarla a revisión.");
     }
 
     const expectedCoordinatesAvailable = hasExpectedCoordinates(workOrder);
@@ -710,17 +720,18 @@ export async function completeInstallerTask(
     const updated = await tx.orderOperationalWorkOrder.update({
       where: { id: workOrder.id },
       data: {
-        status: "COMPLETED",
-        completedAt: now,
-        closedAt: now,
+        status: "PENDING_REVIEW",
+        submittedAt: now,
+        completedAt: null,
+        closedAt: null,
       },
     });
 
     await createOperationalWorkOrderEvent(tx, {
       workOrderId: workOrder.id,
-      eventType: "STATUS_CHANGED",
+      eventType: "SUBMITTED_FOR_REVIEW",
       fromStatus: workOrder.status,
-      toStatus: "COMPLETED",
+      toStatus: "PENDING_REVIEW",
       fromInstallerId: actor.profileId,
       toInstallerId: actor.profileId,
       actorId: actor.profileId,

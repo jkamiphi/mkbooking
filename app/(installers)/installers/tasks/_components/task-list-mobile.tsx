@@ -8,12 +8,14 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-type TaskStatusFilter = "ALL" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED";
+type TaskStatusFilter = "ALL" | "ASSIGNED" | "IN_PROGRESS" | "REOPENED" | "PENDING_REVIEW" | "COMPLETED";
 
 function statusLabel(status: string) {
   if (status === "PENDING_ASSIGNMENT") return "Pendiente asignación";
   if (status === "ASSIGNED") return "Asignada";
   if (status === "IN_PROGRESS") return "En progreso";
+  if (status === "PENDING_REVIEW") return "En revisión";
+  if (status === "REOPENED") return "Reabierta";
   if (status === "COMPLETED") return "Completada";
   if (status === "CANCELLED") return "Cancelada";
   return status;
@@ -22,6 +24,8 @@ function statusLabel(status: string) {
 function statusVariant(status: string) {
   if (status === "ASSIGNED") return "warning" as const;
   if (status === "IN_PROGRESS") return "info" as const;
+  if (status === "PENDING_REVIEW") return "secondary" as const;
+  if (status === "REOPENED") return "destructive" as const;
   if (status === "COMPLETED") return "success" as const;
   if (status === "CANCELLED") return "destructive" as const;
   return "secondary" as const;
@@ -64,19 +68,21 @@ export function TaskListMobile() {
       <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <MetricCard label="Pendientes" value={stats?.pending ?? 0} />
         <MetricCard label="En progreso" value={stats?.inProgress ?? 0} />
-        <MetricCard label="Completadas hoy" value={stats?.completedToday ?? 0} />
-        <MetricCard label="Abiertas" value={stats?.openTotal ?? 0} />
+        <MetricCard label="En revisión" value={(stats as { inReview?: number } | undefined)?.inReview ?? 0} />
+        <MetricCard label="Reabiertas" value={(stats as { reopened?: number } | undefined)?.reopened ?? 0} />
       </section>
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-2">
         <div className="scrollbar-hide -mx-1 overflow-x-auto px-1">
           <div className="flex w-max items-center gap-2">
-            {([
-              { value: "ALL", label: "Resumen" },
-              { value: "ASSIGNED", label: "Asignadas" },
-              { value: "IN_PROGRESS", label: "En progreso" },
-              { value: "COMPLETED", label: "Completadas" },
-            ] as const).map((option) => (
+              {([
+                { value: "ALL", label: "Resumen" },
+                { value: "ASSIGNED", label: "Asignadas" },
+                { value: "IN_PROGRESS", label: "En progreso" },
+                { value: "REOPENED", label: "Reabiertas" },
+                { value: "PENDING_REVIEW", label: "En revisión" },
+                { value: "COMPLETED", label: "Completadas" },
+              ] as const).map((option) => (
               <button
                 key={option.value}
                 type="button"
@@ -138,11 +144,16 @@ export function TaskListMobile() {
                     <Clock3 className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
                     Actualizado: {formatDateTime(task.updatedAt)}
                   </p>
+                  {task.lastReopenReason ? (
+                    <p className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-red-700">
+                      Reapertura: {task.lastReopenReason}
+                    </p>
+                  ) : null}
                 </div>
 
                 <Button asChild className="h-11 w-full rounded-xl">
                   <Link href={`/installers/tasks/${task.id}`}>
-                    Abrir OT
+                    {task.status === "REOPENED" ? "Retomar OT" : "Abrir OT"}
                     <ChevronRight className="ml-1 h-4 w-4" />
                   </Link>
                 </Button>

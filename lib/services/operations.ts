@@ -5,18 +5,37 @@ import { ensureChecklistForWorkOrder } from "@/lib/services/installer-checklist"
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
-const ACTIVE_WORK_ORDER_STATUSES: OperationalWorkOrderStatus[] = ["ASSIGNED", "IN_PROGRESS"];
+const ACTIVE_WORK_ORDER_STATUSES: OperationalWorkOrderStatus[] = [
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "REOPENED",
+];
 const OPEN_WORK_ORDER_STATUSES: OperationalWorkOrderStatus[] = [
   "PENDING_ASSIGNMENT",
   "ASSIGNED",
   "IN_PROGRESS",
+  "PENDING_REVIEW",
+  "REOPENED",
 ];
+const REVIEW_WORK_ORDER_STATUSES: OperationalWorkOrderStatus[] = ["PENDING_REVIEW"];
+const HISTORY_WORK_ORDER_STATUSES: OperationalWorkOrderStatus[] = ["COMPLETED", "CANCELLED"];
+const ACTIVE_VIEW_WORK_ORDER_STATUSES: OperationalWorkOrderStatus[] = [
+  "PENDING_ASSIGNMENT",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "REOPENED",
+];
+const operationViewSchema = z.enum(["ACTIVE", "REVIEW", "HISTORY"]);
 
 export const operationalWorkOrderListSchema = z.object({
+  view: operationViewSchema.default("ACTIVE"),
   status: z.nativeEnum(OperationalWorkOrderStatus).optional(),
   zoneId: z.string().min(1).optional(),
   installerId: z.string().min(1).optional(),
   unassignedOnly: z.boolean().optional(),
+  search: z.string().trim().max(120).optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
   skip: z.number().int().min(0).default(0),
   take: z.number().int().min(1).max(100).default(50),
 });
@@ -25,9 +44,12 @@ export const operationalWorkOrderByOrderSchema = z.object({
   orderId: z.string().min(1),
 });
 
-export const updateOperationalWorkOrderStatusSchema = z.object({
+export const operationalWorkOrderDetailSchema = z.object({
   workOrderId: z.string().min(1),
-  status: z.nativeEnum(OperationalWorkOrderStatus),
+});
+
+export const approveOperationalWorkOrderReviewSchema = z.object({
+  workOrderId: z.string().min(1),
   notes: z.string().trim().max(2000).optional(),
 });
 
@@ -40,6 +62,11 @@ export const reassignOperationalWorkOrderSchema = z.object({
 
 export const retryOperationalWorkOrderAutoAssignSchema = z.object({
   workOrderId: z.string().min(1),
+});
+
+export const reopenOperationalWorkOrderSchema = z.object({
+  workOrderId: z.string().min(1),
+  reason: z.string().trim().min(1).max(2000),
 });
 
 export const upsertInstallerConfigSchema = z.object({
@@ -112,6 +139,9 @@ export async function createOperationalWorkOrderEvent(
       | "AUTO_ASSIGNMENT_SKIPPED"
       | "MANUAL_REASSIGNED"
       | "STATUS_CHANGED"
+      | "SUBMITTED_FOR_REVIEW"
+      | "REVIEW_APPROVED"
+      | "REOPENED_FOR_REWORK"
       | "CANCELLED_BY_PRINT_REOPEN"
       | "AUTO_ASSIGNMENT_RETRIED";
     fromStatus?: OperationalWorkOrderStatus | null;
@@ -136,6 +166,239 @@ export async function createOperationalWorkOrderEvent(
       actorId: input.actorId ?? null,
     },
   });
+}
+
+const operationalWorkOrderListInclude = {
+  order: {
+    select: {
+      id: true,
+      code: true,
+      clientName: true,
+      clientEmail: true,
+      organization: {
+        select: { name: true },
+      },
+    },
+  },
+  zone: {
+    select: {
+      id: true,
+      name: true,
+      province: {
+        select: { name: true },
+      },
+    },
+  },
+  face: {
+    select: {
+      id: true,
+      code: true,
+      asset: {
+        select: {
+          address: true,
+          structureType: {
+            select: { name: true },
+          },
+        },
+      },
+    },
+  },
+  lineItem: {
+    select: {
+      id: true,
+    },
+  },
+  assignedInstaller: {
+    include: {
+      user: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+    },
+  },
+  reviewedBy: {
+    include: {
+      user: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.OrderOperationalWorkOrderInclude;
+
+const operationalWorkOrderDetailInclude = {
+  ...operationalWorkOrderListInclude,
+  checklistItems: {
+    orderBy: [{ createdAt: "asc" }],
+    include: {
+      checkedBy: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+  },
+  evidences: {
+    orderBy: [{ receivedAt: "desc" }],
+    include: {
+      uploadedBy: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+  },
+  events: {
+    orderBy: { createdAt: "desc" },
+    include: {
+      actor: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      fromInstaller: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      toInstaller: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.OrderOperationalWorkOrderInclude;
+
+function normalizeSearchTerm(search?: string) {
+  const trimmed = search?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : undefined;
+}
+
+function toNumberOrNull(value: Prisma.Decimal | number | null | undefined): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const result = Number(value);
+  return Number.isFinite(result) ? result : null;
+}
+
+function endOfDay(value: Date) {
+  const result = new Date(value);
+  result.setHours(23, 59, 59, 999);
+  return result;
+}
+
+function buildOperationalWorkOrderWhere(
+  input: z.infer<typeof operationalWorkOrderListSchema>
+): Prisma.OrderOperationalWorkOrderWhereInput {
+  const where: Prisma.OrderOperationalWorkOrderWhereInput = {};
+
+  if (input.status) {
+    where.status = input.status;
+  } else if (input.view === "ACTIVE") {
+    where.status = { in: ACTIVE_VIEW_WORK_ORDER_STATUSES };
+  } else if (input.view === "REVIEW") {
+    where.status = { in: REVIEW_WORK_ORDER_STATUSES };
+  } else {
+    where.status = { in: HISTORY_WORK_ORDER_STATUSES };
+  }
+
+  if (input.zoneId) {
+    where.zoneId = input.zoneId;
+  }
+
+  if (input.installerId) {
+    where.assignedInstallerId = input.installerId;
+  }
+
+  if (input.unassignedOnly) {
+    where.assignedInstallerId = null;
+  }
+
+  const search = normalizeSearchTerm(input.search);
+  if (search) {
+    where.OR = [
+      {
+        order: {
+          code: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+      },
+      {
+        face: {
+          code: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+      },
+      {
+        order: {
+          clientName: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+      },
+      {
+        order: {
+          organization: {
+            name: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+        },
+      },
+    ];
+  }
+
+  if (input.view === "HISTORY") {
+    if (input.dateFrom || input.dateTo) {
+      where.closedAt = {};
+      if (input.dateFrom) {
+        where.closedAt.gte = input.dateFrom;
+      }
+      if (input.dateTo) {
+        where.closedAt.lte = endOfDay(input.dateTo);
+      }
+    }
+  }
+
+  return where;
 }
 
 async function countInstallerActiveLoads(
@@ -274,6 +537,13 @@ async function assignOperationalWorkOrderAutomatically(
           assignedInstallerId: null,
           assignedAt: null,
           startedAt: null,
+          submittedAt: null,
+          completedAt: null,
+          reviewedAt: null,
+          reviewedById: null,
+          reopenedAt: null,
+          lastReopenReason: null,
+          closedAt: null,
         },
       });
     }
@@ -319,7 +589,12 @@ async function assignOperationalWorkOrderAutomatically(
       assignedInstallerId: eligible.installerId,
       assignedAt: now,
       startedAt: null,
+      submittedAt: null,
       completedAt: null,
+      reviewedAt: null,
+      reviewedById: null,
+      reopenedAt: null,
+      lastReopenReason: null,
       closedAt: null,
     },
   });
@@ -495,6 +770,8 @@ export async function cancelOperationalWorkOrdersByPrintReopen(
       where: { id: workOrder.id },
       data: {
         status: "CANCELLED",
+        reviewedAt: null,
+        reviewedById: null,
         closedAt: now,
       },
     });
@@ -522,82 +799,161 @@ export async function cancelOperationalWorkOrdersByPrintReopen(
 export async function listOperationalWorkOrders(
   input: z.infer<typeof operationalWorkOrderListSchema>
 ) {
-  const where: Prisma.OrderOperationalWorkOrderWhereInput = {};
-  if (input.status) {
-    where.status = input.status;
-  } else {
-    where.closedAt = null;
-  }
-
-  if (input.zoneId) {
-    where.zoneId = input.zoneId;
-  }
-
-  if (input.installerId) {
-    where.assignedInstallerId = input.installerId;
-  }
-
-  if (input.unassignedOnly) {
-    where.assignedInstallerId = null;
-  }
+  const where = buildOperationalWorkOrderWhere(input);
+  const orderBy: Prisma.OrderOperationalWorkOrderOrderByWithRelationInput[] =
+    input.view === "HISTORY"
+      ? [{ closedAt: "desc" }, { updatedAt: "desc" }]
+      : input.view === "REVIEW"
+        ? [{ submittedAt: "asc" }, { updatedAt: "asc" }]
+        : [{ createdAt: "asc" }];
 
   const [workOrders, total] = await Promise.all([
     db.orderOperationalWorkOrder.findMany({
       where,
       skip: input.skip,
       take: input.take,
-      orderBy: [{ createdAt: "asc" }],
-      include: {
-        order: {
-          select: {
-            id: true,
-            code: true,
-            clientName: true,
-            clientEmail: true,
-            organization: {
-              select: { name: true },
-            },
-          },
-        },
-        zone: {
-          select: {
-            id: true,
-            name: true,
-            province: {
-              select: { name: true },
-            },
-          },
-        },
-        face: {
-          select: {
-            id: true,
-            code: true,
-          },
-        },
-        lineItem: {
-          select: {
-            id: true,
-          },
-        },
-        assignedInstaller: {
-          include: {
-            user: {
-              select: {
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-      },
+      orderBy,
+      include: operationalWorkOrderListInclude,
     }),
     db.orderOperationalWorkOrder.count({ where }),
   ]);
+
+  const summary =
+    input.view === "ACTIVE"
+      ? await (async () => {
+          const [unassignedCount, reopenedCount, inProgressCount, oldestOpen] = await Promise.all([
+            db.orderOperationalWorkOrder.count({
+              where: {
+                ...where,
+                status: { in: ACTIVE_VIEW_WORK_ORDER_STATUSES },
+                assignedInstallerId: null,
+              },
+            }),
+            db.orderOperationalWorkOrder.count({
+              where: {
+                ...where,
+                status: "REOPENED",
+              },
+            }),
+            db.orderOperationalWorkOrder.count({
+              where: {
+                ...where,
+                status: "IN_PROGRESS",
+              },
+            }),
+            db.orderOperationalWorkOrder.findFirst({
+              where: {
+                ...where,
+                status: { in: ACTIVE_VIEW_WORK_ORDER_STATUSES },
+              },
+              orderBy: [{ createdAt: "asc" }],
+              select: {
+                id: true,
+                createdAt: true,
+                order: {
+                  select: {
+                    code: true,
+                  },
+                },
+                face: {
+                  select: {
+                    code: true,
+                  },
+                },
+              },
+            }),
+          ]);
+
+          return {
+            unassignedCount,
+            reopenedCount,
+            inProgressCount,
+            oldestOpen,
+          };
+        })()
+      : input.view === "REVIEW"
+        ? await (async () => {
+            const [pendingCount, overrideCount, withoutValidEvidenceCount] = await Promise.all([
+              db.orderOperationalWorkOrder.count({
+                where: {
+                  ...where,
+                  status: "PENDING_REVIEW",
+                },
+              }),
+              db.orderOperationalWorkOrder.count({
+                where: {
+                  ...where,
+                  status: "PENDING_REVIEW",
+                  evidences: {
+                    some: {
+                      geoOverrideReason: {
+                        not: null,
+                      },
+                    },
+                  },
+                },
+              }),
+              db.orderOperationalWorkOrder.count({
+                where: {
+                  ...where,
+                  status: "PENDING_REVIEW",
+                  evidences: {
+                    none: {
+                      withinExpectedRadius: true,
+                    },
+                  },
+                },
+              }),
+            ]);
+
+            return {
+              pendingCount,
+              overrideCount,
+              withoutValidEvidenceCount,
+            };
+          })()
+        : await (async () => {
+            const [completedTodayCount, cancelledCount, reopenedInRangeCount] = await Promise.all([
+              db.orderOperationalWorkOrder.count({
+                where: {
+                  ...where,
+                  status: "COMPLETED",
+                  completedAt: {
+                    gte: new Date(new Date().setHours(0, 0, 0, 0)),
+                  },
+                },
+              }),
+              db.orderOperationalWorkOrder.count({
+                where: {
+                  ...where,
+                  status: "CANCELLED",
+                },
+              }),
+              db.orderOperationalWorkOrder.count({
+                where: {
+                  ...where,
+                  status: {
+                    in: HISTORY_WORK_ORDER_STATUSES,
+                  },
+                  reopenCount: {
+                    gt: 0,
+                  },
+                },
+              }),
+            ]);
+
+            return {
+              completedTodayCount,
+              cancelledCount,
+              reopenedInRangeCount,
+            };
+          })();
 
   return {
     workOrders,
     total,
     hasMore: input.skip + workOrders.length < total,
+    summary,
   };
 }
 
@@ -605,78 +961,55 @@ export async function getOperationalWorkOrdersByOrder(orderId: string) {
   return db.orderOperationalWorkOrder.findMany({
     where: { orderId },
     orderBy: [{ createdAt: "asc" }],
-    include: {
-      zone: {
-        select: {
-          id: true,
-          name: true,
-          province: {
-            select: { name: true },
-          },
-        },
-      },
-      face: {
-        select: {
-          id: true,
-          code: true,
-        },
-      },
-      lineItem: {
-        select: {
-          id: true,
-        },
-      },
-      assignedInstaller: {
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-        },
-      },
-      events: {
-        orderBy: { createdAt: "desc" },
-        include: {
-          actor: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-          fromInstaller: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-          toInstaller: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
+    include: operationalWorkOrderDetailInclude,
   });
 }
 
-export async function updateOperationalWorkOrderStatus(
-  input: z.infer<typeof updateOperationalWorkOrderStatusSchema>,
+export async function getOperationalWorkOrderDetail(
+  input: z.infer<typeof operationalWorkOrderDetailSchema>
+) {
+  const workOrder = await db.orderOperationalWorkOrder.findUnique({
+    where: { id: input.workOrderId },
+    include: operationalWorkOrderDetailInclude,
+  });
+
+  if (!workOrder) {
+    throw new Error("OT operativa no encontrada.");
+  }
+
+  const requiredChecklistItems = workOrder.checklistItems.filter((item) => item.isRequired);
+  const requiredChecklistCompleted = requiredChecklistItems.filter((item) => item.isChecked).length;
+  const validEvidenceCount = workOrder.evidences.filter(
+    (evidence) => evidence.withinExpectedRadius === true
+  ).length;
+  const overrideEvidenceCount = workOrder.evidences.filter(
+    (evidence) => Boolean(evidence.geoOverrideReason)
+  ).length;
+
+  return {
+    ...workOrder,
+    evidences: workOrder.evidences.map((evidence) => ({
+      ...evidence,
+      capturedLatitude: toNumberOrNull(evidence.capturedLatitude),
+      capturedLongitude: toNumberOrNull(evidence.capturedLongitude),
+      expectedLatitude: toNumberOrNull(evidence.expectedLatitude),
+      expectedLongitude: toNumberOrNull(evidence.expectedLongitude),
+      distanceMeters: toNumberOrNull(evidence.distanceMeters),
+    })),
+    validation: {
+      requiredChecklistTotal: requiredChecklistItems.length,
+      requiredChecklistCompleted,
+      evidenceCount: workOrder.evidences.length,
+      validEvidenceCount,
+      overrideEvidenceCount,
+      hasValidEvidence: validEvidenceCount > 0,
+      hasGeoOverride: overrideEvidenceCount > 0,
+    },
+  };
+}
+
+export async function approveOperationalWorkOrderReview(
+  input: z.infer<typeof approveOperationalWorkOrderReviewSchema>,
   actorUserId: string
 ) {
   const actor = await resolveOperationsActor(actorUserId);
@@ -688,9 +1021,6 @@ export async function updateOperationalWorkOrderStatus(
         id: true,
         status: true,
         assignedInstallerId: true,
-        assignedAt: true,
-        startedAt: true,
-        closedAt: true,
       },
     });
 
@@ -698,61 +1028,96 @@ export async function updateOperationalWorkOrderStatus(
       throw new Error("OT operativa no encontrada.");
     }
 
-    if (workOrder.status === input.status) {
-      return tx.orderOperationalWorkOrder.findUniqueOrThrow({
-        where: { id: input.workOrderId },
-      });
-    }
-
-    if (workOrder.closedAt && workOrder.status !== "CANCELLED" && workOrder.status !== "COMPLETED") {
-      throw new Error("La OT está cerrada y no puede cambiar de estado.");
-    }
-
-    if ((input.status === "ASSIGNED" || input.status === "IN_PROGRESS") && !workOrder.assignedInstallerId) {
-      throw new Error("No puedes avanzar estado sin instalador asignado.");
+    if (workOrder.status !== "PENDING_REVIEW") {
+      throw new Error("Solo puedes aprobar OTs que estén pendientes de revisión.");
     }
 
     const now = new Date();
-    const data: Prisma.OrderOperationalWorkOrderUpdateInput = {
-      status: input.status,
-    };
-
-    if (input.status === "PENDING_ASSIGNMENT") {
-      data.assignedInstaller = { disconnect: true };
-      data.assignedAt = null;
-      data.startedAt = null;
-      data.completedAt = null;
-      data.closedAt = null;
-    } else if (input.status === "ASSIGNED") {
-      data.assignedAt = workOrder.assignedAt ?? now;
-      data.startedAt = null;
-      data.completedAt = null;
-      data.closedAt = null;
-    } else if (input.status === "IN_PROGRESS") {
-      data.startedAt = workOrder.startedAt ?? now;
-      data.completedAt = null;
-      data.closedAt = null;
-    } else if (input.status === "COMPLETED") {
-      data.completedAt = now;
-      data.closedAt = now;
-    } else if (input.status === "CANCELLED") {
-      data.closedAt = now;
-    }
-
     const updated = await tx.orderOperationalWorkOrder.update({
       where: { id: input.workOrderId },
-      data,
+      data: {
+        status: "COMPLETED",
+        completedAt: now,
+        reviewedAt: now,
+        reviewedById: actor.profileId,
+        closedAt: now,
+      },
     });
 
     await createOperationalWorkOrderEvent(tx, {
       workOrderId: input.workOrderId,
-      eventType: "STATUS_CHANGED",
+      eventType: "REVIEW_APPROVED",
       fromStatus: workOrder.status,
       toStatus: updated.status,
       fromInstallerId: workOrder.assignedInstallerId ?? null,
       toInstallerId: updated.assignedInstallerId ?? null,
       actorId: actor.profileId,
       notes: input.notes?.trim() || null,
+    });
+
+    return updated;
+  });
+}
+
+export async function reopenOperationalWorkOrderForRework(
+  input: z.infer<typeof reopenOperationalWorkOrderSchema>,
+  actorUserId: string
+) {
+  const actor = await resolveOperationsActor(actorUserId);
+
+  return db.$transaction(async (tx) => {
+    const workOrder = await tx.orderOperationalWorkOrder.findUnique({
+      where: { id: input.workOrderId },
+      select: {
+        id: true,
+        status: true,
+        assignedInstallerId: true,
+      },
+    });
+
+    if (!workOrder) {
+      throw new Error("OT operativa no encontrada.");
+    }
+
+    if (workOrder.status !== "PENDING_REVIEW" && workOrder.status !== "COMPLETED") {
+      throw new Error("Solo puedes reabrir OTs en revisión o ya completadas.");
+    }
+
+    if (!workOrder.assignedInstallerId) {
+      throw new Error("La OT no tiene instalador asignado para reabrirse.");
+    }
+
+    const now = new Date();
+    const updated = await tx.orderOperationalWorkOrder.update({
+      where: { id: input.workOrderId },
+      data: {
+        status: "REOPENED",
+        startedAt: null,
+        submittedAt: null,
+        completedAt: null,
+        reviewedAt: null,
+        reviewedById: null,
+        reopenedAt: now,
+        lastReopenReason: input.reason.trim(),
+        reopenCount: {
+          increment: 1,
+        },
+        closedAt: null,
+      },
+    });
+
+    await createOperationalWorkOrderEvent(tx, {
+      workOrderId: input.workOrderId,
+      eventType: "REOPENED_FOR_REWORK",
+      fromStatus: workOrder.status,
+      toStatus: "REOPENED",
+      fromInstallerId: workOrder.assignedInstallerId,
+      toInstallerId: workOrder.assignedInstallerId,
+      actorId: actor.profileId,
+      notes: input.reason.trim(),
+      metadata: {
+        source: "operations-review",
+      },
     });
 
     return updated;
@@ -781,7 +1146,12 @@ export async function reassignOperationalWorkOrderManual(
       throw new Error("OT operativa no encontrada.");
     }
 
-    if (workOrder.status === "COMPLETED" || workOrder.status === "CANCELLED" || workOrder.closedAt) {
+    if (
+      workOrder.status === "COMPLETED" ||
+      workOrder.status === "CANCELLED" ||
+      workOrder.status === "PENDING_REVIEW" ||
+      workOrder.closedAt
+    ) {
       throw new Error("No puedes reasignar una OT cerrada.");
     }
 
@@ -839,7 +1209,12 @@ export async function reassignOperationalWorkOrderManual(
         assignedInstallerId: input.installerId,
         assignedAt: now,
         startedAt: null,
+        submittedAt: null,
         completedAt: null,
+        reviewedAt: null,
+        reviewedById: null,
+        reopenedAt: null,
+        lastReopenReason: null,
         closedAt: null,
       },
     });

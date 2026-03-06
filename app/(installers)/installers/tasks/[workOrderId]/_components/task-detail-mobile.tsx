@@ -33,6 +33,8 @@ import { Textarea } from "@/components/ui/textarea";
 function statusLabel(status: string) {
   if (status === "ASSIGNED") return "Asignada";
   if (status === "IN_PROGRESS") return "En progreso";
+  if (status === "PENDING_REVIEW") return "En revisión";
+  if (status === "REOPENED") return "Reabierta";
   if (status === "COMPLETED") return "Completada";
   if (status === "CANCELLED") return "Cancelada";
   if (status === "PENDING_ASSIGNMENT") return "Pendiente";
@@ -42,6 +44,8 @@ function statusLabel(status: string) {
 function statusVariant(status: string) {
   if (status === "ASSIGNED") return "warning" as const;
   if (status === "IN_PROGRESS") return "info" as const;
+  if (status === "PENDING_REVIEW") return "secondary" as const;
+  if (status === "REOPENED") return "destructive" as const;
   if (status === "COMPLETED") return "success" as const;
   if (status === "CANCELLED") return "destructive" as const;
   return "secondary" as const;
@@ -150,10 +154,10 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
       setIsCompletingDialogOpen(false);
       setCompleteNotes("");
       setGeoOverrideReason("");
-      toast.success("OT completada correctamente.");
+      toast.success("OT enviada a revisión.");
     },
     onError: (error) => {
-      toast.error("No se pudo completar la OT", {
+      toast.error("No se pudo enviar la OT a revisión", {
         description: error.message,
       });
     },
@@ -283,7 +287,19 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
               <Clock3 className="h-3.5 w-3.5 shrink-0" />
               Actualizada: {formatDateTime(task.updatedAt)}
             </p>
+            {task.submittedAt ? (
+              <p className="flex items-center gap-2 whitespace-nowrap text-xs text-neutral-500">
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                Enviada a revisión: {formatDateTime(task.submittedAt)}
+              </p>
+            ) : null}
           </div>
+
+          {task.lastReopenReason ? (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              Reapertura pendiente: {task.lastReopenReason}
+            </div>
+          ) : null}
 
           {mapsUrl ? (
             <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-xl">
@@ -307,7 +323,7 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
             </Badge>
           </div>
           <div className="mt-3">
-            {task.status === "ASSIGNED" ? (
+            {task.status === "ASSIGNED" || task.status === "REOPENED" ? (
               <Button
                 type="button"
                 className="h-11 w-full rounded-xl"
@@ -315,7 +331,11 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
                 disabled={startTask.isPending}
               >
                 <CheckCircle2 className="mr-1.5 h-4 w-4" />
-                {startTask.isPending ? "Iniciando..." : "Iniciar trabajo"}
+                {startTask.isPending
+                  ? "Iniciando..."
+                  : task.status === "REOPENED"
+                    ? "Retomar trabajo"
+                    : "Iniciar trabajo"}
               </Button>
             ) : null}
 
@@ -327,11 +347,11 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
                 disabled={completeTask.isPending || !task.validation.canComplete}
               >
                 <CheckCircle2 className="mr-1.5 h-4 w-4" />
-                {completeTask.isPending ? "Completando..." : "Completar OT"}
+                {completeTask.isPending ? "Enviando..." : "Enviar a revisión"}
               </Button>
             ) : null}
 
-            {task.status !== "ASSIGNED" && task.status !== "IN_PROGRESS" ? (
+            {task.status !== "ASSIGNED" && task.status !== "REOPENED" && task.status !== "IN_PROGRESS" ? (
               <div className="flex h-11 items-center justify-center rounded-xl border border-neutral-200 px-3 text-sm text-neutral-600">
                 OT en estado {statusLabel(task.status)}
               </div>
@@ -403,7 +423,7 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
 
           {task.evidences.length === 0 ? (
             <div className="rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-xs text-neutral-500">
-              Debes cargar al menos una evidencia para completar esta OT.
+              Debes cargar al menos una evidencia para enviarla a revisión.
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -449,7 +469,7 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
         </Card>
 
         <Card className="rounded-2xl border-neutral-200 p-4">
-          <h3 className="whitespace-nowrap text-sm font-semibold text-neutral-900">Historial reciente</h3>
+            <h3 className="whitespace-nowrap text-sm font-semibold text-neutral-900">Historial reciente</h3>
           <div className="mt-3 space-y-2">
             {task.events.length === 0 ? (
               <p className="text-xs text-neutral-500">Sin eventos registrados.</p>
@@ -472,7 +492,7 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
 
       <div className="fixed inset-x-0 bottom-[max(4.3rem,env(safe-area-inset-bottom))] z-30 border-t border-neutral-200 bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
         <div className="mx-auto flex w-full max-w-3xl gap-2">
-          {task.status === "ASSIGNED" ? (
+          {task.status === "ASSIGNED" || task.status === "REOPENED" ? (
             <Button
               type="button"
               className="h-11 flex-1 rounded-xl"
@@ -480,7 +500,11 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
               disabled={startTask.isPending}
             >
               <CheckCircle2 className="mr-1.5 h-4 w-4" />
-              {startTask.isPending ? "Iniciando..." : "Iniciar trabajo"}
+              {startTask.isPending
+                ? "Iniciando..."
+                : task.status === "REOPENED"
+                  ? "Retomar trabajo"
+                  : "Iniciar trabajo"}
             </Button>
           ) : null}
 
@@ -492,11 +516,11 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
               disabled={completeTask.isPending || !task.validation.canComplete}
             >
               <CheckCircle2 className="mr-1.5 h-4 w-4" />
-              {completeTask.isPending ? "Completando..." : "Completar OT"}
+              {completeTask.isPending ? "Enviando..." : "Enviar a revisión"}
             </Button>
           ) : null}
 
-          {task.status !== "ASSIGNED" && task.status !== "IN_PROGRESS" ? (
+          {task.status !== "ASSIGNED" && task.status !== "REOPENED" && task.status !== "IN_PROGRESS" ? (
             <div className="flex h-11 flex-1 items-center justify-center rounded-xl border border-neutral-200 px-2 text-xs text-neutral-600">
               OT en estado {statusLabel(task.status)}
             </div>
@@ -507,9 +531,9 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
       <Dialog open={isCompletingDialogOpen} onOpenChange={setIsCompletingDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Completar OT con override geográfico</DialogTitle>
+            <DialogTitle>Enviar a revisión con override geográfico</DialogTitle>
             <DialogDescription>
-              Ninguna evidencia está dentro del radio esperado. Debes indicar motivo para cerrar.
+              Ninguna evidencia está dentro del radio esperado. Debes indicar motivo para enviarla a revisión.
             </DialogDescription>
           </DialogHeader>
 
@@ -532,7 +556,7 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
                 rows={3}
                 value={completeNotes}
                 onChange={(event) => setCompleteNotes(event.target.value)}
-                placeholder="Comentario de cierre"
+                placeholder="Comentario para Ops"
               />
             </div>
           </div>
@@ -560,7 +584,7 @@ export function TaskDetailMobile({ workOrderId }: { workOrderId: string }) {
               }
               disabled={completeTask.isPending || geoOverrideReason.trim().length === 0}
             >
-              {completeTask.isPending ? "Guardando..." : "Completar con override"}
+              {completeTask.isPending ? "Guardando..." : "Enviar a revisión con override"}
             </Button>
           </DialogFooter>
         </DialogContent>

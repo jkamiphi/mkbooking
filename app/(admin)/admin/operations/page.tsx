@@ -8,7 +8,7 @@ import { OperationsWorkOrdersTable } from "./_components/operations-work-orders-
 
 export const metadata: Metadata = {
   title: "Operativa | Administración | MK Booking",
-  description: "Bandeja de órdenes de trabajo operativas para instalación.",
+  description: "Control de ejecución, revisión y seguimiento histórico de OTs operativas.",
 };
 
 export default async function AdminOperationsPage() {
@@ -23,7 +23,7 @@ export default async function AdminOperationsPage() {
     <AdminPageShell>
       <AdminPageHeader
         title="Bandeja Operativa"
-        description="Gestiona autoasignación, reasignaciones manuales y estado de OTs por cara."
+        description="Gestiona trabajo activo, revisión post-instalación y seguimiento histórico por cara."
         actions={
           <Button variant="outline" asChild>
             <Link href="/admin/operations/installers">Control de instaladores</Link>

@@ -148,6 +148,7 @@ model UserProfile {
   installerCoverageZones   InstallerCoverageZone[]    @relation("InstallerCoverageInstaller")
   assignedOperationalWorkOrders OrderOperationalWorkOrder[] @relation("OperationalWorkOrderAssignee")
   createdOperationalWorkOrders  OrderOperationalWorkOrder[] @relation("OperationalWorkOrderCreator")
+  reviewedOperationalWorkOrders OrderOperationalWorkOrder[] @relation("OperationalWorkOrderReviewer")
   checkedOperationalChecklistItems OrderOperationalChecklistItem[] @relation("OperationalChecklistItemChecker")
   uploadedOperationalWorkOrderEvidences OrderOperationalWorkOrderEvidence[] @relation("OperationalWorkOrderEvidenceUploader")
   operationalWorkOrderEvents     OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventActor")
@@ -923,6 +924,8 @@ enum OperationalWorkOrderStatus {
   PENDING_ASSIGNMENT
   ASSIGNED
   IN_PROGRESS
+  PENDING_REVIEW
+  REOPENED
   COMPLETED
   CANCELLED
 
@@ -935,6 +938,9 @@ enum OperationalWorkOrderEventType {
   AUTO_ASSIGNMENT_SKIPPED
   MANUAL_REASSIGNED
   STATUS_CHANGED
+  SUBMITTED_FOR_REVIEW
+  REVIEW_APPROVED
+  REOPENED_FOR_REWORK
   CANCELLED_BY_PRINT_REOPEN
   AUTO_ASSIGNMENT_RETRIED
 
@@ -1481,7 +1487,13 @@ model OrderOperationalWorkOrder {
   assignedInstallerId String?
   assignedAt DateTime?
   startedAt DateTime?
+  submittedAt DateTime?
   completedAt DateTime?
+  reviewedAt DateTime?
+  reviewedById String?
+  reopenedAt DateTime?
+  lastReopenReason String? @db.Text
+  reopenCount Int @default(0)
   closedAt DateTime?
   createdById String?
 
@@ -1495,6 +1507,7 @@ model OrderOperationalWorkOrder {
   printTask OrderPrintTask @relation(fields: [printTaskId], references: [id], onDelete: Cascade)
   assignedInstaller UserProfile? @relation("OperationalWorkOrderAssignee", fields: [assignedInstallerId], references: [id], onDelete: SetNull)
   createdBy UserProfile? @relation("OperationalWorkOrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  reviewedBy UserProfile? @relation("OperationalWorkOrderReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   checklistItems OrderOperationalChecklistItem[]
   evidences OrderOperationalWorkOrderEvidence[]
   events OrderOperationalWorkOrderEvent[]
@@ -1506,6 +1519,7 @@ model OrderOperationalWorkOrder {
   @@index([lineItemId])
   @@index([closedAt])
   @@index([status])
+  @@index([reviewedById])
   @@map("order_operational_work_order")
 }
 

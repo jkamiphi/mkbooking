@@ -1,19 +1,23 @@
 import { TRPCError } from "@trpc/server";
 import { operationsProcedure, router } from "../init";
 import {
+  approveOperationalWorkOrderReview,
+  approveOperationalWorkOrderReviewSchema,
   getOperationalWorkOrdersByOrder,
+  getOperationalWorkOrderDetail,
   listInstallersWithControl,
   listOperationalWorkOrders,
+  operationalWorkOrderDetailSchema,
   operationalWorkOrderByOrderSchema,
   operationalWorkOrderListSchema,
   reassignOperationalWorkOrderManual,
   reassignOperationalWorkOrderSchema,
+  reopenOperationalWorkOrderForRework,
+  reopenOperationalWorkOrderSchema,
   retryOperationalWorkOrderAutoAssign,
   retryOperationalWorkOrderAutoAssignSchema,
   updateInstallerCoverage,
   updateInstallerCoverageSchema,
-  updateOperationalWorkOrderStatus,
-  updateOperationalWorkOrderStatusSchema,
   upsertInstallerConfig,
   upsertInstallerConfigSchema,
 } from "@/lib/services/operations";
@@ -30,18 +34,38 @@ export const operationsRouter = router({
       .query(async ({ input }) => {
         return getOperationalWorkOrdersByOrder(input.orderId);
       }),
-    updateStatus: operationsProcedure
-      .input(updateOperationalWorkOrderStatusSchema)
+    getDetail: operationsProcedure
+      .input(operationalWorkOrderDetailSchema)
+      .query(async ({ input }) => {
+        return getOperationalWorkOrderDetail(input);
+      }),
+    approveReview: operationsProcedure
+      .input(approveOperationalWorkOrderReviewSchema)
       .mutation(async ({ input, ctx }) => {
         try {
-          return await updateOperationalWorkOrderStatus(input, ctx.user.id);
+          return await approveOperationalWorkOrderReview(input, ctx.user.id);
         } catch (error) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
               error instanceof Error
                 ? error.message
-                : "No se pudo actualizar el estado de la OT operativa.",
+                : "No se pudo aprobar la revisión de la OT operativa.",
+          });
+        }
+      }),
+    reopenForRework: operationsProcedure
+      .input(reopenOperationalWorkOrderSchema)
+      .mutation(async ({ input, ctx }) => {
+        try {
+          return await reopenOperationalWorkOrderForRework(input, ctx.user.id);
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              error instanceof Error
+                ? error.message
+                : "No se pudo reabrir la OT operativa.",
           });
         }
       }),
