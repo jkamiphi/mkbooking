@@ -2,6 +2,11 @@ import { db } from "@/lib/db";
 import { Prisma, OperationalWorkOrderStatus } from "@prisma/client";
 import { z } from "zod";
 import { ensureChecklistForWorkOrder } from "@/lib/services/installer-checklist";
+import {
+  issueOperationalInstallationReport,
+  supersedeIssuedInstallationReports,
+  synchronizeOrderOperationalClosure,
+} from "@/lib/services/order-traceability";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -228,6 +233,25 @@ const operationalWorkOrderListInclude = {
       },
     },
   },
+  installationReports: {
+    where: {
+      status: "ISSUED",
+    },
+    orderBy: [{ version: "desc" }],
+    take: 1,
+    include: {
+      issuedBy: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+  },
 } satisfies Prisma.OrderOperationalWorkOrderInclude;
 
 const operationalWorkOrderDetailInclude = {
@@ -286,6 +310,31 @@ const operationalWorkOrderDetailInclude = {
         },
       },
       toInstaller: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+  },
+  installationReports: {
+    orderBy: [{ version: "desc" }],
+    include: {
+      issuedBy: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      supersededBy: {
         include: {
           user: {
             select: {
@@ -744,14 +793,10 @@ export async function cancelOperationalWorkOrdersByPrintReopen(
     source?: string;
   }
 ) {
-  const openWorkOrders = await client.orderOperationalWorkOrder.findMany({
+  const relatedWorkOrders = await client.orderOperationalWorkOrder.findMany({
     where: {
       orderId: input.orderId,
       printTaskId: input.printTaskId,
-      status: {
-        in: OPEN_WORK_ORDER_STATUSES,
-      },
-      closedAt: null,
     },
     select: {
       id: true,
@@ -760,9 +805,16 @@ export async function cancelOperationalWorkOrdersByPrintReopen(
     },
   });
 
-  if (openWorkOrders.length === 0) {
+  if (relatedWorkOrders.length === 0) {
     return { cancelledCount: 0 };
   }
+
+  const openWorkOrders = relatedWorkOrders.filter(
+    (workOrder) =>
+      OPEN_WORK_ORDER_STATUSES.includes(workOrder.status) &&
+      workOrder.status !== "COMPLETED" &&
+      workOrder.status !== "CANCELLED"
+  );
 
   const now = new Date();
   for (const workOrder of openWorkOrders) {
@@ -792,6 +844,28 @@ export async function cancelOperationalWorkOrdersByPrintReopen(
       },
     });
   }
+
+  await client.orderOperationalInstallationReport.updateMany({
+    where: {
+      workOrderId: {
+        in: relatedWorkOrders.map((workOrder) => workOrder.id),
+      },
+      status: {
+        in: ["ISSUED"],
+      },
+    },
+    data: {
+      status: "SUPERSEDED",
+      supersededAt: now,
+      supersededById: input.actorId ?? null,
+    },
+  });
+
+  await synchronizeOrderOperationalClosure(client, {
+    orderId: input.orderId,
+    actorId: input.actorId ?? null,
+    changedAt: now,
+  });
 
   return { cancelledCount: openWorkOrders.length };
 }
@@ -985,6 +1059,10 @@ export async function getOperationalWorkOrderDetail(
   const overrideEvidenceCount = workOrder.evidences.filter(
     (evidence) => Boolean(evidence.geoOverrideReason)
   ).length;
+  const currentIssuedReport =
+    workOrder.installationReports.find((report) => report.status === "ISSUED") ?? null;
+  const latestReport =
+    workOrder.installationReports.length > 0 ? workOrder.installationReports[0] : null;
 
   return {
     ...workOrder,
@@ -1005,6 +1083,18 @@ export async function getOperationalWorkOrderDetail(
       hasValidEvidence: validEvidenceCount > 0,
       hasGeoOverride: overrideEvidenceCount > 0,
     },
+    closure: {
+      canApproveAndIssueReport:
+        workOrder.status === "PENDING_REVIEW" &&
+        requiredChecklistCompleted === requiredChecklistItems.length &&
+        workOrder.evidences.length > 0,
+      hasIssuedReport: Boolean(currentIssuedReport),
+      reportVersion: currentIssuedReport?.version ?? latestReport?.version ?? null,
+      isSuperseded:
+        Boolean(latestReport) && latestReport?.status === "SUPERSEDED",
+    },
+    currentInstallationReport: currentIssuedReport,
+    installationReportHistory: workOrder.installationReports,
   };
 }
 
@@ -1033,6 +1123,13 @@ export async function approveOperationalWorkOrderReview(
     }
 
     const now = new Date();
+    const installationReport = await issueOperationalInstallationReport(tx, {
+      workOrderId: input.workOrderId,
+      actorId: actor.profileId,
+      reviewNotes: input.notes?.trim() || null,
+      issuedAt: now,
+    });
+
     const updated = await tx.orderOperationalWorkOrder.update({
       where: { id: input.workOrderId },
       data: {
@@ -1053,9 +1150,23 @@ export async function approveOperationalWorkOrderReview(
       toInstallerId: updated.assignedInstallerId ?? null,
       actorId: actor.profileId,
       notes: input.notes?.trim() || null,
+      metadata: {
+        reportId: installationReport.id,
+        reportVersion: installationReport.version,
+      },
     });
 
-    return updated;
+    const closure = await synchronizeOrderOperationalClosure(tx, {
+      orderId: updated.orderId,
+      actorId: actor.profileId,
+      changedAt: now,
+    });
+
+    return {
+      workOrder: updated,
+      installationReport,
+      closure,
+    };
   });
 }
 
@@ -1106,6 +1217,12 @@ export async function reopenOperationalWorkOrderForRework(
       },
     });
 
+    await supersedeIssuedInstallationReports(tx, {
+      workOrderId: input.workOrderId,
+      actorId: actor.profileId,
+      supersededAt: now,
+    });
+
     await createOperationalWorkOrderEvent(tx, {
       workOrderId: input.workOrderId,
       eventType: "REOPENED_FOR_REWORK",
@@ -1120,7 +1237,16 @@ export async function reopenOperationalWorkOrderForRework(
       },
     });
 
-    return updated;
+    const closure = await synchronizeOrderOperationalClosure(tx, {
+      orderId: updated.orderId,
+      actorId: actor.profileId,
+      changedAt: now,
+    });
+
+    return {
+      workOrder: updated,
+      closure,
+    };
   });
 }
 

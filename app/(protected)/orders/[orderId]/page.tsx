@@ -14,6 +14,8 @@ import { ClientApprovalButton } from "./_components/client-approval-button";
 import { DesignWorkspace } from "@/components/orders/design-workspace";
 import { PurchaseOrderModule } from "@/components/orders/purchase-order-module";
 import { OrderDetailTabs } from "./_components/order-detail-tabs";
+import { OrderTraceabilityPanel } from "@/components/orders/order-traceability-panel";
+import { OrderCaseFilePanel } from "@/components/orders/order-case-file-panel";
 
 type PageProps = {
   params: Promise<{ orderId: string }>;
@@ -89,23 +91,6 @@ const SALES_REVIEW_STATUS_CONFIG: Record<
   CHANGES_REQUESTED: { label: "Requiere cambios", variant: "destructive" },
 };
 
-function resolveDesignTrackingStatus(status: string | null | undefined) {
-  if (!status) return "Pendiente";
-  if (status === "REVIEW") return "En revisión";
-  if (status === "ADJUST") return "Ajustes requeridos";
-  if (status === "CREATE_FROM_SCRATCH") return "Creación en progreso";
-  if (status === "COLOR_PROOF_READY") return "Prueba de color lista";
-  return status;
-}
-
-function resolvePrintTrackingStatus(status: string | null | undefined) {
-  if (!status) return "Pendiente";
-  if (status === "READY") return "Lista para iniciar";
-  if (status === "IN_PROGRESS") return "En progreso";
-  if (status === "COMPLETED") return "Completada";
-  return status;
-}
-
 export default async function OrderDetailPage({
   params,
   searchParams,
@@ -113,12 +98,15 @@ export default async function OrderDetailPage({
   const { orderId } = await params;
   const tabParam = getParamValue((await searchParams).tab);
   const defaultTab =
-    tabParam === "tracking" || tabParam === "design" ? tabParam : "detail";
+    tabParam === "tracking" ||
+    tabParam === "design" ||
+    tabParam === "case-file"
+      ? tabParam
+      : "detail";
   const caller = await createServerTRPCCaller();
 
-  const order = await caller.orders
-    .get({ id: orderId })
-    .catch((error: unknown) => {
+  const [order, traceability] = await Promise.all([
+    caller.orders.get({ id: orderId }).catch((error: unknown) => {
       if (
         error instanceof TRPCError &&
         (error.code === "NOT_FOUND" || error.code === "FORBIDDEN")
@@ -126,7 +114,17 @@ export default async function OrderDetailPage({
         notFound();
       }
       throw error;
-    });
+    }),
+    caller.orders.getTraceability({ orderId }).catch((error: unknown) => {
+      if (
+        error instanceof TRPCError &&
+        (error.code === "NOT_FOUND" || error.code === "FORBIDDEN")
+      ) {
+        notFound();
+      }
+      throw error;
+    }),
+  ]);
 
   const config = STATUS_CONFIG[order.status] || STATUS_CONFIG["DRAFT"];
   const salesReviewConfig =
@@ -268,91 +266,9 @@ export default async function OrderDetailPage({
         El flujo de diseño se habilita cuando la orden está confirmada.
       </section>
     );
-  const isOrderConfirmed = order.status === "CONFIRMED";
-  const isSalesApproved = order.salesReviewStatus === "APPROVED";
-  const isDesignClosed = Boolean(order.designTask?.closedAt);
-  const isPrintCompleted = order.printTask?.status === "COMPLETED";
-
-  const trackingStages = [
-    {
-      id: "order",
-      title: "Orden Confirmada",
-      status: isOrderConfirmed ? "Completada" : "Pendiente",
-      updatedAt: order.companyConfirmedAt,
-      nextStep: isOrderConfirmed
-        ? "Siguiente paso: validación de Ventas."
-        : "Siguiente paso: confirmación interna de la orden.",
-    },
-    {
-      id: "sales",
-      title: "Validación de Ventas",
-      status: salesReviewConfig.label,
-      updatedAt: order.salesReviewUpdatedAt,
-      nextStep: !isOrderConfirmed
-        ? "Se habilita cuando la orden esté confirmada."
-        : order.salesReviewStatus === "APPROVED"
-          ? "Siguiente paso: activación de diseño."
-          : order.salesReviewStatus === "CHANGES_REQUESTED"
-            ? "Revisa observaciones para continuar."
-            : "Ventas continúa validando la orden.",
-    },
-    {
-      id: "design",
-      title: "Diseño",
-      status: !isSalesApproved
-        ? "Bloqueada por Ventas"
-        : isDesignClosed
-          ? "Cerrada"
-          : resolveDesignTrackingStatus(order.designTask?.status),
-      updatedAt: order.designTask?.updatedAt ?? null,
-      nextStep: !isSalesApproved
-        ? "Esperando aprobación comercial."
-        : isDesignClosed
-          ? "Siguiente paso: impresión final."
-          : "Diseño está trabajando la prueba de color.",
-    },
-    {
-      id: "print",
-      title: "Impresión",
-      status: !isDesignClosed
-        ? "Bloqueada por Diseño"
-        : isPrintCompleted
-          ? "Completada"
-          : resolvePrintTrackingStatus(order.printTask?.status),
-      updatedAt: order.printTask?.updatedAt ?? null,
-      nextStep: !isDesignClosed
-        ? "Se habilita al cerrar diseño."
-        : isPrintCompleted
-          ? "Orden lista para ejecución operativa."
-          : "Impresión en curso.",
-    },
-  ] as const;
-
-  const trackingContent = (
-    <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
-      <h2 className="mb-4 border-b border-neutral-100 pb-3 text-sm font-semibold text-neutral-900">
-        Seguimiento de ejecución
-      </h2>
-      <div className="space-y-3">
-        {trackingStages.map((stage) => (
-          <div
-            key={stage.id}
-            className="rounded-xl border border-neutral-200/80 p-3"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-neutral-900">
-                {stage.title}
-              </p>
-              <Badge variant="secondary">{stage.status}</Badge>
-            </div>
-            <p className="mt-1 text-xs text-neutral-500">
-              Actualización: {formatDate(stage.updatedAt)}
-            </p>
-            <p className="mt-1 text-xs text-neutral-700">{stage.nextStep}</p>
-          </div>
-        ))}
-      </div>
-    </section>
+  const trackingContent = <OrderTraceabilityPanel traceability={traceability} />;
+  const caseFileContent = (
+    <OrderCaseFilePanel traceability={traceability} publicView />
   );
 
   return (
@@ -386,6 +302,7 @@ export default async function OrderDetailPage({
             detailContent={detailContent}
             trackingContent={trackingContent}
             designContent={designContent}
+            caseFileContent={caseFileContent}
             defaultTab={defaultTab}
           />
         </div>

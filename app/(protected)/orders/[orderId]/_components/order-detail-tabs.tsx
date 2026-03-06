@@ -7,13 +7,15 @@ interface OrderDetailTabsProps {
   detailContent: ReactNode;
   designContent: ReactNode;
   trackingContent: ReactNode;
-  defaultTab?: "detail" | "tracking" | "design";
+  caseFileContent: ReactNode;
+  defaultTab?: "detail" | "tracking" | "design" | "case-file";
 }
 
 export function OrderDetailTabs({
   detailContent,
   designContent,
   trackingContent,
+  caseFileContent,
   defaultTab = "detail",
 }: OrderDetailTabsProps) {
   return (
@@ -28,10 +30,14 @@ export function OrderDetailTabs({
         <TabsTrigger value="design" className="px-4 py-2 text-sm">
           Diseño
         </TabsTrigger>
+        <TabsTrigger value="case-file" className="px-4 py-2 text-sm">
+          Expediente
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="detail">{detailContent}</TabsContent>
       <TabsContent value="tracking">{trackingContent}</TabsContent>
       <TabsContent value="design">{designContent}</TabsContent>
+      <TabsContent value="case-file">{caseFileContent}</TabsContent>
     </Tabs>
   );
 }

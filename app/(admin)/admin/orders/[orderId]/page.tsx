@@ -13,6 +13,8 @@ import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 import { DesignWorkspace } from "@/components/orders/design-workspace";
 import { PurchaseOrderModule } from "@/components/orders/purchase-order-module";
 import { PrintEvidenceModule } from "@/components/orders/print-evidence-module";
+import { OrderTraceabilityPanel } from "@/components/orders/order-traceability-panel";
+import { OrderCaseFilePanel } from "@/components/orders/order-case-file-panel";
 
 type PageProps = {
     params: Promise<{ orderId: string }>;
@@ -47,12 +49,20 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     const caller = await createServerTRPCCaller();
     const profile = await caller.userProfile.current();
 
-    const order = await caller.orders.get({ id: orderId }).catch((error: unknown) => {
-        if (error instanceof TRPCError && error.code === "NOT_FOUND") {
-            notFound();
-        }
-        throw error;
-    });
+    const [order, traceability] = await Promise.all([
+        caller.orders.get({ id: orderId }).catch((error: unknown) => {
+            if (error instanceof TRPCError && error.code === "NOT_FOUND") {
+                notFound();
+            }
+            throw error;
+        }),
+        caller.orders.getTraceability({ orderId }).catch((error: unknown) => {
+            if (error instanceof TRPCError && error.code === "NOT_FOUND") {
+                notFound();
+            }
+            throw error;
+        }),
+    ]);
 
     const config = STATUS_CONFIG[order.status] || STATUS_CONFIG["DRAFT"];
     const rentalSubtotal = order.lineItems.reduce(
@@ -199,6 +209,10 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                                 </div>
                             )}
                         </section>
+
+                        <OrderTraceabilityPanel traceability={traceability} />
+
+                        <OrderCaseFilePanel traceability={traceability} />
 
                         {order.status === "CONFIRMED" && (
                             <DesignWorkspace

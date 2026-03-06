@@ -39,6 +39,10 @@ import {
   createOrderNotifications,
   NotificationType,
 } from "@/lib/services/notifications";
+import {
+  getOrderOperationsSummary,
+  getOrderTraceability,
+} from "@/lib/services/order-traceability";
 
 function resolveOrderDays(fromDate: Date | null, toDate: Date | null) {
   if (!fromDate || !toDate) return 30;
@@ -75,6 +79,19 @@ async function resolveSystemRole(userId: string): Promise<SystemRole | null> {
   });
 
   return profile?.systemRole ?? null;
+}
+
+function isInternalOrderViewerRole(systemRole: SystemRole | null) {
+  return Boolean(
+    systemRole &&
+      [
+        "SUPERADMIN",
+        "STAFF",
+        "DESIGNER",
+        "SALES",
+        "OPERATIONS_PRINT",
+      ].includes(systemRole),
+  );
 }
 
 async function assertOrderReadAccess(userId: string, orderId: string) {
@@ -430,7 +447,34 @@ export const ordersRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Order not found" });
       }
 
-      return order;
+      const operationsSummary = await getOrderOperationsSummary(input.id);
+
+      return {
+        ...order,
+        operationsSummary,
+      };
+    }),
+
+  getTraceability: protectedProcedure
+    .input(z.object({ orderId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      await assertOrderReadAccess(ctx.user.id, input.orderId);
+
+      const systemRole = await resolveSystemRole(ctx.user.id);
+
+      try {
+        return await getOrderTraceability(input.orderId, {
+          includeInternalDetails: isInternalOrderViewerRole(systemRole),
+        });
+      } catch (error) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message:
+            error instanceof Error
+              ? error.message
+              : "No se pudo cargar la trazabilidad de la orden.",
+        });
+      }
     }),
 
   updateLineItem: commercialProcedure

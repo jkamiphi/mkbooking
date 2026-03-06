@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { InstallationReportCard } from "@/components/orders/installation-report-card";
 
 type OperationsView = "ACTIVE" | "REVIEW" | "HISTORY";
 type WorkOrderStatus =
@@ -561,6 +562,11 @@ export function OperationsWorkOrdersTable() {
                               Reapertura: {workOrder.lastReopenReason}
                             </div>
                           ) : null}
+                          {workOrder.installationReports?.[0] ? (
+                            <div className="text-emerald-700">
+                              Reporte v{workOrder.installationReports[0].version} emitido
+                            </div>
+                          ) : null}
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -781,6 +787,32 @@ export function OperationsWorkOrdersTable() {
                       Ultima reapertura: {detailQuery.data.lastReopenReason}
                     </div>
                   ) : null}
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <StatusMiniCard
+                      label="Reporte vigente"
+                      value={
+                        detailQuery.data.closure.hasIssuedReport
+                          ? `v${detailQuery.data.closure.reportVersion}`
+                          : "Pendiente"
+                      }
+                      tone={detailQuery.data.closure.hasIssuedReport ? "good" : "warn"}
+                    />
+                    <StatusMiniCard
+                      label="Aprobación + emisión"
+                      value={
+                        detailQuery.data.closure.canApproveAndIssueReport
+                          ? "Lista"
+                          : "Bloqueada"
+                      }
+                      tone={detailQuery.data.closure.canApproveAndIssueReport ? "good" : "warn"}
+                    />
+                    <StatusMiniCard
+                      label="Historial de reporte"
+                      value={`${detailQuery.data.installationReportHistory.length}`}
+                      tone={detailQuery.data.installationReportHistory.length > 0 ? "good" : "warn"}
+                    />
+                  </div>
                 </Card>
 
                 {(detailQuery.data.status === "PENDING_REVIEW" || detailQuery.data.status === "COMPLETED") && (
@@ -916,6 +948,28 @@ export function OperationsWorkOrdersTable() {
                       ))
                     )}
                   </div>
+                </Card>
+
+                <Card className="rounded-2xl border-neutral-200 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-neutral-900">
+                      Reportes de instalación
+                    </h3>
+                    <Badge variant="secondary">
+                      {detailQuery.data.installationReportHistory.length}
+                    </Badge>
+                  </div>
+                  {detailQuery.data.installationReportHistory.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-sm text-neutral-500">
+                      Aún no hay reportes emitidos para esta OT.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {detailQuery.data.installationReportHistory.map((report) => (
+                        <InstallationReportCard key={report.id} report={report} />
+                      ))}
+                    </div>
+                  )}
                 </Card>
 
                 <Card className="rounded-2xl border-neutral-200 p-4">

@@ -154,6 +154,10 @@ model UserProfile {
   operationalWorkOrderEvents     OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventActor")
   operationalWorkOrderReassignmentsFrom OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventFromInstaller")
   operationalWorkOrderReassignmentsTo   OrderOperationalWorkOrderEvent[] @relation("OperationalWorkOrderEventToInstaller")
+  issuedOperationalInstallationReports OrderOperationalInstallationReport[] @relation("OperationalInstallationReportIssuer")
+  supersededOperationalInstallationReports OrderOperationalInstallationReport[] @relation("OperationalInstallationReportSuperseder")
+  operationsClosedOrders   Order[] @relation("OrderOperationsCloser")
+  caseFileArchivedOrders   Order[] @relation("OrderCaseFileArchiver")
   notifications            UserNotification[]
 
   @@index([userId])
@@ -947,6 +951,13 @@ enum OperationalWorkOrderEventType {
   @@map("operational_work_order_event_type")
 }
 
+enum OperationalInstallationReportStatus {
+  ISSUED
+  SUPERSEDED
+
+  @@map("operational_installation_report_status")
+}
+
 enum NotificationType {
   ORDER_CONFIRMED
   SALES_REVIEW_APPROVED
@@ -995,6 +1006,10 @@ model Order {
   salesReviewById      String?
   salesReviewNotes     String?           @db.Text
   salesReviewVersion   Int               @default(0)
+  operationsClosedAt   DateTime?
+  operationsClosedById String?
+  caseFileArchivedAt   DateTime?
+  caseFileArchivedById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1005,6 +1020,8 @@ model Order {
   createdBy         UserProfile?            @relation("OrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
   companyConfirmBy  UserProfile?            @relation("OrderConfirmer", fields: [companyConfirmedById], references: [id], onDelete: SetNull)
   salesReviewBy     UserProfile?            @relation("OrderSalesReviewer", fields: [salesReviewById], references: [id], onDelete: SetNull)
+  operationsClosedBy UserProfile?           @relation("OrderOperationsCloser", fields: [operationsClosedById], references: [id], onDelete: SetNull)
+  caseFileArchivedBy UserProfile?           @relation("OrderCaseFileArchiver", fields: [caseFileArchivedById], references: [id], onDelete: SetNull)
   lineItems         OrderLineItem[]
   serviceItems      OrderServiceItem[]
   creatives         OrderCreative[]
@@ -1013,6 +1030,7 @@ model Order {
   designTask        OrderDesignTask?
   printTask         OrderPrintTask?
   operationalWorkOrders OrderOperationalWorkOrder[]
+  operationalInstallationReports OrderOperationalInstallationReport[]
   notifications     UserNotification[]
 
   @@index([status])
@@ -1021,6 +1039,8 @@ model Order {
   @@index([campaignRequestId])
   @@index([salesReviewStatus])
   @@index([salesReviewById])
+  @@index([operationsClosedById])
+  @@index([caseFileArchivedById])
   @@map("order")
 }
 
@@ -1511,6 +1531,7 @@ model OrderOperationalWorkOrder {
   checklistItems OrderOperationalChecklistItem[]
   evidences OrderOperationalWorkOrderEvidence[]
   events OrderOperationalWorkOrderEvent[]
+  installationReports OrderOperationalInstallationReport[]
 
   @@unique([printTaskId, lineItemId, printTaskCompletedAt])
   @@index([assignedInstallerId, status])
@@ -1603,6 +1624,39 @@ model OrderOperationalWorkOrderEvent {
   @@index([actorId])
   @@index([createdAt])
   @@map("order_operational_work_order_event")
+}
+
+model OrderOperationalInstallationReport {
+  id String @id @default(cuid())
+
+  orderId    String
+  workOrderId String
+
+  version Int
+  status  OperationalInstallationReportStatus @default(ISSUED)
+
+  reviewNotes String? @db.Text
+  snapshot    Json
+
+  issuedAt      DateTime @default(now())
+  issuedById    String?
+  supersededAt  DateTime?
+  supersededById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order        Order                    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  workOrder    OrderOperationalWorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  issuedBy     UserProfile?             @relation("OperationalInstallationReportIssuer", fields: [issuedById], references: [id], onDelete: SetNull)
+  supersededBy UserProfile?             @relation("OperationalInstallationReportSuperseder", fields: [supersededById], references: [id], onDelete: SetNull)
+
+  @@unique([workOrderId, version])
+  @@index([orderId, issuedAt])
+  @@index([workOrderId, status])
+  @@index([issuedById])
+  @@index([supersededById])
+  @@map("order_operational_installation_report")
 }
 
 model OrderPurchaseOrder {
