@@ -61,10 +61,17 @@ export const createHoldSchema = z.object({
   organizationId: z.string().optional(),
 });
 
+export const updateHoldSchema = z.object({
+  holdId: z.string().min(1),
+  expiresAt: z.coerce.date().optional(),
+  organizationId: z.string().nullable().optional(),
+});
+
 export type UpsertCatalogFaceInput = z.infer<typeof upsertCatalogFaceSchema>;
 export type CreatePriceRuleInput = z.infer<typeof createPriceRuleSchema>;
 export type CreatePromoInput = z.infer<typeof createPromoSchema>;
 export type CreateHoldInput = z.infer<typeof createHoldSchema>;
+export type UpdateHoldInput = z.infer<typeof updateHoldSchema>;
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -830,6 +837,47 @@ export async function releaseHold(holdId: string) {
   return db.catalogHold.update({
     where: { id: holdId },
     data: { status: "RELEASED", releasedAt: new Date() },
+  });
+}
+
+export async function updateHold(input: UpdateHoldInput) {
+  const hold = await db.catalogHold.findUnique({
+    where: { id: input.holdId },
+    select: {
+      id: true,
+      status: true,
+      expiresAt: true,
+    },
+  });
+
+  if (!hold) {
+    throw new Error("Reserva no encontrada.");
+  }
+
+  if (hold.status !== "ACTIVE") {
+    throw new Error("Solo se pueden editar reservas activas.");
+  }
+
+  const nextExpiryDate = input.expiresAt;
+  if (nextExpiryDate) {
+    const now = new Date();
+
+    if (nextExpiryDate <= now) {
+      throw new Error("La nueva fecha de expiracion debe ser futura.");
+    }
+
+    if (nextExpiryDate <= hold.expiresAt) {
+      throw new Error("La nueva fecha de expiracion debe extender la reserva actual.");
+    }
+  }
+
+  return db.catalogHold.update({
+    where: { id: input.holdId },
+    data: {
+      expiresAt: nextExpiryDate ?? undefined,
+      organizationId:
+        input.organizationId !== undefined ? input.organizationId : undefined,
+    },
   });
 }
 

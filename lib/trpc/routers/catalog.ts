@@ -14,6 +14,8 @@ import {
   createHoldSchema,
   createPromo,
   createPromoSchema,
+  updateHold,
+  updateHoldSchema,
   checkFacesAvailability,
   checkFacesAvailabilitySchema,
   getCatalogFaceByFaceId,
@@ -188,6 +190,11 @@ export const catalogRouter = router({
       .input(z.object({ holdId: z.string() }))
       .mutation(async ({ input }) => {
         return releaseHold(input.holdId);
+      }),
+    update: adminProcedure
+      .input(updateHoldSchema)
+      .mutation(async ({ input }) => {
+        return updateHold(input);
       }),
   }),
 

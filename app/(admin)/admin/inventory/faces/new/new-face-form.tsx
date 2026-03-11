@@ -39,6 +39,7 @@ export function NewFaceForm() {
   const assetsQuery = trpc.inventory.assets.list.useQuery({ take: 100 });
   const positionsQuery = trpc.inventory.facePositions.list.useQuery();
   const [images, setImages] = useState<ImageGalleryItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     assetId: preselectedAssetId,
@@ -46,6 +47,7 @@ export function NewFaceForm() {
     positionId: "",
     width: "",
     height: "",
+    productionCostMonthly: "",
     facing: "TRAFFIC" as FaceFacing,
     status: "ACTIVE" as FaceStatus,
     visibilityNotes: "",
@@ -73,13 +75,25 @@ export function NewFaceForm() {
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
+          setError(null);
           if (!canSave) return;
+          const productionCostMonthly = form.productionCostMonthly.trim()
+            ? Number(form.productionCostMonthly)
+            : undefined;
+          if (
+            productionCostMonthly !== undefined &&
+            (!Number.isFinite(productionCostMonthly) || productionCostMonthly < 0)
+          ) {
+            setError("La producción mensual debe ser un monto válido.");
+            return;
+          }
           createFace.mutate({
             assetId: form.assetId,
             code: form.code.trim(),
             positionId: form.positionId || undefined,
             width: Number(form.width),
             height: Number(form.height),
+            productionCostMonthly,
             facing: form.facing,
             status: form.status,
             visibilityNotes: form.visibilityNotes.trim() || undefined,
@@ -164,6 +178,22 @@ export function NewFaceForm() {
                 }
               />
             </div>
+          </div>
+          <div>
+            <Label className="mb-1.5 block">Producción Mensual (USD)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Ej. 1800.00"
+              value={form.productionCostMonthly}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  productionCostMonthly: event.target.value,
+                }))
+              }
+            />
           </div>
           <div>
             <Label className="mb-1.5 block">Orientación</Label>
@@ -257,6 +287,11 @@ export function NewFaceForm() {
             <Link href="/admin/inventory/faces">Cancelar</Link>
           </Button>
         </div>
+        {error ? (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+            {error}
+          </div>
+        ) : null}
       </form>
       </CardContent>
     </Card>

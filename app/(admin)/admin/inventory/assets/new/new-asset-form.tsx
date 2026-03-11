@@ -25,6 +25,13 @@ const statusLabels: Record<(typeof statusOptions)[number], string> = {
   MAINTENANCE: "MANTENIMIENTO",
   RETIRED: "RETIRADO",
 };
+const landTenureOptions = ["SERVIDUMBRE", "PRIVADO", "ESTATAL", "OTRO"] as const;
+const landTenureLabels: Record<(typeof landTenureOptions)[number], string> = {
+  SERVIDUMBRE: "Servidumbre",
+  PRIVADO: "Privado",
+  ESTATAL: "Estatal",
+  OTRO: "Otro",
+};
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const GOOGLE_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "";
@@ -50,6 +57,20 @@ function isValidLatitude(value: number) {
 
 function isValidLongitude(value: number) {
   return value >= -180 && value <= 180;
+}
+
+function parseOptionalNumberInput(value: string) {
+  const trimmed = value.trim().replace(",", ".");
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseOptionalIntegerInput(value: string) {
+  const parsed = parseOptionalNumberInput(value);
+  if (parsed === undefined) return undefined;
+  if (parsed === null || !Number.isInteger(parsed)) return null;
+  return parsed;
 }
 
 function AssetLocationMap({
@@ -130,8 +151,15 @@ export function NewAssetForm() {
     roadTypeId: "",
     address: "",
     landmark: "",
+    municipality: "",
     latitude: "",
     longitude: "",
+    landTenure: "",
+    vehicleTrafficMonthly: "",
+    pedestrianTrafficMonthly: "",
+    landRentMonthly: "",
+    electricityCostMonthly: "",
+    assetTaxMonthly: "",
     illuminated: false,
     digital: false,
     powered: false,
@@ -240,6 +268,59 @@ export function NewAssetForm() {
               return;
             }
 
+            const vehicleTrafficMonthly = parseOptionalIntegerInput(
+              form.vehicleTrafficMonthly
+            );
+            if (
+              vehicleTrafficMonthly === null ||
+              (vehicleTrafficMonthly !== undefined && vehicleTrafficMonthly < 0)
+            ) {
+              setError("El aforo vehicular mensual debe ser un número entero válido.");
+              return;
+            }
+
+            const pedestrianTrafficMonthly = parseOptionalIntegerInput(
+              form.pedestrianTrafficMonthly
+            );
+            if (
+              pedestrianTrafficMonthly === null ||
+              (pedestrianTrafficMonthly !== undefined &&
+                pedestrianTrafficMonthly < 0)
+            ) {
+              setError("El aforo de personas mensual debe ser un número entero válido.");
+              return;
+            }
+
+            const landRentMonthly = parseOptionalNumberInput(form.landRentMonthly);
+            if (
+              landRentMonthly === null ||
+              (landRentMonthly !== undefined && landRentMonthly < 0)
+            ) {
+              setError("El terraje mensual debe ser un monto válido.");
+              return;
+            }
+
+            const electricityCostMonthly = parseOptionalNumberInput(
+              form.electricityCostMonthly
+            );
+            if (
+              electricityCostMonthly === null ||
+              (electricityCostMonthly !== undefined &&
+                electricityCostMonthly < 0)
+            ) {
+              setError("El gasto de luz mensual debe ser un monto válido.");
+              return;
+            }
+
+            const assetTaxMonthly = parseOptionalNumberInput(form.assetTaxMonthly);
+            if (
+              assetTaxMonthly === null ||
+              (assetTaxMonthly !== undefined && assetTaxMonthly < 0)
+            ) {
+              setError("El impuesto mensual debe ser un monto válido.");
+              return;
+            }
+
             createAsset.mutate({
               code: form.code.trim(),
               structureTypeId: form.structureTypeId,
@@ -247,8 +328,16 @@ export function NewAssetForm() {
               roadTypeId: form.roadTypeId || undefined,
               address: form.address.trim(),
               landmark: form.landmark.trim() || undefined,
+              municipality: form.municipality.trim() || undefined,
               latitude: lat,
               longitude: lng,
+              landTenure:
+                (form.landTenure as (typeof landTenureOptions)[number]) || undefined,
+              vehicleTrafficMonthly,
+              pedestrianTrafficMonthly,
+              landRentMonthly,
+              electricityCostMonthly,
+              assetTaxMonthly,
               illuminated: form.illuminated,
               digital: form.digital,
               powered: form.powered,
@@ -344,6 +433,100 @@ export function NewAssetForm() {
                 value={form.landmark}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, landmark: event.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Terreno</Label>
+              <SelectNative
+                value={form.landTenure}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, landTenure: event.target.value }))
+                }
+              >
+                <option value="">Seleccionar</option>
+                {landTenureOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {landTenureLabels[option]}
+                  </option>
+                ))}
+              </SelectNative>
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Municipio (opcional)</Label>
+              <Input
+                value={form.municipality}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, municipality: event.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Aforo Vehicular Mensual</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={form.vehicleTrafficMonthly}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    vehicleTrafficMonthly: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Aforo Personas Mensual</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={form.pedestrianTrafficMonthly}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    pedestrianTrafficMonthly: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Terraje Mensual (USD)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.landRentMonthly}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, landRentMonthly: event.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Gasto Luz Mensual (USD)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.electricityCostMonthly}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    electricityCostMonthly: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Impuesto Mensual (USD)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.assetTaxMonthly}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, assetTaxMonthly: event.target.value }))
                 }
               />
             </div>

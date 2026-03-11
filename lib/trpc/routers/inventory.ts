@@ -14,16 +14,21 @@ import {
   createRoadTypeSchema,
   createStructureTypeSchema,
   createZoneSchema,
+  occupancyStatusSchema,
+  upsertProductionSpecSchema,
   updateAssetFaceSchema,
   updateAssetSchema,
   updateStructureTypeSchema,
   updateZoneSchema,
   listAssets,
+  listAssetControlRows,
   getAssetById,
   listAssetFaces,
   getAssetFaceById,
   listFacePositions,
+  listMaintenanceWindows,
   listMountingTypes,
+  listPermits,
   listProvinces,
   listRestrictionTags,
   listRoadTypes,
@@ -45,6 +50,7 @@ import {
   updateAssetFace,
   updateStructureType,
   updateZone,
+  upsertProductionSpec,
 } from "@/lib/services/inventory";
 
 const listZonesInputSchema = z
@@ -169,6 +175,23 @@ export const inventoryRouter = router({
       .query(async ({ input }) => {
         return listAssets(input);
       }),
+    controlList: adminProcedure
+      .input(
+        z
+          .object({
+            search: z.string().optional(),
+            structureTypeId: z.string().optional(),
+            zoneId: z.string().optional(),
+            provinceId: z.string().optional(),
+            occupancyStatus: occupancyStatusSchema.optional(),
+            skip: z.number().min(0).default(0),
+            take: z.number().min(1).max(100).default(50),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        return listAssetControlRows(input);
+      }),
     get: adminProcedure
       .input(
         z.object({
@@ -222,13 +245,47 @@ export const inventoryRouter = router({
       }),
   }),
 
+  productionSpecs: router({
+    upsert: adminProcedure
+      .input(upsertProductionSpecSchema)
+      .mutation(async ({ input }) => {
+        return upsertProductionSpec(input);
+      }),
+  }),
+
   permits: router({
+    list: adminProcedure
+      .input(
+        z
+          .object({
+            assetId: z.string().optional(),
+            faceId: z.string().optional(),
+            take: z.number().min(1).max(200).default(50),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        return listPermits(input);
+      }),
     create: adminProcedure.input(createPermitSchema).mutation(async ({ input }) => {
       return createPermit(input);
     }),
   }),
 
   maintenanceWindows: router({
+    list: adminProcedure
+      .input(
+        z
+          .object({
+            assetId: z.string().optional(),
+            faceId: z.string().optional(),
+            take: z.number().min(1).max(200).default(50),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        return listMaintenanceWindows(input);
+      }),
     create: adminProcedure
       .input(createMaintenanceWindowSchema)
       .mutation(async ({ input }) => {

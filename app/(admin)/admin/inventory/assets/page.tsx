@@ -1,4 +1,4 @@
-import { AssetsContent } from "./assets-content";
+import { AssetsTabsContent } from "./assets-tabs-content";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
 
 export const metadata = {
@@ -13,7 +13,7 @@ export default function AssetsPage() {
         title="Activos"
         description="Estructuras físicas, ubicación y estado operativo."
       />
-      <AssetsContent />
+      <AssetsTabsContent />
     </AdminPageShell>
   );
 }

@@ -6,10 +6,14 @@ import { isExpectedS3PublicUrl } from "@/lib/storage/s3";
 const assetStatusValues = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
 const assetFaceStatusValues = ["ACTIVE", "INACTIVE", "MAINTENANCE", "RETIRED"] as const;
 const assetFaceFacingValues = ["TRAFFIC", "OPPOSITE_TRAFFIC"] as const;
+const landTenureValues = ["SERVIDUMBRE", "PRIVADO", "ESTATAL", "OTRO"] as const;
+const occupancyStatusValues = ["OCUPADO", "DISPONIBLE"] as const;
 
 export const assetStatusSchema = z.enum(assetStatusValues);
 export const assetFaceStatusSchema = z.enum(assetFaceStatusValues);
 export const assetFaceFacingSchema = z.enum(assetFaceFacingValues);
+export const landTenureSchema = z.enum(landTenureValues);
+export const occupancyStatusSchema = z.enum(occupancyStatusValues);
 
 const s3OnlyImageErrorMessage =
   "Image URLs must use a configured media domain (CloudFront or S3).";
@@ -85,8 +89,15 @@ export const createAssetSchema = z.object({
   roadTypeId: z.string().optional(),
   address: z.string().min(1),
   landmark: z.string().optional(),
+  municipality: z.string().optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
+  landTenure: landTenureSchema.optional(),
+  vehicleTrafficMonthly: z.number().int().min(0).optional(),
+  pedestrianTrafficMonthly: z.number().int().min(0).optional(),
+  landRentMonthly: z.number().min(0).optional(),
+  electricityCostMonthly: z.number().min(0).optional(),
+  assetTaxMonthly: z.number().min(0).optional(),
   illuminated: z.boolean().optional(),
   digital: z.boolean().optional(),
   powered: z.boolean().optional(),
@@ -112,6 +123,7 @@ export const createAssetFaceSchema = z.object({
   positionId: z.string().optional(),
   width: z.number().min(0),
   height: z.number().min(0),
+  productionCostMonthly: z.number().min(0).optional(),
   facing: assetFaceFacingSchema.optional(),
   visibilityNotes: z.string().optional(),
   status: assetFaceStatusSchema.optional(),
@@ -242,6 +254,50 @@ function normalizeInventoryImages(images: InventoryImageInput[] | undefined) {
     ...image,
     isPrimary: index === primaryIndex,
   }));
+}
+
+const FEET_PER_METER = 3.28084;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const panamaDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Panama",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function toNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  if (
+    value &&
+    typeof value === "object" &&
+    "toString" in value &&
+    typeof value.toString === "function"
+  ) {
+    const parsed = Number(value.toString());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function toPanamaDateUtc(date: Date) {
+  const parts = panamaDateFormatter.formatToParts(date);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function getDaysUntilPanama(date: Date | null) {
+  if (!date) return null;
+  const todayUtc = toPanamaDateUtc(new Date()).getTime();
+  const targetUtc = toPanamaDateUtc(date).getTime();
+  return Math.round((targetUtc - todayUtc) / MS_PER_DAY);
 }
 
 export async function getInventoryOverview() {
@@ -474,6 +530,274 @@ export async function listAssets(options?: {
   };
 }
 
+type OccupancyStatus = z.infer<typeof occupancyStatusSchema>;
+
+function pickLatestDate(dates: Array<Date | null | undefined>) {
+  return dates.reduce<Date | null>((latest, current) => {
+    if (!current) return latest;
+    if (!latest) return current;
+    return current.getTime() > latest.getTime() ? current : latest;
+  }, null);
+}
+
+export async function listAssetControlRows(options?: {
+  search?: string;
+  structureTypeId?: string;
+  zoneId?: string;
+  provinceId?: string;
+  occupancyStatus?: OccupancyStatus;
+  skip?: number;
+  take?: number;
+}) {
+  const {
+    search,
+    structureTypeId,
+    zoneId,
+    provinceId,
+    occupancyStatus,
+    skip = 0,
+    take = 50,
+  } = options ?? {};
+
+  const todayPanama = toPanamaDateUtc(new Date());
+  const activeOrderWhere: Prisma.OrderWhereInput = {
+    status: "CONFIRMED",
+    fromDate: { lte: todayPanama },
+    toDate: { gte: todayPanama },
+  };
+
+  const where: Prisma.AssetFaceWhereInput = {};
+  if (structureTypeId || zoneId || provinceId) {
+    where.asset = {};
+    if (structureTypeId) where.asset.structureTypeId = structureTypeId;
+    if (zoneId) where.asset.zoneId = zoneId;
+    if (provinceId) {
+      where.asset.zone = {
+        provinceId,
+      };
+    }
+  }
+
+  if (occupancyStatus === "OCUPADO") {
+    where.orderLineItems = {
+      some: {
+        order: activeOrderWhere,
+      },
+    };
+  }
+  if (occupancyStatus === "DISPONIBLE") {
+    where.orderLineItems = {
+      none: {
+        order: activeOrderWhere,
+      },
+    };
+  }
+
+  const searchTerm = search?.trim();
+  if (searchTerm) {
+    where.OR = [
+      { code: { contains: searchTerm, mode: "insensitive" } },
+      { asset: { code: { contains: searchTerm, mode: "insensitive" } } },
+      { asset: { address: { contains: searchTerm, mode: "insensitive" } } },
+      { asset: { landmark: { contains: searchTerm, mode: "insensitive" } } },
+      { asset: { municipality: { contains: searchTerm, mode: "insensitive" } } },
+      { asset: { zone: { name: { contains: searchTerm, mode: "insensitive" } } } },
+      {
+        asset: {
+          zone: {
+            province: {
+              name: { contains: searchTerm, mode: "insensitive" },
+            },
+          },
+        },
+      },
+    ];
+  }
+
+  const [faces, total] = await Promise.all([
+    db.assetFace.findMany({
+      where,
+      skip,
+      take,
+      orderBy: [{ asset: { code: "asc" } }, { code: "asc" }],
+      include: {
+        productionSpec: {
+          select: {
+            material: true,
+          },
+        },
+        maintenanceWindows: {
+          select: {
+            endDate: true,
+          },
+          orderBy: {
+            endDate: "desc",
+          },
+          take: 1,
+        },
+        orderLineItems: {
+          where: {
+            order: activeOrderWhere,
+          },
+          orderBy: [{ order: { toDate: "asc" } }, { createdAt: "asc" }],
+          take: 1,
+          select: {
+            priceDaily: true,
+            order: {
+              select: {
+                id: true,
+                code: true,
+                clientName: true,
+                currency: true,
+                fromDate: true,
+                toDate: true,
+                organization: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        asset: {
+          include: {
+            structureType: true,
+            zone: {
+              include: {
+                province: true,
+              },
+            },
+            maintenanceWindows: {
+              select: {
+                endDate: true,
+              },
+              orderBy: {
+                endDate: "desc",
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+    }),
+    db.assetFace.count({ where }),
+  ]);
+
+  const faceIds = Array.from(new Set(faces.map((face) => face.id)));
+  const zoneIds = Array.from(new Set(faces.map((face) => face.asset.zoneId)));
+  const structureTypeIds = Array.from(
+    new Set(faces.map((face) => face.asset.structureTypeId))
+  );
+  const activeRuleOr: Prisma.CatalogPriceRuleWhereInput[] = [];
+  if (faceIds.length > 0) activeRuleOr.push({ faceId: { in: faceIds } });
+  if (zoneIds.length > 0) activeRuleOr.push({ zoneId: { in: zoneIds } });
+  if (structureTypeIds.length > 0) {
+    activeRuleOr.push({ structureTypeId: { in: structureTypeIds } });
+  }
+
+  const catalogRules =
+    activeRuleOr.length > 0
+      ? await db.catalogPriceRule.findMany({
+          where: {
+            organizationId: null,
+            isActive: true,
+            startDate: { lte: todayPanama },
+            OR: [{ endDate: null }, { endDate: { gte: todayPanama } }],
+            AND: [{ OR: activeRuleOr }],
+          },
+          orderBy: [{ startDate: "desc" }, { createdAt: "desc" }],
+          select: {
+            id: true,
+            faceId: true,
+            zoneId: true,
+            structureTypeId: true,
+            priceDaily: true,
+            currency: true,
+          },
+        })
+      : [];
+
+  const rows = faces.map((face) => {
+    const activeLineItem = face.orderLineItems[0] ?? null;
+    const activeOrder = activeLineItem?.order ?? null;
+    const faceRule = catalogRules.find((rule) => rule.faceId === face.id);
+    const zoneRule = catalogRules.find(
+      (rule) => !rule.faceId && rule.zoneId === face.asset.zoneId
+    );
+    const structureRule = catalogRules.find(
+      (rule) =>
+        !rule.faceId &&
+        !rule.zoneId &&
+        rule.structureTypeId === face.asset.structureTypeId
+    );
+    const fallbackRule = faceRule ?? zoneRule ?? structureRule ?? null;
+
+    const monthlyAmount = activeLineItem
+      ? Number(activeLineItem.priceDaily) * 30
+      : fallbackRule
+        ? Number(fallbackRule.priceDaily) * 30
+        : null;
+
+    const widthMeters = toNumber(face.width);
+    const heightMeters = toNumber(face.height);
+    const latitude = toNumber(face.asset.latitude);
+    const longitude = toNumber(face.asset.longitude);
+    const latestMaintenanceDate = pickLatestDate([
+      face.maintenanceWindows[0]?.endDate ?? null,
+      face.asset.maintenanceWindows[0]?.endDate ?? null,
+    ]);
+
+    return {
+      id: face.id,
+      assetId: face.assetId,
+      assetCode: face.asset.code,
+      faceCode: face.code,
+      rowCode: `${face.asset.code}-${face.code}`,
+      province: face.asset.zone.province.name,
+      sector: face.asset.zone.name,
+      structureType: face.asset.structureType.name,
+      terrain: face.asset.landTenure,
+      illuminated: face.asset.illuminated,
+      materialType: face.productionSpec?.material ?? null,
+      occupancyStatus: activeOrder ? ("OCUPADO" as const) : ("DISPONIBLE" as const),
+      clientName: activeOrder?.organization?.name || activeOrder?.clientName || null,
+      checkIn: activeOrder?.fromDate ?? null,
+      checkOut: activeOrder?.toDate ?? null,
+      dueInDays: getDaysUntilPanama(activeOrder?.toDate ?? null),
+      monthlyAmount,
+      monthlyCurrency: activeOrder?.currency || fallbackRule?.currency || null,
+      widthMeters,
+      heightMeters,
+      widthFeet: widthMeters === null ? null : widthMeters * FEET_PER_METER,
+      heightFeet: heightMeters === null ? null : heightMeters * FEET_PER_METER,
+      productionCostMonthly: toNumber(face.productionCostMonthly),
+      address: face.asset.address,
+      municipality: face.asset.municipality ?? null,
+      latitude,
+      longitude,
+      mapsUrl:
+        latitude !== null && longitude !== null
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${latitude},${longitude}`)}`
+          : null,
+      vehicleTrafficMonthly: face.asset.vehicleTrafficMonthly,
+      pedestrianTrafficMonthly: face.asset.pedestrianTrafficMonthly,
+      assetTaxMonthly: toNumber(face.asset.assetTaxMonthly),
+      landRentMonthly: toNumber(face.asset.landRentMonthly),
+      electricityCostMonthly: toNumber(face.asset.electricityCostMonthly),
+      latestMaintenanceDate,
+      assetOperationalStatus: face.asset.status,
+      faceOperationalStatus: face.status,
+    };
+  });
+
+  return {
+    rows,
+    total,
+    hasMore: skip + rows.length < total,
+  };
+}
+
 export async function getAssetById(id: string) {
   return db.asset.findUnique({
     where: { id },
@@ -495,16 +819,23 @@ export async function createAsset(input: CreateAssetInput) {
   return db.asset.create({
     data: {
       address: input.address,
+      assetTaxMonthly: input.assetTaxMonthly,
       code: input.code,
       digital: input.digital,
+      electricityCostMonthly: input.electricityCostMonthly,
       hasPrintService: input.hasPrintService,
       illuminated: input.illuminated,
+      landRentMonthly: input.landRentMonthly,
+      landTenure: input.landTenure,
       latitude: input.latitude,
+      municipality: input.municipality || null,
+      pedestrianTrafficMonthly: input.pedestrianTrafficMonthly,
       roadTypeId: input.roadTypeId || null,
       longitude: input.longitude,
       landmark: input.landmark || null,
       notes: input.notes || null,
       powered: input.powered,
+      vehicleTrafficMonthly: input.vehicleTrafficMonthly,
       installedDate: input.installedDate || null,
       retiredDate: input.retiredDate || null,
       status: input.status,
@@ -538,6 +869,9 @@ export async function updateAsset(input: UpdateAssetInput) {
   if ("landmark" in data) {
     updateData.landmark = data.landmark ? data.landmark : null;
   }
+  if ("municipality" in data) {
+    updateData.municipality = data.municipality ? data.municipality : null;
+  }
   if ("notes" in data) {
     updateData.notes = data.notes ? data.notes : null;
   }
@@ -552,6 +886,24 @@ export async function updateAsset(input: UpdateAssetInput) {
   }
   if ("longitude" in data) {
     updateData.longitude = data.longitude ?? null;
+  }
+  if ("landRentMonthly" in data) {
+    updateData.landRentMonthly = data.landRentMonthly ?? null;
+  }
+  if ("electricityCostMonthly" in data) {
+    updateData.electricityCostMonthly = data.electricityCostMonthly ?? null;
+  }
+  if ("assetTaxMonthly" in data) {
+    updateData.assetTaxMonthly = data.assetTaxMonthly ?? null;
+  }
+  if ("vehicleTrafficMonthly" in data) {
+    updateData.vehicleTrafficMonthly = data.vehicleTrafficMonthly ?? null;
+  }
+  if ("pedestrianTrafficMonthly" in data) {
+    updateData.pedestrianTrafficMonthly = data.pedestrianTrafficMonthly ?? null;
+  }
+  if ("landTenure" in data) {
+    updateData.landTenure = data.landTenure ?? null;
   }
 
   return db.$transaction(async (transaction) => {
@@ -627,6 +979,7 @@ export async function getAssetFaceById(id: string) {
           code: true,
         },
       },
+      productionSpec: true,
       images: {
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       },
@@ -644,6 +997,7 @@ export async function createAssetFace(input: CreateAssetFaceInput) {
       code: input.code,
       facing: input.facing,
       height: input.height,
+      productionCostMonthly: input.productionCostMonthly,
       status: input.status,
       width: input.width,
       positionId: input.positionId || null,
@@ -683,6 +1037,9 @@ export async function updateAssetFace(input: UpdateAssetFaceInput) {
   }
   if ("notes" in data) {
     updateData.notes = data.notes ? data.notes : null;
+  }
+  if ("productionCostMonthly" in data) {
+    updateData.productionCostMonthly = data.productionCostMonthly ?? null;
   }
 
   return db.$transaction(async (transaction) => {
@@ -758,6 +1115,54 @@ export async function upsertProductionSpec(input: UpsertProductionSpecInput) {
       installNotes: input.installNotes || null,
       uninstallNotes: input.uninstallNotes || null,
     },
+  });
+}
+
+export async function listPermits(options?: {
+  assetId?: string;
+  faceId?: string;
+  take?: number;
+}) {
+  const where: Prisma.PermitWhereInput = {};
+  const take = options?.take ?? 50;
+
+  if (options?.assetId && options?.faceId) {
+    where.assetId = options.assetId;
+    where.OR = [{ faceId: null }, { faceId: options.faceId }];
+  } else if (options?.faceId) {
+    where.faceId = options.faceId;
+  } else if (options?.assetId) {
+    where.assetId = options.assetId;
+  }
+
+  return db.permit.findMany({
+    where,
+    take,
+    orderBy: [{ expiresDate: "asc" }, { issuedDate: "desc" }, { id: "asc" }],
+  });
+}
+
+export async function listMaintenanceWindows(options?: {
+  assetId?: string;
+  faceId?: string;
+  take?: number;
+}) {
+  const where: Prisma.MaintenanceWindowWhereInput = {};
+  const take = options?.take ?? 50;
+
+  if (options?.assetId && options?.faceId) {
+    where.assetId = options.assetId;
+    where.OR = [{ faceId: null }, { faceId: options.faceId }];
+  } else if (options?.faceId) {
+    where.faceId = options.faceId;
+  } else if (options?.assetId) {
+    where.assetId = options.assetId;
+  }
+
+  return db.maintenanceWindow.findMany({
+    where,
+    take,
+    orderBy: [{ startDate: "desc" }, { endDate: "desc" }, { id: "asc" }],
   });
 }
 
