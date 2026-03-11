@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Menu, Shield, X } from "lucide-react";
+import { Bell, ChevronDown, Menu, Shield, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -20,8 +20,12 @@ import { signOut } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc/client";
 import type { SystemRole } from "@prisma/client";
 import {
+  getAdminNavigationDefaultExpandedGroups,
   getAdminNavigationByRole,
+  getAdminNavigationGroupActiveChildHref,
   getSystemRoleLabel,
+  isAdminNavigationGroup,
+  isAdminNavigationHrefActive,
 } from "./admin-navigation";
 
 interface AdminHeaderProps {
@@ -62,6 +66,13 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
   const { data: unreadData } = trpc.notifications.unreadCount.useQuery();
   const unreadCount = unreadData?.count ?? 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const defaultExpandedGroups = useMemo(
+    () => getAdminNavigationDefaultExpandedGroups(navigation, pathname),
+    [navigation, pathname]
+  );
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    {}
+  );
   const [signingOut, setSigningOut] = useState(false);
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
@@ -88,6 +99,18 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
       document.body.style.overflow = previousOverflow;
     };
   }, [mobileMenuOpen]);
+
+  function isGroupExpanded(groupKey: string) {
+    return expandedGroups[groupKey] ?? defaultExpandedGroups[groupKey] ?? false;
+  }
+
+  function toggleGroup(groupKey: string) {
+    const currentValue = isGroupExpanded(groupKey);
+    setExpandedGroups((previousState) => ({
+      ...previousState,
+      [groupKey]: !currentValue,
+    }));
+  }
 
   return (
     <>
@@ -274,27 +297,91 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
             </div>
 
             <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-              {navigation.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/admin" && pathname.startsWith(item.href));
+              {navigation.map((node) => {
+                if (!isAdminNavigationGroup(node)) {
+                  const isActive = isAdminNavigationHrefActive(
+                    pathname,
+                    node.href
+                  );
+
+                  return (
+                    <Link
+                      key={node.key}
+                      href={node.href}
+                      onClick={closeMobileMenu}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-mkmedia-blue/8 text-mkmedia-blue dark:bg-mkmedia-blue/20 dark:text-mkmedia-yellow"
+                          : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                      )}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      {node.icon ? <node.icon className="h-4 w-4" /> : null}
+                      {node.name}
+                    </Link>
+                  );
+                }
+
+                const activeChildHref = getAdminNavigationGroupActiveChildHref(
+                  pathname,
+                  node
+                );
+                const isGroupActive = activeChildHref !== null;
+                const isExpanded = isGroupExpanded(node.key);
 
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={closeMobileMenu}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-mkmedia-blue/8 text-mkmedia-blue dark:bg-mkmedia-blue/20 dark:text-mkmedia-yellow"
-                        : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                    )}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
-                  </Link>
+                  <div key={node.key} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(node.key)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                        isGroupActive
+                          ? "bg-mkmedia-blue/8 text-mkmedia-blue dark:bg-mkmedia-blue/20 dark:text-mkmedia-yellow"
+                          : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                      )}
+                      aria-expanded={isExpanded}
+                      aria-controls={`mobile-admin-nav-group-${node.key}`}
+                    >
+                      {node.icon ? <node.icon className="h-4 w-4" /> : null}
+                      <span className="truncate">{node.name}</span>
+                      <ChevronDown
+                        className={cn(
+                          "ml-auto h-4 w-4 transition-transform",
+                          isExpanded ? "rotate-180" : ""
+                        )}
+                      />
+                    </button>
+
+                    {isExpanded ? (
+                      <div
+                        id={`mobile-admin-nav-group-${node.key}`}
+                        className="ml-7 space-y-1 border-l border-neutral-200 pl-3 dark:border-neutral-800"
+                      >
+                        {node.children.map((child) => {
+                          const isChildActive = activeChildHref === child.href;
+
+                          return (
+                            <Link
+                              key={child.key}
+                              href={child.href}
+                              onClick={closeMobileMenu}
+                              className={cn(
+                                "flex items-center rounded-lg px-2 py-2 text-sm transition-colors",
+                                isChildActive
+                                  ? "bg-mkmedia-blue/8 text-mkmedia-blue dark:bg-mkmedia-blue/20 dark:text-mkmedia-yellow"
+                                  : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                              )}
+                              aria-current={isChildActive ? "page" : undefined}
+                            >
+                              {child.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })}
             </nav>

@@ -65,7 +65,7 @@ MK Booking is an Out-of-Home (OOH) advertising rental and booking platform for P
 ### Core Directories
 
 ```
-src/
+root/
 ├── app/                     # Next.js App Router pages and API routes
 │   ├── api/                # tRPC and auth API endpoints
 │   ├── (auth)/             # Login, register routes
