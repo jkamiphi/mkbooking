@@ -20,6 +20,7 @@ interface PublicMarketplaceShellProps {
   backLabel?: string;
   contextLabel?: string;
   contextMeta?: string;
+  headerActions?: React.ReactNode;
   sectionLabel?: string;
   sectionHint?: string;
   className?: string;
@@ -35,6 +36,7 @@ export function PublicMarketplaceShell({
   backLabel = "Volver",
   contextLabel,
   contextMeta,
+  headerActions,
   sectionLabel = "MK MEDIA CATALOGO",
   sectionHint = "Explora espacios publicitarios en Panamá",
   className,
@@ -90,6 +92,8 @@ export function PublicMarketplaceShell({
                 ) : null}
               </div>
             ) : null}
+
+            {headerActions ? <div className="flex items-center">{headerActions}</div> : null}
 
             {user ? (
               <UserHeaderActions

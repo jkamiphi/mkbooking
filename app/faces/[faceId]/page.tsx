@@ -21,7 +21,10 @@ import { isExpectedS3PublicUrl } from "@/lib/storage/s3";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
 import { PublicFaceCard } from "@/components/public/public-face-card";
 import { PublicMarketplaceShell } from "@/components/public/public-marketplace-shell";
-import { brandPrimaryButtonClass, brandSoftButtonClass } from "@/components/public/brand-styles";
+import {
+  brandPrimaryButtonClass,
+  brandSoftButtonClass,
+} from "@/components/public/brand-styles";
 import { cn } from "@/lib/utils";
 import { FaceDetailActions } from "./_components/face-detail-actions";
 
@@ -90,7 +93,9 @@ function formatNumber(value: number, maximumFractionDigits = 0) {
 }
 
 function facingLabel(value: string) {
-  return value === "OPPOSITE_TRAFFIC" ? "Sentido opuesto" : "Sentido de tráfico";
+  return value === "OPPOSITE_TRAFFIC"
+    ? "Sentido opuesto"
+    : "Sentido de tráfico";
 }
 
 function statusLabel(value: string) {
@@ -120,7 +125,10 @@ function buildMapsUrl(latitude: unknown, longitude: unknown) {
   return `https://www.google.com/maps?q=${lat},${lng}`;
 }
 
-export default async function FaceDetailPage({ params, searchParams }: PageProps) {
+export default async function FaceDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { faceId } = await params;
   const awaitedSearchParams = await searchParams;
   const fromParam = getParam(awaitedSearchParams.from);
@@ -139,7 +147,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
   });
   if (!detail) notFound();
 
-  const { face, effectivePrice, relatedFaces, promo, resolvedImageUrl } = detail;
+  const { face, effectivePrice, relatedFaces, promo, resolvedImageUrl } =
+    detail;
   const catalogFace = face.catalogFace;
   if (!catalogFace) notFound();
 
@@ -153,7 +162,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
   const area = width !== null && height !== null ? width * height : null;
   const mapsUrl = buildMapsUrl(face.asset.latitude, face.asset.longitude);
   const coordinates =
-    toNumber(face.asset.latitude) !== null && toNumber(face.asset.longitude) !== null
+    toNumber(face.asset.latitude) !== null &&
+    toNumber(face.asset.longitude) !== null
       ? `${toNumber(face.asset.latitude)}, ${toNumber(face.asset.longitude)}`
       : "N/D";
 
@@ -161,11 +171,11 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
     ...(catalogFace.primaryImageUrl &&
     isExpectedS3PublicUrl(catalogFace.primaryImageUrl)
       ? [
-        {
-          url: catalogFace.primaryImageUrl,
-          caption: catalogFace.title || `${face.asset.code}-${face.code}`,
-        },
-      ]
+          {
+            url: catalogFace.primaryImageUrl,
+            caption: catalogFace.title || `${face.asset.code}-${face.code}`,
+          },
+        ]
       : []),
     ...face.images
       .filter((image) => isExpectedS3PublicUrl(image.image))
@@ -182,12 +192,18 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
   ]);
   const gallerySlots: Array<GalleryItem | null> = Array.from(
     { length: 5 },
-    (_, index) => gallery[index] ?? null
+    (_, index) => gallery[index] ?? null,
   );
 
   const maintenanceById = new Map<
     string,
-    { id: string; source: "Cara" | "Activo"; startDate: Date; endDate: Date; reason: string }
+    {
+      id: string;
+      source: "Cara" | "Activo";
+      startDate: Date;
+      endDate: Date;
+      reason: string;
+    }
   >();
   for (const item of face.asset.maintenanceWindows) {
     maintenanceById.set(item.id, {
@@ -208,7 +224,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
     });
   }
   const maintenanceWindows = Array.from(maintenanceById.values()).sort(
-    (a, b) => a.startDate.getTime() - b.startDate.getTime()
+    (a, b) => a.startDate.getTime() - b.startDate.getTime(),
   );
 
   const permitById = new Map<
@@ -256,7 +272,10 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
   const nextHoldExpiration = catalogFace.holds[0]?.expiresAt ?? null;
   const priceDailyLabel =
     effectivePrice && showPrices
-      ? formatPrice(Number(effectivePrice.priceDaily), effectivePrice.currency ?? "USD")
+      ? formatPrice(
+          Number(effectivePrice.priceDaily),
+          effectivePrice.currency ?? "USD",
+        )
       : null;
   const promoLabel = promo
     ? promo.type === "PERCENT"
@@ -315,14 +334,18 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
             </div>
           </div>
 
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-neutral-950">{title}</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-neutral-950">
+            {title}
+          </h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-neutral-600">
             <span className="inline-flex items-center gap-1 rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-2.5 py-1 text-mkmedia-blue">
               <BadgeCheck className="h-3.5 w-3.5" />
               {catalogFace.isPublished ? "Publicado" : "No publicado"}
             </span>
-            <span>Código: {face.asset.code}-{face.code}</span>
+            <span>
+              Código: {face.asset.code}-{face.code}
+            </span>
             <span>{location}</span>
             <span>Actualizado: {formatDateTime(catalogFace.updatedAt)}</span>
           </div>
@@ -384,7 +407,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
         <section className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_370px]">
           <div className="space-y-6">
             <article className="rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-neutral-900">Detalle del espacio</h2>
+              <h2 className="text-xl font-semibold text-neutral-900">
+                Detalle del espacio
+              </h2>
               <p className="mt-3 text-sm leading-7 text-neutral-700">
                 {catalogFace.summary || "Sin resumen cargado para esta cara."}
               </p>
@@ -397,7 +422,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                   </p>
                 </div>
                 <div className="rounded-2xl border border-mkmedia-blue/15 p-4">
-                  <p className="text-xs text-neutral-500">Posición y orientación</p>
+                  <p className="text-xs text-neutral-500">
+                    Posición y orientación
+                  </p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
                     {face.position?.name || "N/D"} · {facingLabel(face.facing)}
                   </p>
@@ -415,7 +442,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                   </p>
                 </div>
                 <div className="rounded-2xl border border-mkmedia-blue/15 p-4">
-                  <p className="text-xs text-neutral-500">Digital / Iluminado</p>
+                  <p className="text-xs text-neutral-500">
+                    Digital / Iluminado
+                  </p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
                     {face.asset.digital ? "Digital" : "No digital"} ·{" "}
                     {face.asset.illuminated ? "Iluminado" : "No iluminado"}
@@ -424,7 +453,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                 <div className="rounded-2xl border border-mkmedia-blue/15 p-4">
                   <p className="text-xs text-neutral-500">Estado</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
-                    Activo: {statusLabel(face.asset.status)} · Cara: {statusLabel(face.status)}
+                    Activo: {statusLabel(face.asset.status)} · Cara:{" "}
+                    {statusLabel(face.status)}
                   </p>
                 </div>
               </div>
@@ -440,83 +470,121 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               </h3>
               <div className="mt-4 space-y-2 text-sm text-neutral-700">
                 <p>
-                  <span className="font-semibold text-neutral-900">Cara:</span> {face.asset.code}-
-                  {face.code}
+                  <span className="font-semibold text-neutral-900">Cara:</span>{" "}
+                  {face.asset.code}-{face.code}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Material:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Material:
+                  </span>{" "}
                   {face.productionSpec?.material || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Montaje:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Montaje:
+                  </span>{" "}
                   {face.productionSpec?.mountingType?.name || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Formato:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Formato:
+                  </span>{" "}
                   {face.productionSpec?.fileFormat || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">DPI recomendado:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    DPI recomendado:
+                  </span>{" "}
                   {face.productionSpec?.dpiRecommended || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Sangrado:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Sangrado:
+                  </span>{" "}
                   {face.productionSpec?.bleedCm
                     ? `${formatNumber(Number(face.productionSpec.bleedCm), 2)} cm`
                     : "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Margen seguro:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Margen seguro:
+                  </span>{" "}
                   {face.productionSpec?.safeMarginCm
                     ? `${formatNumber(Number(face.productionSpec.safeMarginCm), 2)} cm`
                     : "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Notas instalación:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Notas instalación:
+                  </span>{" "}
                   {face.productionSpec?.installNotes || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Notas desmontaje:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Notas desmontaje:
+                  </span>{" "}
                   {face.productionSpec?.uninstallNotes || "N/D"}
                 </p>
               </div>
             </article>
 
             <article className="rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-neutral-900">Ubicación y operación</h3>
+              <h3 className="text-lg font-semibold text-neutral-900">
+                Ubicación y operación
+              </h3>
               <div className="mt-4 space-y-2 text-sm text-neutral-700">
                 <p>
-                  <span className="font-semibold text-neutral-900">Dirección:</span> {face.asset.address}
+                  <span className="font-semibold text-neutral-900">
+                    Dirección:
+                  </span>{" "}
+                  {face.asset.address}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Referencia:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Referencia:
+                  </span>{" "}
                   {face.asset.landmark || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Tipo de vía:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Tipo de vía:
+                  </span>{" "}
                   {face.asset.roadType?.name || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Coordenadas:</span> {coordinates}
+                  <span className="font-semibold text-neutral-900">
+                    Coordenadas:
+                  </span>{" "}
+                  {coordinates}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Instalado:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Instalado:
+                  </span>{" "}
                   {formatDate(face.asset.installedDate)}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Retirado:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Retirado:
+                  </span>{" "}
                   {formatDate(face.asset.retiredDate)}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Notas de visibilidad:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Notas de visibilidad:
+                  </span>{" "}
                   {face.visibilityNotes || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Notas de cara:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Notas de cara:
+                  </span>{" "}
                   {face.notes || "N/D"}
                 </p>
                 <p>
-                  <span className="font-semibold text-neutral-900">Notas de activo:</span>{" "}
+                  <span className="font-semibold text-neutral-900">
+                    Notas de activo:
+                  </span>{" "}
                   {face.asset.notes || "N/D"}
                 </p>
               </div>
@@ -543,7 +611,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               </h3>
 
               <div className="mt-4 rounded-2xl border border-mkmedia-blue/15 bg-mkmedia-blue/6 p-4">
-                <p className="text-sm font-semibold text-neutral-900">Etiquetas de restricción</p>
+                <p className="text-sm font-semibold text-neutral-900">
+                  Etiquetas de restricción
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {face.restrictionTags.length ? (
                     face.restrictionTags.map((restriction) => (
@@ -555,11 +625,15 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-neutral-500">Sin etiquetas registradas.</span>
+                    <span className="text-xs text-neutral-500">
+                      Sin etiquetas registradas.
+                    </span>
                   )}
                 </div>
                 {face.restrictions ? (
-                  <p className="mt-2 text-xs text-neutral-600">{face.restrictions}</p>
+                  <p className="mt-2 text-xs text-neutral-600">
+                    {face.restrictions}
+                  </p>
                 ) : null}
               </div>
 
@@ -573,8 +647,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                     {permits.slice(0, 6).map((permit) => (
                       <div key={permit.id} className="text-xs text-neutral-600">
                         <p>
-                          {permit.scope} · {permit.permitNumber || "Sin número"} ·{" "}
-                          {permit.authority || "Autoridad N/D"}
+                          {permit.scope} · {permit.permitNumber || "Sin número"}{" "}
+                          · {permit.authority || "Autoridad N/D"}
                         </p>
                         <p>
                           Emisión: {formatDate(permit.issuedDate)} · Vence:{" "}
@@ -594,7 +668,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-2 text-xs text-neutral-500">No hay permisos registrados.</p>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    No hay permisos registrados.
+                  </p>
                 )}
               </div>
 
@@ -607,20 +683,25 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                   <div className="mt-2 space-y-2">
                     {maintenanceWindows.slice(0, 6).map((window) => (
                       <p key={window.id} className="text-xs text-neutral-600">
-                        {window.source} · {window.reason} · {formatDate(window.startDate)} -{" "}
+                        {window.source} · {window.reason} ·{" "}
+                        {formatDate(window.startDate)} -{" "}
                         {formatDate(window.endDate)}
                       </p>
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-2 text-xs text-neutral-500">Sin mantenimientos programados.</p>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Sin mantenimientos programados.
+                  </p>
                 )}
               </div>
             </article>
 
             {showPrices ? (
               <article className="rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-neutral-900">Reglas de precio</h3>
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  Reglas de precio
+                </h3>
                 <div className="mt-3 space-y-2">
                   {catalogFace.priceRules.length ? (
                     catalogFace.priceRules.slice(0, 6).map((rule) => (
@@ -632,7 +713,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                           {formatPrice(Number(rule.priceDaily), rule.currency)}
                         </p>
                         <p>
-                          Vigencia: {formatDate(rule.startDate)} - {formatDate(rule.endDate)}
+                          Vigencia: {formatDate(rule.startDate)} -{" "}
+                          {formatDate(rule.endDate)}
                         </p>
                         <p>
                           Alcance:{" "}
@@ -649,14 +731,16 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-neutral-500">No hay reglas configuradas.</p>
+                    <p className="text-sm text-neutral-500">
+                      No hay reglas configuradas.
+                    </p>
                   )}
                 </div>
               </article>
             ) : null}
           </div>
 
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <div className="rounded-3xl border border-mkmedia-blue/20 bg-white p-5 shadow-lg shadow-mkmedia-blue/10">
               <p className="text-xs uppercase tracking-[0.22em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
                 Precio y reserva
@@ -677,7 +761,10 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
 
                   <div className="mt-4 rounded-xl border border-mkmedia-blue/20 bg-mkmedia-blue/8 p-3 text-xs text-neutral-700">
                     <p>Bloqueos activos: {activeHolds}</p>
-                    <p>Próximo vencimiento de bloqueo: {formatDateTime(nextHoldExpiration)}</p>
+                    <p>
+                      Próximo vencimiento de bloqueo:{" "}
+                      {formatDateTime(nextHoldExpiration)}
+                    </p>
                   </div>
 
                   <FaceDetailActions
@@ -687,7 +774,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                       location,
                       imageUrl: resolvedImageUrl ?? null,
                       priceLabel: priceDailyLabel,
-                      priceDaily: effectivePrice ? Number(effectivePrice.priceDaily) : null,
+                      priceDaily: effectivePrice
+                        ? Number(effectivePrice.priceDaily)
+                        : null,
                       currency: effectivePrice?.currency ?? "USD",
                       structureType: face.asset.structureType.name,
                     }}
@@ -728,11 +817,14 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
 
         {relatedFaces.length > 0 ? (
           <section className="mt-10">
-            <h3 className="text-xl font-semibold text-neutral-900">Espacios similares en esta zona</h3>
+            <h3 className="text-xl font-semibold text-neutral-900">
+              Espacios similares en esta zona
+            </h3>
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {relatedFaces.map((item) => {
                 const itemTitle =
-                  item.catalogFace?.title || `${item.asset.structureType.name} · Cara ${item.code}`;
+                  item.catalogFace?.title ||
+                  `${item.asset.structureType.name} · Cara ${item.code}`;
                 const itemImage =
                   item.resolvedImageUrl ||
                   (item.catalogFace?.primaryImageUrl &&
@@ -746,7 +838,10 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                         item.effectivePrice.currency ?? "USD",
                       )
                     : null;
-                const itemDimensions = formatFaceDimensions(item.width, item.height);
+                const itemDimensions = formatFaceDimensions(
+                  item.width,
+                  item.height,
+                );
 
                 return (
                   <PublicFaceCard
@@ -761,7 +856,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                       isIlluminated: item.asset.illuminated,
                       dimensionsLabel: itemDimensions?.label ?? null,
                       areaLabel: itemDimensions?.areaLabel ?? null,
-                      trafficLabel: getTrafficLabel(item.asset.structureType.name),
+                      trafficLabel: getTrafficLabel(
+                        item.asset.structureType.name,
+                      ),
                       priceLabel: itemPrice,
                     }}
                     href={`/faces/${item.id}?from=${encodeURIComponent(`/faces/${face.id}`)}`}
@@ -775,7 +872,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
         ) : null}
 
         <footer className="mt-10 rounded-3xl border border-mkmedia-blue/15 bg-white px-5 py-4 text-xs text-neutral-500">
-          Última actualización de inventario: {formatDateTime(catalogFace.updatedAt)}
+          Última actualización de inventario:{" "}
+          {formatDateTime(catalogFace.updatedAt)}
         </footer>
       </main>
     </PublicMarketplaceShell>

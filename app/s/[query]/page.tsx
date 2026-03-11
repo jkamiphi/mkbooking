@@ -182,23 +182,24 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       backLabel="Inicio"
       contextLabel={searchContextLabel}
       contextMeta={selectedZone?.province.name}
+      headerActions={
+        <SearchFilters
+          key={`${typeId ?? ""}-${zoneId ?? ""}-${fromDate ?? ""}-${toDate ?? ""}`}
+          structureTypes={structureTypes}
+          zones={zones}
+          selectedTypeId={typeId}
+          selectedZoneId={zoneId}
+          selectedFromDate={fromDate}
+          selectedToDate={toDate}
+          minimumStartDate={toDateInputValue(minimumStartDate)}
+          query={decodedQuery}
+        />
+      }
       sectionLabel="MK MEDIA CATALOGO"
       sectionHint="Búsqueda de espacios OOH para planificación de campañas"
       contentClassName="flex flex-1 flex-col"
       footerClassName="mt-0"
     >
-      <SearchFilters
-        key={`${typeId ?? ""}-${zoneId ?? ""}-${fromDate ?? ""}-${toDate ?? ""}`}
-        structureTypes={structureTypes}
-        zones={zones}
-        selectedTypeId={typeId}
-        selectedZoneId={zoneId}
-        selectedFromDate={fromDate}
-        selectedToDate={toDate}
-        minimumStartDate={toDateInputValue(minimumStartDate)}
-        query={decodedQuery}
-      />
-
       <div className="flex flex-auto flex-col">
         <SearchResultsView
           total={visibleTotal}
