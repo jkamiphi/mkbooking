@@ -163,7 +163,8 @@ export function HomeSearchBar({
 
   const segmentBase =
     "flex cursor-pointer flex-col rounded-3xl px-6 py-3 text-[11px] font-semibold text-neutral-500 transition";
-  const segmentActive = "bg-white shadow-lg shadow-neutral-200/60";
+  const segmentActive =
+    "border border-mkmedia-blue/20 bg-mkmedia-blue/8 text-mkmedia-blue shadow-lg shadow-mkmedia-blue/10";
 
   return (
     <section className="relative mx-auto w-full max-w-min px-6 pb-12 pt-4">
@@ -171,7 +172,7 @@ export function HomeSearchBar({
         <button
           type="button"
           onClick={openMobileSearch}
-          className="w-[min(100vw-3rem,30rem)] rounded-full border border-white/80 bg-white/95 px-5 py-3 text-left shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl"
+          className="w-[min(100vw-3rem,30rem)] rounded-full border border-mkmedia-blue/20 bg-white/95 px-5 py-3 text-left shadow-xl shadow-mkmedia-blue/10 backdrop-blur-xl"
         >
           <span className="flex items-center gap-2 text-base font-semibold text-neutral-900">
             <Search className="h-4 w-4 text-neutral-500" />
@@ -356,8 +357,8 @@ export function HomeSearchBar({
                           onClick={() => setSelectedTypeId(selected ? "" : type.id)}
                           className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
                             selected
-                              ? "border-neutral-900 bg-neutral-900 text-white"
-                              : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
+                              ? "border-mkmedia-blue bg-mkmedia-blue text-white"
+                              : "border-mkmedia-blue/20 text-neutral-700 hover:border-mkmedia-blue/35"
                           }`}
                         >
                           {type.name}
@@ -369,7 +370,7 @@ export function HomeSearchBar({
               </section>
             </div>
 
-            <div className="border-t border-neutral-200 bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
+            <div className="border-t border-mkmedia-blue/15 bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
               <div className="flex items-center justify-between gap-3">
                 <button
                   type="button"
@@ -381,7 +382,7 @@ export function HomeSearchBar({
                 <button
                   type="button"
                   onClick={executeSearch}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#E91E63] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#E91E63]/30 transition hover:bg-[#d91857]"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-mkmedia-blue px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 transition hover:bg-mkmedia-blue/90"
                 >
                   <Search className="h-4 w-4" />
                   Buscar
@@ -394,7 +395,7 @@ export function HomeSearchBar({
 
       <form onSubmit={handleSearch} className="mt-8 hidden md:block">
         <div ref={containerRef} className="relative">
-          <div className="rounded-full border border-white/70 bg-white/90 shadow-xl shadow-[#fcb814]/20 backdrop-blur-xl">
+          <div className="rounded-full border border-mkmedia-blue/20 bg-white/90 shadow-xl shadow-mkmedia-blue/12 backdrop-blur-xl">
             <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto p-2 md:gap-0 md:overflow-visible">
               <div
                 className={`${segmentBase} min-w-[260px] md:rounded-none md:rounded-l-full ${
@@ -417,7 +418,7 @@ export function HomeSearchBar({
                 </span>
               </div>
 
-              <div className="hidden h-8 w-px bg-neutral-200 md:block" />
+              <div className="hidden h-8 w-px bg-mkmedia-blue/15 md:block" />
 
               <div
                 className={`${segmentBase} min-w-[180px] md:rounded-none ${
@@ -434,7 +435,7 @@ export function HomeSearchBar({
                 </span>
               </div>
 
-              <div className="hidden h-8 w-px bg-neutral-200 md:block" />
+              <div className="hidden h-8 w-px bg-mkmedia-blue/15 md:block" />
 
               <div
                 className={`${segmentBase} min-w-[220px] md:rounded-r-full ${
@@ -453,7 +454,7 @@ export function HomeSearchBar({
               <div className="flex items-center px-2">
                 <button
                   type="submit"
-                  className="flex items-center gap-2 rounded-full bg-[#E91E63] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#E91E63]/30 hover:bg-[#d91857]"
+                  className="flex items-center gap-2 rounded-full bg-mkmedia-blue px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 hover:bg-mkmedia-blue/90"
                 >
                   <span className="hidden md:inline">Buscar</span>
                   <ChevronRight className="h-4 w-4" />
@@ -463,7 +464,7 @@ export function HomeSearchBar({
           </div>
 
           {activePanel ? (
-            <div className="absolute left-1/2 top-full z-30 mt-4 w-full max-w-lg -translate-x-1/2 rounded-3xl border border-neutral-200 bg-white p-6 shadow-2xl md:max-w-2xl">
+            <div className="absolute left-1/2 top-full z-30 mt-4 w-full max-w-lg -translate-x-1/2 rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-2xl md:max-w-2xl">
               {activePanel === "destination" ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -543,8 +544,8 @@ export function HomeSearchBar({
                           }}
                           className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
                             selected
-                              ? "border-neutral-900 bg-neutral-900 text-white"
-                              : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
+                              ? "border-mkmedia-blue bg-mkmedia-blue text-white"
+                              : "border-mkmedia-blue/20 text-neutral-700 hover:border-mkmedia-blue/35"
                           }`}
                         >
                           {type.name}
@@ -561,7 +562,7 @@ export function HomeSearchBar({
 
       {showPromo ? (
         <div
-          className="mt-6 flex items-center gap-3 rounded-2xl border border-[#fcb814]/60 bg-[#fff6dd] px-4 py-3 text-sm text-[#0359A8]"
+          className="mt-6 flex items-center gap-3 rounded-2xl border border-mkmedia-yellow/60 bg-mkmedia-yellow/15 px-4 py-3 text-sm text-mkmedia-blue"
           style={{ animation: "rise 0.7s ease 0.1s forwards" }}
         >
           <span className="font-semibold">
