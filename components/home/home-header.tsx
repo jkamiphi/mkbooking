@@ -13,7 +13,7 @@ interface HomeHeaderProps {
 
 export function HomeHeader({ user }: HomeHeaderProps) {
   return (
-    <header className="relative mx-auto flex w-full max-w-7xl items-start justify-between px-6 pb-6 pt-6">
+    <header className="relative flex w-full items-start justify-between px-4 pb-6 pt-6 sm:px-6 lg:px-8 2xl:px-10">
       <Link href="/" className="flex items-center gap-2">
         <Image src="/images/logo/b-mkm-blue.png" alt="Logo" width={78.4} height={40} />
       </Link>

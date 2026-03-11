@@ -122,7 +122,7 @@ export default async function Home({
         />
       </section>
 
-      <HomeFooter showPrices={showPrices} />
+      <HomeFooter showPrices={showPrices} fullWidth />
     </div>
   );
 }
