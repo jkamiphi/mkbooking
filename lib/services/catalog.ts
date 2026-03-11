@@ -532,6 +532,36 @@ export async function listCatalogFaces(options?: {
   };
 }
 
+export async function listCatalogPricingFaceOptions(options?: {
+  search?: string;
+  take?: number;
+}) {
+  const { search, take = 100 } = options ?? {};
+  const where: Prisma.AssetFaceWhereInput = {};
+
+  if (search) {
+    where.OR = [
+      { code: { contains: search, mode: "insensitive" } },
+      { asset: { code: { contains: search, mode: "insensitive" } } },
+    ];
+  }
+
+  return db.assetFace.findMany({
+    where,
+    take,
+    orderBy: [{ asset: { code: "asc" } }, { code: "asc" }],
+    select: {
+      id: true,
+      code: true,
+      asset: {
+        select: {
+          code: true,
+        },
+      },
+    },
+  });
+}
+
 export async function getPublicCatalogFaceDetailById(
   faceId: string,
   options?: { organizationId?: string }

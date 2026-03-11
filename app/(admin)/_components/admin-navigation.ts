@@ -148,7 +148,7 @@ const adminNavigationTree: AdminNavigationNode[] = [
         name: "Precios",
         href: "/admin/catalog/pricing",
         icon: BookOpen,
-        roles: ADMIN_ROLES,
+        roles: SALES_ROLES,
       },
       {
         type: "item",

@@ -566,8 +566,8 @@ export function HomeSearchBar({
         >
           <span className="font-semibold">
             {promoValueLabel
-              ? `${promoValueLabel} de descuento en campañas por zona en Panamá`
-              : "Descuento activo en campañas por zona en Panamá"}
+              ? `${promoValueLabel} de descuento en campañas activas`
+              : "Descuento activo en campañas"}
           </span>
         </div>
       ) : null}

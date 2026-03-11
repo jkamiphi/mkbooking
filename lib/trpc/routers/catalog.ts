@@ -19,6 +19,7 @@ import {
   getCatalogFaceByFaceId,
   getPublicCatalogFaceDetailById,
   listCatalogFaces,
+  listCatalogPricingFaceOptions,
   listHolds,
   listPromos,
   listPriceRules,
@@ -91,10 +92,22 @@ export const catalogRouter = router({
       .query(async ({ input }) => {
         return listCatalogFaces(input);
       }),
-    get: adminProcedure
+    get: commercialProcedure
       .input(z.object({ faceId: z.string() }))
       .query(async ({ input }) => {
         return getCatalogFaceByFaceId(input.faceId);
+      }),
+    pricingOptions: commercialProcedure
+      .input(
+        z
+          .object({
+            search: z.string().optional(),
+            take: z.number().min(1).max(200).default(100),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        return listCatalogPricingFaceOptions(input);
       }),
     publicDetail: publicProcedure
       .input(
@@ -121,7 +134,7 @@ export const catalogRouter = router({
   }),
 
   priceRules: router({
-    list: adminProcedure
+    list: commercialProcedure
       .input(
         z
           .object({
@@ -136,7 +149,7 @@ export const catalogRouter = router({
       .query(async ({ input }) => {
         return listPriceRules(input);
       }),
-    create: adminProcedure
+    create: commercialProcedure
       .input(createPriceRuleSchema)
       .mutation(async ({ input }) => {
         return createPriceRule(input);
@@ -144,10 +157,10 @@ export const catalogRouter = router({
   }),
 
   promos: router({
-    list: adminProcedure.query(async () => {
+    list: commercialProcedure.query(async () => {
       return listPromos();
     }),
-    create: adminProcedure
+    create: commercialProcedure
       .input(createPromoSchema)
       .mutation(async ({ input }) => {
         return createPromo(input);

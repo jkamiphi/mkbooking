@@ -70,13 +70,8 @@ export default async function Home({
     caller.inventory.zones.publicList(),
   ]);
 
-  const selectedZone = zones.find((zone) => zone.id === zoneId);
   const showPrices = Boolean(session);
-  const isPanamaQuery =
-    (query ?? "").toLowerCase().includes("panam") ||
-    (selectedZone?.province.name ?? "").toLowerCase().includes("panam") ||
-    (selectedZone?.name ?? "").toLowerCase().includes("panam");
-  const showPromo = Boolean(catalog.promo && isPanamaQuery);
+  const showPromo = Boolean(session && catalog.promo);
 
   const promoValueLabel = catalog.promo
     ? catalog.promo.type === "PERCENT"
