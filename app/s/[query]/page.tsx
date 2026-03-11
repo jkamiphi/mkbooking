@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { ArrowLeft, MapPin } from "lucide-react";
 import {
   formatFaceDimensions,
   formatPrice,
@@ -13,11 +11,9 @@ import {
 } from "@/lib/date/campaign-date-range";
 import { getCampaignRequestStartGapDays } from "@/lib/server-config";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
-import { UserHeaderActions } from "@/components/layout/user-header-actions";
-import { HomeFooter } from "@/components/home/home-footer";
+import { PublicMarketplaceShell } from "@/components/public/public-marketplace-shell";
 import { SearchFilters } from "./_components/search-filters";
 import { SearchResultsView } from "./_components/search-results-view";
-import Image from "next/image";
 
 type PageProps = {
   params: Promise<{ query: string }>;
@@ -90,10 +86,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   ]);
 
   const showPrices = Boolean(session);
+  const selectedZone = zoneId
+    ? zones.find((zone) => zone.id === zoneId) ?? null
+    : null;
   const searchContextLabel =
     searchTerm ||
     (typeId && structureTypes.find((t) => t.id === typeId)?.name) ||
-    (zoneId && zones.find((z) => z.id === zoneId)?.name);
+    selectedZone?.name ||
+    "Todo Panamá";
 
   const visibleFaces = catalog.faces;
   const visibleTotal = visibleFaces.length;
@@ -158,103 +158,63 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     })
     .filter((marker): marker is NonNullable<typeof marker> => Boolean(marker));
 
-  // Default center (Panama City)
   const defaultCenter = { lat: 9.0, lng: -79.5 };
   const mapCenter =
     markers.length > 0
       ? {
-          lat: markers.reduce((sum, m) => sum + m.lat, 0) / markers.length,
-          lng: markers.reduce((sum, m) => sum + m.lng, 0) / markers.length,
+          lat: markers.reduce((sum, marker) => sum + marker.lat, 0) / markers.length,
+          lng: markers.reduce((sum, marker) => sum + marker.lng, 0) / markers.length,
         }
       : defaultCenter;
 
   return (
-    <>
-      <div className="flex min-h-screen flex-col bg-white">
-        {/* Header */}
-        <header className="z-20 flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link
-              href="/"
-              className="flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Volver</span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Image
-                src="/images/logo/b-mkm-blue.png"
-                alt="Logo"
-                width={68.4}
-                height={30}
-              />
-            </div>
-          </div>
+    <PublicMarketplaceShell
+      user={
+        session
+          ? {
+              email: session.user.email,
+              name: session.user.name,
+            }
+          : null
+      }
+      showPrices={showPrices}
+      backHref="/"
+      backLabel="Inicio"
+      contextLabel={searchContextLabel}
+      contextMeta={selectedZone?.province.name}
+      sectionLabel="MK MEDIA CATALOGO"
+      sectionHint="Búsqueda de espacios OOH para planificación de campañas"
+      contentClassName="flex flex-1 flex-col"
+      footerClassName="mt-0"
+    >
+      <SearchFilters
+        key={`${typeId ?? ""}-${zoneId ?? ""}-${fromDate ?? ""}-${toDate ?? ""}`}
+        structureTypes={structureTypes}
+        zones={zones}
+        selectedTypeId={typeId}
+        selectedZoneId={zoneId}
+        selectedFromDate={fromDate}
+        selectedToDate={toDate}
+        minimumStartDate={toDateInputValue(minimumStartDate)}
+        query={decodedQuery}
+      />
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {searchContextLabel ? (
-              <div className="hidden items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 md:flex">
-                <MapPin className="h-4 w-4 text-neutral-400" />
-                <span className="text-sm font-medium text-neutral-900">
-                  {searchContextLabel}
-                </span>
-                {zoneId && zones.find((z) => z.id === zoneId) && (
-                  <span className="text-sm text-neutral-500">
-                    {zones.find((z) => z.id === zoneId)?.province.name}
-                  </span>
-                )}
-              </div>
-            ) : null}
-
-            {session ? (
-              <UserHeaderActions
-                user={{
-                  email: session.user.email,
-                  name: session.user.name,
-                }}
-              />
-            ) : (
-              <Link
-                href="/login"
-                className="rounded-full bg-[#0359A8] px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-[#0359A8]/20 transition hover:bg-[#024a8c] sm:px-4 sm:text-sm"
-              >
-                Iniciar sesión
-              </Link>
-            )}
-          </div>
-        </header>
-
-        {/* Filters Bar */}
-        <SearchFilters
-          key={`${typeId ?? ""}-${zoneId ?? ""}-${fromDate ?? ""}-${toDate ?? ""}`}
-          structureTypes={structureTypes}
-          zones={zones}
+      <div className="flex flex-auto flex-col">
+        <SearchResultsView
+          total={visibleTotal}
+          searchTerm={searchTerm}
+          results={results}
+          markers={markers}
+          center={mapCenter}
+          showPrices={showPrices}
           selectedTypeId={typeId}
           selectedZoneId={zoneId}
           selectedFromDate={fromDate}
           selectedToDate={toDate}
-          minimumStartDate={toDateInputValue(minimumStartDate)}
-          query={decodedQuery}
+          isAuthenticated={Boolean(session)}
+          searchPath={currentSearchPath}
         />
-
-        <div className="flex flex-auto flex-col">
-          <SearchResultsView
-            total={visibleTotal}
-            searchTerm={searchTerm}
-            results={results}
-            markers={markers}
-            center={mapCenter}
-            showPrices={showPrices}
-            selectedTypeId={typeId}
-            selectedZoneId={zoneId}
-            selectedFromDate={fromDate}
-            selectedToDate={toDate}
-            isAuthenticated={Boolean(session)}
-            searchPath={currentSearchPath}
-          />
-        </div>
       </div>
-      <HomeFooter showPrices={showPrices} className="mt-0" />
-    </>
+    </PublicMarketplaceShell>
   );
 }

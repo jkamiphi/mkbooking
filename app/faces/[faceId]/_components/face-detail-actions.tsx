@@ -2,6 +2,8 @@
 
 import { Check, Plus, ShoppingCart } from "lucide-react";
 import { useFaceSelection, type SelectedFace } from "@/components/face-selection-context";
+import { cn } from "@/lib/utils";
+import { brandPrimaryButtonClass, brandSoftButtonClass } from "@/components/public/brand-styles";
 
 interface FaceDetailActionsProps {
     face: SelectedFace;
@@ -16,13 +18,12 @@ export function FaceDetailActions({ face }: FaceDetailActionsProps) {
             <button
                 type="button"
                 onClick={() => toggleFace(face)}
-                className={`
-          mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition
-          ${isFaceSelected
-                        ? "border-2 border-[#0359A8] bg-[#0359A8]/5 text-[#0359A8] hover:bg-[#0359A8]/10"
-                        : "bg-[#0359A8] text-white shadow-lg shadow-[#0359A8]/25 hover:bg-[#024a8c]"
-                    }
-        `}
+                className={cn(
+                    "mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold",
+                    isFaceSelected
+                        ? `${brandSoftButtonClass} border-2`
+                        : brandPrimaryButtonClass
+                )}
             >
                 {isFaceSelected ? (
                     <>

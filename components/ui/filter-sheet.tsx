@@ -96,7 +96,7 @@ export const FilterSheetTriggerButton = React.forwardRef<
       variant={variant}
       size={size}
       className={cn(
-        "h-9 rounded-full border-neutral-200 bg-white px-4 text-neutral-700 shadow-none hover:border-neutral-300 hover:bg-neutral-50",
+        "h-9 rounded-full border-mkmedia-blue/20 bg-white px-4 text-mkmedia-blue shadow-none hover:border-mkmedia-blue/35 hover:bg-mkmedia-blue/8",
         className,
       )}
       {...props}
@@ -104,7 +104,7 @@ export const FilterSheetTriggerButton = React.forwardRef<
       <SlidersHorizontal className="h-4 w-4" />
       {label}
       {activeCount > 0 ? (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#0359A8] px-1.5 text-[10px] font-bold text-white">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-mkmedia-blue px-1.5 text-[10px] font-bold text-white">
           {activeCount}
         </span>
       ) : null}
@@ -124,7 +124,7 @@ export function FilterSummaryChips({
           key={chip.key}
           type="button"
           onClick={chip.onRemove}
-          className="inline-flex min-h-8 items-center gap-2 rounded-full border border-[#0359A8]/20 bg-[#0359A8]/6 px-3 py-1.5 text-xs font-semibold text-[#0359A8] transition hover:bg-[#0359A8]/12"
+          className="inline-flex min-h-8 items-center gap-2 rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1.5 text-xs font-semibold text-mkmedia-blue transition hover:bg-mkmedia-blue/15"
         >
           <span>{chip.label}</span>
           <X className="h-3.5 w-3.5" />
@@ -188,7 +188,7 @@ export function FilterSheetPanel({
           <Button
             type="button"
             onClick={onApply}
-            className="bg-[#0359A8] text-white hover:bg-[#024a8f]"
+            className="bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
           >
             {applyLabel}
           </Button>

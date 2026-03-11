@@ -176,7 +176,7 @@ export function SearchFilters({
   }));
 
   return (
-    <div className="border-b border-neutral-200 bg-white px-6 py-3">
+    <div className="border-b border-mkmedia-blue/15 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
       <Sheet
         open={isOpen}
         onOpenChange={(open) => {
@@ -192,6 +192,7 @@ export function SearchFilters({
         }}
       >
         <FilterSheetToolbar
+          className="rounded-2xl border border-mkmedia-blue/15 bg-linear-to-r from-mkmedia-blue/8 via-white to-mkmedia-yellow/15 p-2.5 sm:p-3"
           summaryChips={summaryChips}
           onClearAll={activeCount > 0 ? clearAllFilters : undefined}
         >

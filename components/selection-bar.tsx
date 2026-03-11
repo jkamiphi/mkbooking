@@ -6,6 +6,8 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { CheckCircle2, ChevronUp, ShoppingCart, Trash2, X } from "lucide-react";
 import { useFaceSelection } from "@/components/face-selection-context";
+import { brandPrimaryButtonClass } from "@/components/public/brand-styles";
+import { cn } from "@/lib/utils";
 
 type SearchContext = {
     returnTo: string;
@@ -143,7 +145,7 @@ export function SelectionBar() {
                                                     className="object-cover"
                                                 />
                                             ) : (
-                                                <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-[#fcb814]/20 to-[#0359A8]/20">
+                                                <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-mkmedia-yellow/20 to-mkmedia-blue/20">
                                                     <span className="text-[8px] font-semibold text-neutral-500">
                                                         {face.structureType}
                                                     </span>
@@ -180,8 +182,8 @@ export function SelectionBar() {
                             onClick={() => setIsExpanded(!isExpanded)}
                             className="flex items-center gap-2 text-sm font-medium text-neutral-700 transition hover:text-neutral-900"
                         >
-                            <ShoppingCart className="h-4 w-4 text-[#0359A8]" />
-                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#0359A8] px-1.5 text-[10px] font-bold text-white">
+                            <ShoppingCart className="h-4 w-4 text-mkmedia-blue" />
+                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-mkmedia-blue px-1.5 text-[10px] font-bold text-white">
                                 {selectionCount}
                             </span>
                             <span className="hidden sm:inline">
@@ -204,7 +206,10 @@ export function SelectionBar() {
                         </button>
                         <Link
                             href={quoteUrl}
-                            className="inline-flex items-center gap-2 rounded-full bg-[#0359A8] px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-[#0359A8]/25 transition hover:bg-[#024a8c]"
+                            className={cn(
+                                "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold",
+                                brandPrimaryButtonClass
+                            )}
                         >
                             <CheckCircle2 className="h-4 w-4" />
                             Solicitar cotización

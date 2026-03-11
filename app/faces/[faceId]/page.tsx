@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft,
   BadgeCheck,
   FileText,
   Heart,
@@ -13,9 +12,17 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
-import { formatFaceDimensions, formatPrice } from "@/lib/formatters/catalog-face";
+import {
+  formatFaceDimensions,
+  formatPrice,
+  getTrafficLabel,
+} from "@/lib/formatters/catalog-face";
 import { isExpectedS3PublicUrl } from "@/lib/storage/s3";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
+import { PublicFaceCard } from "@/components/public/public-face-card";
+import { PublicMarketplaceShell } from "@/components/public/public-marketplace-shell";
+import { brandPrimaryButtonClass, brandSoftButtonClass } from "@/components/public/brand-styles";
+import { cn } from "@/lib/utils";
 import { FaceDetailActions } from "./_components/face-detail-actions";
 
 type PageProps = {
@@ -258,29 +265,49 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
     : null;
 
   return (
-    <div className="min-h-screen bg-[#f7f7f7] text-neutral-900">
+    <PublicMarketplaceShell
+      user={
+        session
+          ? {
+              email: session.user.email,
+              name: session.user.name,
+            }
+          : null
+      }
+      showPrices={showPrices}
+      backHref={returnHref}
+      backLabel="Resultados"
+      contextLabel={location}
+      contextMeta={`Cara ${face.asset.code}-${face.code}`}
+      sectionLabel="MK MEDIA CATALOGO"
+      sectionHint="Detalle completo de disponibilidad, especificaciones y reserva"
+      footerClassName="mt-0"
+    >
       <main className="mx-auto w-full max-w-7xl px-5 pb-16 pt-8">
-        <section className="mb-6">
+        <section className="mb-6 rounded-3xl border border-mkmedia-blue/15 bg-white/90 p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Link
-              href={returnHref}
-              className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Volver
-            </Link>
+            <div className="inline-flex items-center gap-2 rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
+              <Sparkles className="h-3.5 w-3.5" />
+              Espacio destacado
+            </div>
 
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold",
+                  brandSoftButtonClass,
+                )}
               >
                 <Share2 className="h-4 w-4" />
                 Compartir
               </button>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold",
+                  brandSoftButtonClass,
+                )}
               >
                 <Heart className="h-4 w-4" />
                 Guardar
@@ -288,27 +315,20 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#0359A8] text-white">
-              <Sparkles className="h-4 w-4" />
-            </span>
-            <h1 className="text-3xl font-semibold tracking-tight text-neutral-950">{title}</h1>
-          </div>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-neutral-950">{title}</h1>
 
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-600">
-            <span className="inline-flex items-center gap-1">
-              <BadgeCheck className="h-3.5 w-3.5 text-neutral-700" />
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-neutral-600">
+            <span className="inline-flex items-center gap-1 rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-2.5 py-1 text-mkmedia-blue">
+              <BadgeCheck className="h-3.5 w-3.5" />
               {catalogFace.isPublished ? "Publicado" : "No publicado"}
             </span>
-            <span>
-              Código: {face.asset.code}-{face.code}
-            </span>
+            <span>Código: {face.asset.code}-{face.code}</span>
             <span>{location}</span>
             <span>Actualizado: {formatDateTime(catalogFace.updatedAt)}</span>
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-3xl">
+        <section className="overflow-hidden rounded-3xl border border-mkmedia-blue/15 bg-white p-2 shadow-sm">
           <div className="grid gap-2 lg:grid-cols-[1.65fr_1fr]">
             <div className="relative min-h-[280px] overflow-hidden rounded-3xl bg-neutral-200 lg:min-h-[460px]">
               {gallerySlots[0] ? (
@@ -350,7 +370,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                   {index === 3 ? (
                     <button
                       type="button"
-                      className="absolute bottom-3 right-3 rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 shadow-sm"
+                      className="absolute bottom-3 right-3 rounded-xl border border-mkmedia-blue/20 bg-white px-3 py-2 text-xs font-semibold text-mkmedia-blue shadow-sm"
                     >
                       Ver {gallery.length} fotos
                     </button>
@@ -363,45 +383,45 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
 
         <section className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_370px]">
           <div className="space-y-6">
-            <article className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <article className="rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-neutral-900">Detalle del espacio</h2>
               <p className="mt-3 text-sm leading-7 text-neutral-700">
                 {catalogFace.summary || "Sin resumen cargado para esta cara."}
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-neutral-200 p-4">
+                <div className="rounded-2xl border border-mkmedia-blue/15 p-4">
                   <p className="text-xs text-neutral-500">Tipo de estructura</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
                     {face.asset.structureType.name}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-neutral-200 p-4">
+                <div className="rounded-2xl border border-mkmedia-blue/15 p-4">
                   <p className="text-xs text-neutral-500">Posición y orientación</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
                     {face.position?.name || "N/D"} · {facingLabel(face.facing)}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-neutral-200 p-4">
+                <div className="rounded-2xl border border-mkmedia-blue/15 p-4">
                   <p className="text-xs text-neutral-500">Dimensiones</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
                     {dimensions?.label || "N/D"}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-neutral-200 p-4">
+                <div className="rounded-2xl border border-mkmedia-blue/15 p-4">
                   <p className="text-xs text-neutral-500">Área</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
                     {area !== null ? `${formatNumber(area, 1)} m²` : "N/D"}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-neutral-200 p-4">
+                <div className="rounded-2xl border border-mkmedia-blue/15 p-4">
                   <p className="text-xs text-neutral-500">Digital / Iluminado</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
                     {face.asset.digital ? "Digital" : "No digital"} ·{" "}
                     {face.asset.illuminated ? "Iluminado" : "No iluminado"}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-neutral-200 p-4">
+                <div className="rounded-2xl border border-mkmedia-blue/15 p-4">
                   <p className="text-xs text-neutral-500">Estado</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">
                     Activo: {statusLabel(face.asset.status)} · Cara: {statusLabel(face.status)}
@@ -410,9 +430,12 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               </div>
             </article>
 
-            <article id="technical-specs" className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <article
+              id="technical-specs"
+              className="rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-sm"
+            >
               <h3 className="flex items-center gap-2 text-lg font-semibold text-neutral-900">
-                <Ruler className="h-4 w-4 text-[#ff385c]" />
+                <Ruler className="h-4 w-4 text-mkmedia-blue" />
                 Especificaciones técnicas
               </h3>
               <div className="mt-4 space-y-2 text-sm text-neutral-700">
@@ -459,7 +482,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               </div>
             </article>
 
-            <article className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <article className="rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-neutral-900">Ubicación y operación</h3>
               <div className="mt-4 space-y-2 text-sm text-neutral-700">
                 <p>
@@ -502,7 +525,10 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                   href={mapsUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50"
+                  className={cn(
+                    "mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold",
+                    brandSoftButtonClass,
+                  )}
                 >
                   <MapPin className="h-4 w-4" />
                   Abrir en Google Maps
@@ -510,20 +536,20 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
               ) : null}
             </article>
 
-            <article className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <article className="rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-sm">
               <h3 className="flex items-center gap-2 text-lg font-semibold text-neutral-900">
-                <ShieldCheck className="h-4 w-4 text-[#ff385c]" />
+                <ShieldCheck className="h-4 w-4 text-mkmedia-blue" />
                 Restricciones, permisos y mantenimiento
               </h3>
 
-              <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+              <div className="mt-4 rounded-2xl border border-mkmedia-blue/15 bg-mkmedia-blue/6 p-4">
                 <p className="text-sm font-semibold text-neutral-900">Etiquetas de restricción</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {face.restrictionTags.length ? (
                     face.restrictionTags.map((restriction) => (
                       <span
                         key={restriction.id}
-                        className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-700"
+                        className="rounded-full border border-mkmedia-blue/20 bg-white px-2.5 py-1 text-xs text-neutral-700"
                       >
                         {restriction.tag.label}
                       </span>
@@ -537,9 +563,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                 ) : null}
               </div>
 
-              <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+              <div className="mt-4 rounded-2xl border border-mkmedia-blue/15 bg-mkmedia-blue/6 p-4">
                 <p className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-                  <FileText className="h-4 w-4 text-[#ff385c]" />
+                  <FileText className="h-4 w-4 text-mkmedia-blue" />
                   Permisos
                 </p>
                 {permits.length ? (
@@ -559,7 +585,7 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                             href={permit.document}
                             target="_blank"
                             rel="noreferrer"
-                            className="font-semibold text-[#0359A8] hover:underline"
+                            className="font-semibold text-mkmedia-blue hover:underline"
                           >
                             Ver documento
                           </a>
@@ -572,9 +598,9 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                 )}
               </div>
 
-              <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+              <div className="mt-4 rounded-2xl border border-mkmedia-blue/15 bg-mkmedia-blue/6 p-4">
                 <p className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-                  <Wrench className="h-4 w-4 text-[#ff385c]" />
+                  <Wrench className="h-4 w-4 text-mkmedia-blue" />
                   Ventanas de mantenimiento
                 </p>
                 {maintenanceWindows.length ? (
@@ -593,14 +619,14 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
             </article>
 
             {showPrices ? (
-              <article className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <article className="rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-sm">
                 <h3 className="text-lg font-semibold text-neutral-900">Reglas de precio</h3>
                 <div className="mt-3 space-y-2">
                   {catalogFace.priceRules.length ? (
                     catalogFace.priceRules.slice(0, 6).map((rule) => (
                       <div
                         key={rule.id}
-                        className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700"
+                        className="rounded-xl border border-mkmedia-blue/15 bg-mkmedia-blue/6 p-3 text-xs text-neutral-700"
                       >
                         <p className="font-semibold text-neutral-900">
                           {formatPrice(Number(rule.priceDaily), rule.currency)}
@@ -631,8 +657,8 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
           </div>
 
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-lg shadow-neutral-300/50">
-              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">
+            <div className="rounded-3xl border border-mkmedia-blue/20 bg-white p-5 shadow-lg shadow-mkmedia-blue/10">
+              <p className="text-xs uppercase tracking-[0.22em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
                 Precio y reserva
               </p>
 
@@ -644,12 +670,12 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                   <p className="text-sm text-neutral-500">por día</p>
 
                   {promo && promoLabel ? (
-                    <p className="mt-2 text-xs font-semibold text-[#ff385c]">
+                    <p className="mt-2 inline-flex rounded-full bg-mkmedia-yellow/30 px-3 py-1 text-xs font-semibold text-neutral-800">
                       Promo activa: {promo.name} · {promoLabel}
                     </p>
                   ) : null}
 
-                  <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
+                  <div className="mt-4 rounded-xl border border-mkmedia-blue/20 bg-mkmedia-blue/8 p-3 text-xs text-neutral-700">
                     <p>Bloqueos activos: {activeHolds}</p>
                     <p>Próximo vencimiento de bloqueo: {formatDateTime(nextHoldExpiration)}</p>
                   </div>
@@ -672,12 +698,15 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                 </>
               ) : (
                 <>
-                  <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
+                  <div className="mt-3 rounded-xl border border-mkmedia-blue/20 bg-mkmedia-blue/8 p-4 text-sm text-neutral-700">
                     Debes iniciar sesión para ver precios y habilitar reservas.
                   </div>
                   <Link
                     href="/login"
-                    className="mt-4 block w-full rounded-xl bg-[#ff385c] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#e32f52]"
+                    className={cn(
+                      "mt-4 block w-full rounded-xl px-4 py-3 text-center text-sm font-semibold",
+                      brandPrimaryButtonClass,
+                    )}
                   >
                     Iniciar sesión
                   </Link>
@@ -687,7 +716,10 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
 
             <button
               type="button"
-              className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+              className={cn(
+                "w-full rounded-xl px-4 py-2 text-sm font-semibold",
+                brandSoftButtonClass,
+              )}
             >
               Reportar este espacio
             </button>
@@ -710,57 +742,42 @@ export default async function FaceDetailPage({ params, searchParams }: PageProps
                 const itemPrice =
                   item.effectivePrice && showPrices
                     ? formatPrice(
-                      Number(item.effectivePrice.priceDaily),
-                      item.effectivePrice.currency ?? "USD"
-                    )
+                        Number(item.effectivePrice.priceDaily),
+                        item.effectivePrice.currency ?? "USD",
+                      )
                     : null;
+                const itemDimensions = formatFaceDimensions(item.width, item.height);
 
                 return (
-                  <Link
+                  <PublicFaceCard
                     key={item.id}
+                    face={{
+                      id: item.id,
+                      title: itemTitle,
+                      location: `${item.asset.zone.name}, ${item.asset.zone.province.name}`,
+                      imageUrl: itemImage,
+                      structureType: item.asset.structureType.name,
+                      isDigital: item.asset.digital,
+                      isIlluminated: item.asset.illuminated,
+                      dimensionsLabel: itemDimensions?.label ?? null,
+                      areaLabel: itemDimensions?.areaLabel ?? null,
+                      trafficLabel: getTrafficLabel(item.asset.structureType.name),
+                      priceLabel: itemPrice,
+                    }}
                     href={`/faces/${item.id}?from=${encodeURIComponent(`/faces/${face.id}`)}`}
-                    className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white transition hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-lg"
-                  >
-                    <div className="relative aspect-[4/3] bg-neutral-200">
-                      {itemImage ? (
-                        <Image
-                          src={itemImage}
-                          alt={itemTitle}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-gradient-to-br from-neutral-300 to-neutral-200" />
-                      )}
-                    </div>
-                    <div className="space-y-1.5 p-4">
-                      <p className="line-clamp-1 text-sm font-semibold text-neutral-900">{itemTitle}</p>
-                      <p className="text-xs text-neutral-500">
-                        {item.asset.zone.name}, {item.asset.zone.province.name}
-                      </p>
-                      {showPrices ? (
-                        <p className="text-sm font-semibold text-neutral-900">
-                          {itemPrice || "Precio no configurado"}
-                        </p>
-                      ) : (
-                        <p className="text-xs font-semibold text-neutral-600">
-                          Inicia sesión para ver precio y reservar
-                        </p>
-                      )}
-                    </div>
-                  </Link>
+                    showPrices={showPrices}
+                    ctaLabel="Ver"
+                  />
                 );
               })}
             </div>
           </section>
         ) : null}
 
-        <footer className="mt-10 rounded-3xl border border-neutral-200 bg-white px-5 py-4 text-xs text-neutral-500">
+        <footer className="mt-10 rounded-3xl border border-mkmedia-blue/15 bg-white px-5 py-4 text-xs text-neutral-500">
           Última actualización de inventario: {formatDateTime(catalogFace.updatedAt)}
         </footer>
       </main>
-    </div>
+    </PublicMarketplaceShell>
   );
 }
