@@ -27,7 +27,7 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <div className="min-h-dvh bg-[#f4f7fb] lg:h-dvh lg:overflow-hidden">
+    <div className="min-h-dvh bg-neutral-100/70 lg:h-dvh lg:overflow-hidden">
       <div className="flex min-h-dvh flex-col lg:h-dvh lg:flex-row">
         <UserSidebar
           user={{
@@ -35,8 +35,8 @@ export default async function ProtectedLayout({
             name: session.user.name,
           }}
         />
-        <main className="min-w-0 flex-1 lg:h-dvh lg:overflow-y-auto">
-          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        <main className="min-w-0 flex-1 bg-neutral-100/60 lg:h-dvh lg:overflow-y-auto">
+          <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
             {children}
           </div>
         </main>
