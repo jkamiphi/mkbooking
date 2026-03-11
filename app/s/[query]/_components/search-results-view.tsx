@@ -8,7 +8,10 @@ import {
   useFaceSelection,
   type SelectedFace,
 } from "@/components/face-selection-context";
-import { PublicFaceCard, type PublicFaceCardData } from "@/components/public/public-face-card";
+import {
+  PublicFaceCard,
+  type PublicFaceCardData,
+} from "@/components/public/public-face-card";
 import { brandSoftButtonClass } from "@/components/public/brand-styles";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +63,9 @@ export function SearchResultsView({
   isAuthenticated,
   searchPath,
 }: SearchResultsViewProps) {
-  const [highlightedFaceId, setHighlightedFaceId] = useState<string | null>(null);
+  const [highlightedFaceId, setHighlightedFaceId] = useState<string | null>(
+    null,
+  );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
   const { toggleFace, isSelected } = useFaceSelection();
@@ -82,7 +87,11 @@ export function SearchResultsView({
     const card = cardRefs.current.get(highlightedFaceId);
     if (!card) return;
 
-    card.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    card.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
   }, [highlightedFaceId]);
 
   return (
@@ -95,7 +104,10 @@ export function SearchResultsView({
             {searchTerm ? (
               <span>
                 {" "}
-                para <span className="font-semibold text-mkmedia-blue">&quot;{searchTerm}&quot;</span>
+                para{" "}
+                <span className="font-semibold text-mkmedia-blue">
+                  &quot;{searchTerm}&quot;
+                </span>
               </span>
             ) : null}
           </p>
@@ -170,7 +182,9 @@ export function SearchResultsView({
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-mkmedia-blue/15">
                   <MapPin className="h-6 w-6 text-mkmedia-blue" />
                 </div>
-                <p className="text-sm font-semibold text-neutral-800">No se encontraron espacios</p>
+                <p className="text-sm font-semibold text-neutral-800">
+                  No se encontraron espacios
+                </p>
                 <p className="mt-1 text-xs text-neutral-600">
                   Intenta con otra búsqueda o filtros diferentes
                 </p>
@@ -211,7 +225,7 @@ export function SearchResultsView({
         </div>
       </div>
 
-      <div className="hidden border-l border-mkmedia-blue/15 bg-white lg:sticky lg:top-[108px] lg:block lg:h-[calc(100vh-108px)] lg:self-start lg:w-[45%] xl:w-[40%]">
+      <div className="hidden border-l border-mkmedia-blue/15 bg-white lg:sticky lg:top-[64px] lg:block lg:h-[calc(100vh-64px)] lg:self-start lg:w-[45%] xl:w-[40%]">
         <div className="h-full w-full border-l-4 border-l-mkmedia-yellow/70">
           <SearchMap
             markers={markers}

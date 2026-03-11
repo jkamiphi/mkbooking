@@ -23,6 +23,7 @@ interface PublicMarketplaceShellProps {
   headerActions?: React.ReactNode;
   sectionLabel?: string;
   sectionHint?: string;
+  showSectionBanner?: boolean;
   className?: string;
   contentClassName?: string;
   footerClassName?: string;
@@ -39,6 +40,7 @@ export function PublicMarketplaceShell({
   headerActions,
   sectionLabel = "MK MEDIA CATALOGO",
   sectionHint = "Explora espacios publicitarios en Panamá",
+  showSectionBanner = true,
   className,
   contentClassName,
   footerClassName,
@@ -117,14 +119,16 @@ export function PublicMarketplaceShell({
         </div>
       </header>
 
-      <div className="border-b border-mkmedia-blue/15 bg-linear-to-r from-mkmedia-blue/10 via-white to-mkmedia-yellow/20">
-        <div className="flex w-full flex-col gap-1 px-4 py-2.5 sm:px-6 lg:px-8 2xl:px-10">
-          <p className="text-xs uppercase tracking-[0.18em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
-            {sectionLabel}
-          </p>
-          <p className="text-xs text-neutral-600">{sectionHint}</p>
+      {showSectionBanner ? (
+        <div className="border-b border-mkmedia-blue/15 bg-linear-to-r from-mkmedia-blue/10 via-white to-mkmedia-yellow/20">
+          <div className="flex w-full flex-col gap-1 px-4 py-2.5 sm:px-6 lg:px-8 2xl:px-10">
+            <p className="text-xs uppercase tracking-[0.18em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
+              {sectionLabel}
+            </p>
+            <p className="text-xs text-neutral-600">{sectionHint}</p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className={cn("flex flex-1 flex-col", contentClassName)}>{children}</div>
       <HomeFooter

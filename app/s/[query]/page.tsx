@@ -195,8 +195,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           query={decodedQuery}
         />
       }
-      sectionLabel="MK MEDIA CATALOGO"
-      sectionHint="Búsqueda de espacios OOH para planificación de campañas"
+      showSectionBanner={false}
       contentClassName="flex flex-1 flex-col"
       footerClassName="mt-0"
     >

@@ -298,8 +298,7 @@ export default async function FaceDetailPage({
       backLabel="Resultados"
       contextLabel={location}
       contextMeta={`Cara ${face.asset.code}-${face.code}`}
-      sectionLabel="MK MEDIA CATALOGO"
-      sectionHint="Detalle completo de disponibilidad, especificaciones y reserva"
+      showSectionBanner={false}
       footerClassName="mt-0"
     >
       <main className="mx-auto w-full max-w-7xl px-5 pb-16 pt-8">
