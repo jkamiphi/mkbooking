@@ -44,6 +44,8 @@ import {
   getOrderOperationsSummary,
   getOrderTraceability,
 } from "@/lib/services/order-traceability";
+import { resolveEffectivePriceRuleMapForFaces } from "@/lib/services/catalog";
+import { listAccessibleOrganizationIdsForUser } from "@/lib/services/organization-access";
 
 function resolveOrderDays(fromDate: Date | null, toDate: Date | null) {
   if (!fromDate || !toDate) return 30;
@@ -186,9 +188,19 @@ export const ordersRouter = router({
 
       const days = resolveOrderDays(request.fromDate, request.toDate);
       let currency = "USD";
+      const priceRuleMap = await resolveEffectivePriceRuleMapForFaces(
+        request.assignments.map((assignment) => ({
+          id: assignment.faceId,
+          asset: {
+            zoneId: assignment.face.asset.zoneId,
+            structureTypeId: assignment.face.asset.structureTypeId,
+          },
+        })),
+        request.organizationId ?? undefined,
+      );
 
       const lineItemsData = request.assignments.map((assignment) => {
-        const priceRule = assignment.face.catalogFace?.priceRules[0];
+        const priceRule = priceRuleMap.get(assignment.faceId) ?? null;
         const dailyRate = priceRule ? Number(priceRule.priceDaily) : 0;
         const lineSubtotal = dailyRate * days;
         if (priceRule?.currency) currency = priceRule.currency;
@@ -254,6 +266,7 @@ export const ordersRouter = router({
           data: {
             campaignRequestId: request.id,
             organizationId: request.organizationId,
+            actingAgencyOrganizationId: request.actingAgencyOrganizationId,
             createdById: userProfile.id,
             clientName: request.contactName,
             clientEmail: request.contactEmail,
@@ -341,8 +354,7 @@ export const ordersRouter = router({
         include: { organizationRoles: true },
       });
 
-      const orgIds =
-        userProfile?.organizationRoles.map((r) => r.organizationId) || [];
+      const orgIds = await listAccessibleOrganizationIdsForUser(user.id);
 
       const where: Prisma.OrderWhereInput = {
         ...(status ? { status } : { status: { not: OrderStatus.DRAFT } }),

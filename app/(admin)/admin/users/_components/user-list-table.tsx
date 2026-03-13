@@ -206,8 +206,11 @@ export function UserListTable({
                             {profile.organizationRoles.length}
                           </span>{" "}
                           org(s)
-                          <p className="max-w-[160px] truncate text-xs">
-                            {profile.organizationRoles[0].organization.name}
+                          <p className="max-w-[220px] truncate text-xs">
+                            {profile.organizationRoles
+                              .slice(0, 2)
+                              .map((membership) => membership.organization.name)
+                              .join(", ")}
                           </p>
                         </div>
                       ) : (

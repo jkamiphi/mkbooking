@@ -3,16 +3,21 @@ import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import superjson from "superjson";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { parseOrganizationContextCookieHeader } from "@/lib/services/organization-access";
 
 export async function createContext(opts: FetchCreateContextFnOptions) {
   const session = await auth.api.getSession({
     headers: opts.req.headers,
   });
+  const activeOrganizationContextKey = parseOrganizationContextCookieHeader(
+    opts.req.headers.get("cookie"),
+  );
 
   return {
     db,
     session,
     user: session?.user ?? null,
+    activeOrganizationContextKey,
   };
 }
 
@@ -59,6 +64,7 @@ const isAuthed = t.middleware(({ ctx, next }) => {
   }
   return next({
     ctx: {
+      ...ctx,
       session: ctx.session,
       user: ctx.user,
     },
@@ -82,6 +88,7 @@ const isAdmin = t.middleware(async ({ ctx, next }) => {
 
   return next({
     ctx: {
+      ...ctx,
       session: ctx.session,
       user: ctx.user,
       systemRole,
@@ -106,6 +113,7 @@ const isCommercial = t.middleware(async ({ ctx, next }) => {
 
   return next({
     ctx: {
+      ...ctx,
       session: ctx.session,
       user: ctx.user,
       systemRole,
@@ -130,6 +138,7 @@ const isSalesReviewer = t.middleware(async ({ ctx, next }) => {
 
   return next({
     ctx: {
+      ...ctx,
       session: ctx.session,
       user: ctx.user,
       systemRole,
@@ -154,6 +163,7 @@ const isDesignReviewer = t.middleware(async ({ ctx, next }) => {
 
   return next({
     ctx: {
+      ...ctx,
       session: ctx.session,
       user: ctx.user,
       systemRole,
@@ -178,6 +188,7 @@ const isPrintOperator = t.middleware(async ({ ctx, next }) => {
 
   return next({
     ctx: {
+      ...ctx,
       session: ctx.session,
       user: ctx.user,
       systemRole,
@@ -229,6 +240,7 @@ const isInstaller = t.middleware(async ({ ctx, next }) => {
 
   return next({
     ctx: {
+      ...ctx,
       session: ctx.session,
       user: ctx.user,
       systemRole: profile.systemRole,
@@ -253,6 +265,7 @@ const isSuperAdmin = t.middleware(async ({ ctx, next }) => {
 
   return next({
     ctx: {
+      ...ctx,
       session: ctx.session,
       user: ctx.user,
       systemRole,

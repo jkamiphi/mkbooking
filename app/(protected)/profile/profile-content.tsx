@@ -5,6 +5,7 @@ import {
   Bell,
   Building2,
   Check,
+  Link2,
   Mail,
   PencilLine,
   Phone,
@@ -332,29 +333,55 @@ export function ProfileContent() {
               />
             </dl>
 
-            {currentProfile.organizationRoles.length > 0 ? (
+            {currentProfile.activeOrganizationContext ? (
+              <div className="rounded-2xl border border-mkmedia-blue/15 bg-mkmedia-blue/6 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+                  <Check className="h-4 w-4 text-mkmedia-blue" />
+                  Contexto activo
+                </div>
+                <p className="mt-2 text-sm font-semibold text-neutral-900">
+                  {currentProfile.activeOrganizationContext.organizationName}
+                </p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  {currentProfile.activeOrganizationContext.accessType === "DELEGATED"
+                    ? `Acceso delegado por ${currentProfile.activeOrganizationContext.viaOrganizationName}`
+                    : "Acceso directo"}
+                </p>
+              </div>
+            ) : null}
+
+            {currentProfile.organizationContexts.length > 0 ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
                   <Building2 className="h-4 w-4 text-[#0359A8]" />
-                  Organizaciones
+                  Contextos disponibles
                 </div>
                 <div className="space-y-2">
-                  {currentProfile.organizationRoles.map((membership) => (
+                  {currentProfile.organizationContexts.map((context) => (
                     <div
-                      key={membership.id}
+                      key={context.contextKey}
                       className="rounded-2xl border border-neutral-200/70 bg-neutral-50/70 px-4 py-3"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-neutral-900">
-                            {membership.organization.name}
+                            {context.organizationName}
                           </p>
-                          <p className="text-xs text-neutral-500">
-                            {membership.organization.organizationType}
-                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                            <span>{context.organizationType}</span>
+                            <span className="rounded-full bg-mkmedia-blue/8 px-2 py-0.5 font-semibold text-mkmedia-blue">
+                              {context.role}
+                            </span>
+                            {context.accessType === "DELEGATED" ? (
+                              <span className="inline-flex items-center gap-1 text-neutral-600">
+                                <Link2 className="h-3 w-3" />
+                                {context.viaOrganizationName}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                         <span className="rounded-full bg-[#0359A8]/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#0359A8]">
-                          {membership.role}
+                          {context.accessType}
                         </span>
                       </div>
                     </div>

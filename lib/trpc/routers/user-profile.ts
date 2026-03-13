@@ -18,12 +18,12 @@ import { NotificationType } from "@prisma/client";
 export const userProfileRouter = router({
   // Get the current user's profile without creating one
   current: protectedProcedure.query(async ({ ctx }) => {
-    return getUserProfileByUserId(ctx.user.id);
+    return getUserProfileByUserId(ctx.user.id, ctx.activeOrganizationContextKey);
   }),
 
   // Get the current user's profile (creates if doesn't exist)
   me: protectedProcedure.query(async ({ ctx }) => {
-    return getOrCreateUserProfile(ctx.user.id);
+    return getOrCreateUserProfile(ctx.user.id, ctx.activeOrganizationContextKey);
   }),
 
   // Get a profile by user ID
@@ -65,6 +65,7 @@ export const userProfileRouter = router({
         ctx.user.id,
         input.preferences,
         ctx.user.id,
+        ctx.activeOrganizationContextKey,
       );
     }),
 

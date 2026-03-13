@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Building2, CircleCheckBig, UserRound } from "lucide-react";
+import { ArrowLeft, Building2, CircleCheckBig, Link2, UserRound } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type CustomerType = "natural" | "business";
+type CustomerType = "natural" | "business" | "agency";
 
 const steps = ["Tipo de cuenta", "Datos", "Completar"] as const;
 
@@ -213,6 +213,9 @@ function BusinessForm({
   onSubmit,
   isLoading,
   error,
+  title,
+  description,
+  submitLabel,
 }: {
   onSubmit: (data: {
     legalName: string;
@@ -225,6 +228,9 @@ function BusinessForm({
   }) => void;
   isLoading: boolean;
   error: string | null;
+  title: string;
+  description: string;
+  submitLabel: string;
 }) {
   const [legalName, setLegalName] = useState("");
   const [tradeName, setTradeName] = useState("");
@@ -250,10 +256,8 @@ function BusinessForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1">
-        <p className="text-sm font-medium text-foreground">Datos de empresa</p>
-        <p className="text-sm text-muted-foreground">
-          Completa la información fiscal y de contacto de tu organización.
-        </p>
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
       {error ? (
@@ -352,7 +356,7 @@ function BusinessForm({
       </div>
 
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Configurando empresa..." : "Completar onboarding"}
+        {isLoading ? "Configurando organización..." : submitLabel}
       </Button>
     </form>
   );
@@ -389,7 +393,11 @@ function SuccessStep() {
 function getInitialCustomerType(): CustomerType | null {
   if (typeof window === "undefined") return null;
   const storedType = sessionStorage.getItem("onboarding_customer_type");
-  if (storedType === "natural" || storedType === "business") {
+  if (
+    storedType === "natural" ||
+    storedType === "business" ||
+    storedType === "agency"
+  ) {
     return storedType;
   }
   return null;
@@ -428,6 +436,17 @@ export function OnboardingContent() {
     },
   });
 
+  const registerAgency = trpc.organization.registerAgency.useMutation({
+    onSuccess: () => {
+      setCompleted(true);
+      setError(null);
+      sessionStorage.removeItem("onboarding_customer_type");
+    },
+    onError: (mutationError) => {
+      setError(mutationError.message);
+    },
+  });
+
   useEffect(() => {
     if (!loadingOrgs && organizations && organizations.length > 0) {
       router.push("/profile");
@@ -456,6 +475,19 @@ export function OnboardingContent() {
   }) {
     setError(null);
     registerBusiness.mutate(data);
+  }
+
+  function handleAgencySubmit(data: {
+    legalName: string;
+    tradeName?: string;
+    taxId: string;
+    dvCode?: string;
+    phone?: string;
+    email?: string;
+    industry?: string;
+  }) {
+    setError(null);
+    registerAgency.mutate(data);
   }
 
   function handleCustomerTypeSelect(type: CustomerType) {
@@ -516,10 +548,17 @@ export function OnboardingContent() {
                     />
                     <AccountTypeCard
                       title="Empresa / negocio"
-                      description="Perfil para empresas, agencias y organizaciones."
+                      description="Perfil para anunciantes, marcas y empresas con operación propia."
                       icon={<Building2 className="h-5 w-5" />}
                       selected={customerType === "business"}
                       onClick={() => handleCustomerTypeSelect("business")}
+                    />
+                    <AccountTypeCard
+                      title="Agencia"
+                      description="Perfil para agencias que operan marcas cliente y trabajan por contexto."
+                      icon={<Link2 className="h-5 w-5" />}
+                      selected={customerType === "agency"}
+                      onClick={() => handleCustomerTypeSelect("agency")}
                     />
                   </div>
                 </div>
@@ -538,6 +577,20 @@ export function OnboardingContent() {
                   onSubmit={handleBusinessSubmit}
                   isLoading={registerBusiness.isPending}
                   error={error}
+                  title="Datos de empresa"
+                  description="Completa la información fiscal y de contacto de tu organización anunciante."
+                  submitLabel="Completar onboarding"
+                />
+              ) : null}
+
+              {customerType === "agency" && !completed ? (
+                <BusinessForm
+                  onSubmit={handleAgencySubmit}
+                  isLoading={registerAgency.isPending}
+                  error={error}
+                  title="Datos de agencia"
+                  description="Registra la agencia y luego podrás vincular marcas cliente desde relaciones multi-organización."
+                  submitLabel="Crear agencia"
                 />
               ) : null}
 

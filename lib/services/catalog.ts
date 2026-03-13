@@ -254,7 +254,7 @@ function pickEffectiveRule<T extends { id: string; createdAt: Date }>({
   })[0];
 }
 
-type FacePricingContext = {
+export type FacePricingContext = {
   id: string;
   asset: {
     zoneId: string;
@@ -298,6 +298,26 @@ async function findActiveRulesForFaces(
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function resolveEffectivePriceRuleMapForFaces(
+  faces: FacePricingContext[],
+  organizationId?: string,
+) {
+  const rules = await findActiveRulesForFaces(faces, organizationId);
+
+  return new Map(
+    faces.map((face) => [
+      face.id,
+      pickEffectiveRule({
+        rules,
+        faceId: face.id,
+        zoneId: face.asset.zoneId,
+        structureTypeId: face.asset.structureTypeId,
+        organizationId: organizationId ?? undefined,
+      }),
+    ]),
+  );
 }
 
 function mapFacesWithEffectivePrice<T extends FacePricingContext>({

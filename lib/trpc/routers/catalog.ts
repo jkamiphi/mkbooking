@@ -56,6 +56,7 @@ import {
   updateCampaignService,
   updateCampaignServiceSchema,
 } from "@/lib/services/campaign-services";
+import { resolveActiveOrganizationContextForUser } from "@/lib/services/organization-access";
 
 const publicFaceListInputSchema = z
   .object({
@@ -202,6 +203,25 @@ export const catalogRouter = router({
     create: protectedProcedure
       .input(createCampaignRequestSchema)
       .mutation(async ({ ctx, input }) => {
+        const { activeContext } = await resolveActiveOrganizationContextForUser(
+          ctx.user.id,
+          ctx.activeOrganizationContextKey,
+        );
+
+        if (!activeContext) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Select an organization context before creating a request",
+          });
+        }
+
+        if (!activeContext.permissions.canCreateRequests) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Your active organization context cannot create requests",
+          });
+        }
+
         return createCampaignRequest(
           {
             ...input,
@@ -210,6 +230,7 @@ export const catalogRouter = router({
           },
           {
             createdByUserId: ctx.user?.id,
+            activeContextKey: ctx.activeOrganizationContextKey,
           }
         );
       }),

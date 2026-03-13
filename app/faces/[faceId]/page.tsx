@@ -138,8 +138,7 @@ export default async function FaceDetailPage({
     createServerTRPCCaller(),
   ]);
   const profile = session?.user?.id ? await caller.userProfile.current() : null;
-  const organizationId =
-    profile?.organizationRoles?.[0]?.organization?.id || undefined;
+  const organizationId = profile?.activeOrganizationContext?.organizationId;
 
   const detail = await caller.catalog.faces.publicDetail({
     faceId,

@@ -242,6 +242,11 @@ model Organization {
   campaignRequests  CampaignRequest[]
   orders            Order[]
   notifications     UserNotification[]
+  outgoingRelationships OrganizationRelationship[] @relation("OrganizationRelationshipSource")
+  incomingRelationships OrganizationRelationship[] @relation("OrganizationRelationshipTarget")
+  agencyCatalogHolds CatalogHold[] @relation("CatalogHoldActingAgency")
+  agencyCampaignRequests CampaignRequest[] @relation("CampaignRequestActingAgency")
+  agencyOrders      Order[] @relation("OrderActingAgency")
 
   @@index([organizationType])
   @@index([isActive])
@@ -265,6 +270,20 @@ enum OrganizationRole {
   CLIENT_VIEWER
 
   @@map("organization_role")
+}
+
+enum OrganizationRelationshipType {
+  AGENCY_CLIENT
+
+  @@map("organization_relationship_type")
+}
+
+enum OrganizationRelationshipStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+
+  @@map("organization_relationship_status")
 }
 
 model OrganizationMember {
@@ -298,6 +317,36 @@ model OrganizationMember {
   @@index([role])
   @@index([isActive])
   @@map("organization_member")
+}
+
+model OrganizationRelationship {
+  id String @id @default(cuid())
+
+  sourceOrganizationId String
+  targetOrganizationId String
+
+  relationshipType OrganizationRelationshipType
+  status           OrganizationRelationshipStatus @default(PENDING)
+
+  canCreateRequests Boolean @default(true)
+  canCreateOrders   Boolean @default(true)
+  canViewBilling    Boolean @default(false)
+  canManageContacts Boolean @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedBy   String?
+
+  sourceOrganization Organization @relation("OrganizationRelationshipSource", fields: [sourceOrganizationId], references: [id], onDelete: Cascade)
+  targetOrganization Organization @relation("OrganizationRelationshipTarget", fields: [targetOrganizationId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceOrganizationId, targetOrganizationId, relationshipType])
+  @@index([sourceOrganizationId])
+  @@index([targetOrganizationId])
+  @@index([relationshipType])
+  @@index([status])
+  @@map("organization_relationship")
 }
 
 // ============================================================================
@@ -719,6 +768,7 @@ model CatalogHold {
 
   faceId         String
   organizationId String?
+  actingAgencyOrganizationId String?
   createdById    String?
 
   status     CatalogHoldStatus @default(ACTIVE)
@@ -730,10 +780,12 @@ model CatalogHold {
 
   face         CatalogFace   @relation(fields: [faceId], references: [id], onDelete: Cascade)
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actingAgencyOrganization Organization? @relation("CatalogHoldActingAgency", fields: [actingAgencyOrganizationId], references: [id], onDelete: SetNull)
   createdBy    UserProfile?  @relation("CatalogHoldCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([faceId])
   @@index([organizationId])
+  @@index([actingAgencyOrganizationId])
   @@index([status])
   @@index([expiresAt])
   @@map("catalog_hold")
@@ -755,6 +807,7 @@ model CampaignRequest {
   contactPhone String?
 
   organizationId String?
+  actingAgencyOrganizationId String?
   createdById    String?
 
   status       CampaignRequestStatus @default(NEW)
@@ -767,6 +820,7 @@ model CampaignRequest {
   zone          Zone?                           @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   structureType StructureType?                  @relation(fields: [structureTypeId], references: [id], onDelete: SetNull)
   organization  Organization?                   @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actingAgencyOrganization Organization?        @relation("CampaignRequestActingAgency", fields: [actingAgencyOrganizationId], references: [id], onDelete: SetNull)
   createdBy     UserProfile?                    @relation("CampaignRequestCreator", fields: [createdById], references: [id], onDelete: SetNull)
   resolvedBy    UserProfile?                    @relation("CampaignRequestResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
   assignments   CampaignRequestFaceAssignment[]
@@ -777,6 +831,7 @@ model CampaignRequest {
   @@index([zoneId])
   @@index([structureTypeId])
   @@index([organizationId])
+  @@index([actingAgencyOrganizationId])
   @@index([createdById])
   @@index([createdAt])
   @@map("campaign_request")
@@ -1001,6 +1056,7 @@ model Order {
 
   // Information
   organizationId String?
+  actingAgencyOrganizationId String?
   createdById    String?
   clientName     String?
   clientEmail    String?
@@ -1038,6 +1094,7 @@ model Order {
   // Relations
   campaignRequest   CampaignRequest?        @relation(fields: [campaignRequestId], references: [id], onDelete: SetNull)
   organization      Organization?           @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actingAgencyOrganization Organization?    @relation("OrderActingAgency", fields: [actingAgencyOrganizationId], references: [id], onDelete: SetNull)
   createdBy         UserProfile?            @relation("OrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
   companyConfirmBy  UserProfile?            @relation("OrderConfirmer", fields: [companyConfirmedById], references: [id], onDelete: SetNull)
   salesReviewBy     UserProfile?            @relation("OrderSalesReviewer", fields: [salesReviewById], references: [id], onDelete: SetNull)
@@ -1056,6 +1113,7 @@ model Order {
 
   @@index([status])
   @@index([organizationId])
+  @@index([actingAgencyOrganizationId])
   @@index([createdById])
   @@index([campaignRequestId])
   @@index([salesReviewStatus])

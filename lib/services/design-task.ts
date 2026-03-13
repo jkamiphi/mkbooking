@@ -16,6 +16,7 @@ import {
   NotificationType,
   sendPreparedNotificationEmails,
 } from "@/lib/services/notifications";
+import { listAccessibleOrganizationIdsForUser } from "@/lib/services/organization-access";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -1092,19 +1093,14 @@ export async function getDesignTaskByOrder(orderId: string) {
 export async function canUserAccessOrder(userId: string, orderId: string) {
   const profile = await db.userProfile.findUnique({
     where: { userId },
-    include: {
-      organizationRoles: {
-        where: { isActive: true },
-        select: { organizationId: true },
-      },
-    },
+    select: { id: true },
   });
 
   if (!profile) {
     return false;
   }
 
-  const orgIds = profile.organizationRoles.map((role) => role.organizationId);
+  const orgIds = await listAccessibleOrganizationIdsForUser(userId);
   const orderAccessFilters: Prisma.OrderWhereInput[] = [
     { createdById: profile.id },
   ];

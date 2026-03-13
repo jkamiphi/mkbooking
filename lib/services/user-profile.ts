@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { NotificationType, Prisma } from "@prisma/client";
 import { z } from "zod";
+import { resolveActiveOrganizationContextForUser } from "@/lib/services/organization-access";
 
 // ============================================================================
 // Schemas
@@ -88,12 +89,35 @@ export async function ensureUserNotificationPreferences(
   return result.count;
 }
 
+async function enrichUserProfileWithOrganizationContext<
+  T extends { userId: string } | null,
+>(profile: T, activeContextKey?: string | null) {
+  if (!profile) {
+    return null;
+  }
+
+  const { contexts, activeContext } =
+    await resolveActiveOrganizationContextForUser(
+      profile.userId,
+      activeContextKey,
+    );
+
+  return {
+    ...profile,
+    organizationContexts: contexts,
+    activeOrganizationContext: activeContext,
+  };
+}
+
 // ============================================================================
 // Service Functions
 // ============================================================================
 
-export async function getUserProfileByUserId(userId: string) {
-  return db.userProfile.findUnique({
+export async function getUserProfileByUserId(
+  userId: string,
+  activeContextKey?: string | null,
+) {
+  const profile = await db.userProfile.findUnique({
     where: { userId },
     include: {
       user: {
@@ -122,6 +146,8 @@ export async function getUserProfileByUserId(userId: string) {
       },
     },
   });
+
+  return enrichUserProfileWithOrganizationContext(profile, activeContextKey);
 }
 
 export async function getUserProfileById(id: string) {
@@ -205,12 +231,15 @@ export async function updateUserProfile(
   });
 }
 
-export async function getOrCreateUserProfile(userId: string) {
-  let profile = await getUserProfileByUserId(userId);
+export async function getOrCreateUserProfile(
+  userId: string,
+  activeContextKey?: string | null,
+) {
+  let profile = await getUserProfileByUserId(userId, activeContextKey);
 
   if (!profile) {
     await createUserProfile({ userId });
-    profile = await getUserProfileByUserId(userId);
+    profile = await getUserProfileByUserId(userId, activeContextKey);
   }
 
   if (!profile) {
@@ -224,7 +253,7 @@ export async function getOrCreateUserProfile(userId: string) {
   });
 
   if (ensuredCount > 0) {
-    profile = await getUserProfileByUserId(userId);
+    profile = await getUserProfileByUserId(userId, activeContextKey);
   }
 
   return profile;
@@ -238,6 +267,7 @@ export async function updateUserNotificationPreferences(
     inAppEnabled: boolean;
   }>,
   updatedBy?: string,
+  activeContextKey?: string | null,
 ) {
   return db.$transaction(async (tx) => {
     const profile = await tx.userProfile.findUnique({
@@ -289,7 +319,7 @@ export async function updateUserNotificationPreferences(
       data: { updatedBy },
     });
 
-    return tx.userProfile.findUnique({
+    const updatedProfile = await tx.userProfile.findUnique({
       where: { userId },
       include: {
         user: {
@@ -318,6 +348,11 @@ export async function updateUserNotificationPreferences(
         },
       },
     });
+
+    return enrichUserProfileWithOrganizationContext(
+      updatedProfile,
+      activeContextKey,
+    );
   });
 }
 

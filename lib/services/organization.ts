@@ -1,5 +1,11 @@
 import { db } from "@/lib/db";
-import { LegalEntityType, OrganizationType, OrganizationRole, Prisma } from "@prisma/client";
+import {
+  LegalEntityType,
+  OrganizationRelationshipStatus,
+  OrganizationType,
+  OrganizationRole,
+  Prisma,
+} from "@prisma/client";
 import { z } from "zod";
 
 // ============================================================================
@@ -69,6 +75,24 @@ export const businessRegistrationSchema = z.object({
 
 export type NaturalPersonRegistrationInput = z.infer<typeof naturalPersonRegistrationSchema>;
 export type BusinessRegistrationInput = z.infer<typeof businessRegistrationSchema>;
+
+export const organizationRelationshipPermissionsSchema = z.object({
+  canCreateRequests: z.boolean().optional(),
+  canCreateOrders: z.boolean().optional(),
+  canViewBilling: z.boolean().optional(),
+  canManageContacts: z.boolean().optional(),
+});
+
+export const createAgencyClientRelationshipSchema = z.object({
+  agencyOrganizationId: z.string().min(1),
+  advertiserOrganizationId: z.string().min(1),
+  status: z.nativeEnum(OrganizationRelationshipStatus).optional(),
+  permissions: organizationRelationshipPermissionsSchema.optional(),
+});
+
+export type CreateAgencyClientRelationshipInput = z.infer<
+  typeof createAgencyClientRelationshipSchema
+>;
 
 // ============================================================================
 // Service Functions
@@ -241,6 +265,27 @@ export async function registerBusiness(
   );
 }
 
+export async function registerAgency(
+  input: BusinessRegistrationInput,
+  userProfileId: string
+) {
+  return createOrganizationWithOwner(
+    {
+      name: input.tradeName || input.legalName,
+      legalName: input.legalName,
+      tradeName: input.tradeName,
+      organizationType: OrganizationType.AGENCY,
+      legalEntityType: LegalEntityType.LEGAL_ENTITY,
+      taxId: input.taxId,
+      dvCode: input.dvCode,
+      phone: input.phone,
+      email: input.email,
+      industry: input.industry,
+    },
+    userProfileId
+  );
+}
+
 export async function updateOrganization(
   id: string,
   input: UpdateOrganizationInput,
@@ -292,6 +337,123 @@ export async function removeOrganizationMember(memberId: string) {
   return db.organizationMember.update({
     where: { id: memberId },
     data: { isActive: false },
+  });
+}
+
+function resolveRelationshipPermissions(
+  permissions?: CreateAgencyClientRelationshipInput["permissions"]
+) {
+  return {
+    canCreateRequests: permissions?.canCreateRequests ?? true,
+    canCreateOrders: permissions?.canCreateOrders ?? true,
+    canViewBilling: permissions?.canViewBilling ?? false,
+    canManageContacts: permissions?.canManageContacts ?? false,
+  };
+}
+
+export async function createAgencyClientRelationship(
+  input: CreateAgencyClientRelationshipInput,
+  createdByProfileId: string
+) {
+  if (input.agencyOrganizationId === input.advertiserOrganizationId) {
+    throw new Error("La agencia y el cliente no pueden ser la misma organización.");
+  }
+
+  const [agencyOrganization, advertiserOrganization] = await Promise.all([
+    db.organization.findUnique({
+      where: { id: input.agencyOrganizationId },
+      select: {
+        id: true,
+        isActive: true,
+        organizationType: true,
+      },
+    }),
+    db.organization.findUnique({
+      where: { id: input.advertiserOrganizationId },
+      select: {
+        id: true,
+        isActive: true,
+        organizationType: true,
+      },
+    }),
+  ]);
+
+  if (!agencyOrganization || !agencyOrganization.isActive) {
+    throw new Error("La organización agencia no existe o está inactiva.");
+  }
+
+  if (agencyOrganization.organizationType !== OrganizationType.AGENCY) {
+    throw new Error("La organización origen debe ser una agencia.");
+  }
+
+  if (!advertiserOrganization || !advertiserOrganization.isActive) {
+    throw new Error("La organización cliente no existe o está inactiva.");
+  }
+
+  if (advertiserOrganization.organizationType !== OrganizationType.ADVERTISER) {
+    throw new Error("La organización destino debe ser un anunciante.");
+  }
+
+  const permissions = resolveRelationshipPermissions(input.permissions);
+
+  return db.organizationRelationship.upsert({
+    where: {
+      sourceOrganizationId_targetOrganizationId_relationshipType: {
+        sourceOrganizationId: input.agencyOrganizationId,
+        targetOrganizationId: input.advertiserOrganizationId,
+        relationshipType: "AGENCY_CLIENT",
+      },
+    },
+    create: {
+      sourceOrganizationId: input.agencyOrganizationId,
+      targetOrganizationId: input.advertiserOrganizationId,
+      relationshipType: "AGENCY_CLIENT",
+      status: input.status ?? OrganizationRelationshipStatus.ACTIVE,
+      createdById: createdByProfileId,
+      updatedBy: createdByProfileId,
+      ...permissions,
+    },
+    update: {
+      status: input.status ?? OrganizationRelationshipStatus.ACTIVE,
+      updatedBy: createdByProfileId,
+      ...permissions,
+    },
+    include: {
+      sourceOrganization: true,
+      targetOrganization: true,
+    },
+  });
+}
+
+export async function listAgencyClients(agencyOrganizationId: string) {
+  return db.organizationRelationship.findMany({
+    where: {
+      sourceOrganizationId: agencyOrganizationId,
+      relationshipType: "AGENCY_CLIENT",
+    },
+    orderBy: [
+      { status: "asc" },
+      { targetOrganization: { name: "asc" } },
+    ],
+    include: {
+      targetOrganization: true,
+    },
+  });
+}
+
+export async function listClientAgencies(advertiserOrganizationId: string) {
+  return db.organizationRelationship.findMany({
+    where: {
+      targetOrganizationId: advertiserOrganizationId,
+      relationshipType: "AGENCY_CLIENT",
+    },
+    orderBy: [
+      { status: "asc" },
+      { sourceOrganization: { name: "asc" } },
+    ],
+    include: {
+      sourceOrganization: true,
+    },
   });
 }
 

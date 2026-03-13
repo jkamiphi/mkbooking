@@ -13,6 +13,10 @@ import {
   reopenOrderSalesReview,
   resolveSalesReviewActor,
 } from "@/lib/services/sales-review";
+import {
+  listAccessibleOrganizationIdsForUser,
+  resolveActiveOrganizationContextForUser,
+} from "@/lib/services/organization-access";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -204,14 +208,22 @@ function faceMatchesRequestCriteria(request: { zoneId?: string | null; structure
 
 export async function createCampaignRequest(
   input: CreateCampaignRequestInput,
-  options?: { createdByUserId?: string }
+  options?: { createdByUserId?: string; activeContextKey?: string | null }
 ) {
   const profile = await resolveUserProfile(options?.createdByUserId);
+  const { activeContext } = options?.createdByUserId
+    ? await resolveActiveOrganizationContextForUser(
+        options.createdByUserId,
+        options.activeContextKey,
+      )
+    : { activeContext: null };
   const resolvedDates = normalizeDateRange(input.fromDate, input.toDate);
-  const profileOrganizationId = profile?.organizationRoles?.[0]?.organization?.isActive
-    ? profile.organizationRoles[0].organizationId
-    : null;
-  const organizationId = input.organizationId || profileOrganizationId || null;
+  const organizationId =
+    input.organizationId || activeContext?.organizationId || null;
+  const actingAgencyOrganizationId =
+    activeContext?.accessType === "DELEGATED"
+      ? activeContext.viaOrganizationId
+      : null;
 
   const profileName =
     [profile?.firstName, profile?.lastName]
@@ -239,6 +251,7 @@ export async function createCampaignRequest(
         contactEmail: input.contactEmail || profileEmail || null,
         contactPhone: input.contactPhone || null,
         organizationId: organizationId || null,
+        actingAgencyOrganizationId: actingAgencyOrganizationId || null,
         createdById: profile?.id || null,
         status: "NEW",
       },
@@ -306,6 +319,7 @@ export async function createCampaignRequest(
       zone: { include: { province: true } },
       structureType: true,
       organization: true,
+      actingAgencyOrganization: true,
       assignments: {
         include: {
           face: {
@@ -334,6 +348,7 @@ const requestInclude = {
   zone: { include: { province: true } },
   structureType: true,
   organization: true,
+  actingAgencyOrganization: true,
   createdBy: {
     include: {
       user: {
@@ -406,8 +421,9 @@ export async function listCampaignRequestsForUser(
   options: { userId: string; userEmail?: string | null }
 ) {
   const profile = await resolveUserProfile(options.userId);
-  const ownershipFilters = buildCampaignRequestOwnershipFilters(
+  const ownershipFilters = await buildCampaignRequestOwnershipFilters(
     profile,
+    options.userId,
     options.userEmail
   );
 
@@ -442,13 +458,12 @@ export async function listCampaignRequestsForUser(
   };
 }
 
-function buildCampaignRequestOwnershipFilters(
+async function buildCampaignRequestOwnershipFilters(
   profile: Awaited<ReturnType<typeof resolveUserProfile>>,
+  userId: string,
   userEmail?: string | null
 ) {
-  const activeOrganizationIds = (profile?.organizationRoles ?? [])
-    .filter((membership) => membership.organization.isActive)
-    .map((membership) => membership.organizationId);
+  const activeOrganizationIds = await listAccessibleOrganizationIdsForUser(userId);
 
   return [
     profile?.id ? { createdById: profile.id } : null,
@@ -475,8 +490,9 @@ export async function getCampaignRequestByIdForUser(
   options: { userId: string; userEmail?: string | null }
 ) {
   const profile = await resolveUserProfile(options.userId);
-  const ownershipFilters = buildCampaignRequestOwnershipFilters(
+  const ownershipFilters = await buildCampaignRequestOwnershipFilters(
     profile,
+    options.userId,
     options.userEmail
   );
 
@@ -754,6 +770,7 @@ export async function confirmCampaignRequest(
         data: {
           faceId: catalogFace.id,
           organizationId: request.organizationId,
+          actingAgencyOrganizationId: request.actingAgencyOrganizationId,
           createdById: profile?.id || null,
           status: "ACTIVE",
           expiresAt,

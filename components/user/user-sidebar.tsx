@@ -17,6 +17,7 @@ import {
 import { signOut } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import { OrganizationContextSelector } from "@/components/organization/organization-context-selector";
 import {
   Sheet,
   SheetContent,
@@ -156,6 +157,9 @@ export function UserSidebar({ user }: UserSidebarProps) {
                 MK MEDIA
               </p>
             </Link>
+            <div className="mt-4">
+              <OrganizationContextSelector variant="sidebar" />
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-5">
@@ -347,6 +351,9 @@ export function UserSidebar({ user }: UserSidebarProps) {
                     <p className="truncate text-xs text-neutral-500">{user.email}</p>
                   </div>
                 </div>
+              </div>
+              <div className="mt-4">
+                <OrganizationContextSelector variant="sidebar" />
               </div>
             </div>
 

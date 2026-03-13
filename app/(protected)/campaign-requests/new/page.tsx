@@ -81,8 +81,7 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
   }> = [];
 
   if (faceIds.length > 0) {
-    const organizationId =
-      profile?.organizationRoles?.[0]?.organization?.id || undefined;
+    const organizationId = profile?.activeOrganizationContext?.organizationId;
     const catalog = await caller.catalog.faces.publicList({
       isPublished: true,
       take: 100,

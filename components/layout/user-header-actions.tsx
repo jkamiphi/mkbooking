@@ -18,6 +18,7 @@ import { signOut } from "@/lib/auth-client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
+import { OrganizationContextSelector } from "@/components/organization/organization-context-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,6 +72,7 @@ export function UserHeaderActions({ user }: UserHeaderActionsProps) {
 
   return (
     <div className="flex items-center gap-2">
+      <OrganizationContextSelector />
       <Button
         asChild
         variant="ghost"

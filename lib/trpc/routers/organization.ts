@@ -7,10 +7,15 @@ import {
   updateOrganization,
   registerNaturalPerson,
   registerBusiness,
+  registerAgency,
   listOrganizations,
   searchOrganizations,
   checkCedulaExists,
   checkTaxIdExists,
+  createAgencyClientRelationship,
+  createAgencyClientRelationshipSchema,
+  listAgencyClients,
+  listClientAgencies,
   createOrganizationSchema,
   updateOrganizationSchema,
   naturalPersonRegistrationSchema,
@@ -18,7 +23,16 @@ import {
 } from "@/lib/services/organization";
 import { getOrCreateUserProfile } from "@/lib/services/user-profile";
 import { TRPCError } from "@trpc/server";
-import { LegalEntityType, OrganizationType } from "@prisma/client";
+import {
+  LegalEntityType,
+  OrganizationRelationshipStatus,
+  OrganizationType,
+} from "@prisma/client";
+import {
+  getDirectOrganizationMembership,
+  listAccessibleOrganizationContextsForUser,
+  resolveActiveOrganizationContextForUser,
+} from "@/lib/services/organization-access";
 
 export const organizationRouter = router({
   // Get organization by ID
@@ -37,7 +51,10 @@ export const organizationRouter = router({
 
   // Get current user's organizations
   myOrganizations: protectedProcedure.query(async ({ ctx }) => {
-    const profile = await getOrCreateUserProfile(ctx.user.id);
+    const profile = await getOrCreateUserProfile(
+      ctx.user.id,
+      ctx.activeOrganizationContextKey,
+    );
     if (!profile) {
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -47,11 +64,21 @@ export const organizationRouter = router({
     return getOrganizationsByUserProfileId(profile.id);
   }),
 
+  myContexts: protectedProcedure.query(async ({ ctx }) => {
+    return resolveActiveOrganizationContextForUser(
+      ctx.user.id,
+      ctx.activeOrganizationContextKey,
+    );
+  }),
+
   // Create a new organization
   create: protectedProcedure
     .input(createOrganizationSchema)
     .mutation(async ({ ctx, input }) => {
-      const profile = await getOrCreateUserProfile(ctx.user.id);
+      const profile = await getOrCreateUserProfile(
+        ctx.user.id,
+        ctx.activeOrganizationContextKey,
+      );
       if (!profile) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -87,7 +114,10 @@ export const organizationRouter = router({
   registerNaturalPerson: protectedProcedure
     .input(naturalPersonRegistrationSchema)
     .mutation(async ({ ctx, input }) => {
-      const profile = await getOrCreateUserProfile(ctx.user.id);
+      const profile = await getOrCreateUserProfile(
+        ctx.user.id,
+        ctx.activeOrganizationContextKey,
+      );
       if (!profile) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -111,7 +141,10 @@ export const organizationRouter = router({
   registerBusiness: protectedProcedure
     .input(businessRegistrationSchema)
     .mutation(async ({ ctx, input }) => {
-      const profile = await getOrCreateUserProfile(ctx.user.id);
+      const profile = await getOrCreateUserProfile(
+        ctx.user.id,
+        ctx.activeOrganizationContextKey,
+      );
       if (!profile) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -131,6 +164,31 @@ export const organizationRouter = router({
       return registerBusiness(input, profile.id);
     }),
 
+  registerAgency: protectedProcedure
+    .input(businessRegistrationSchema)
+    .mutation(async ({ ctx, input }) => {
+      const profile = await getOrCreateUserProfile(
+        ctx.user.id,
+        ctx.activeOrganizationContextKey,
+      );
+      if (!profile) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User profile not found",
+        });
+      }
+
+      const exists = await checkTaxIdExists(input.taxId);
+      if (exists) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "An organization with this tax ID already exists",
+        });
+      }
+
+      return registerAgency(input, profile.id);
+    }),
+
   // Update organization
   update: protectedProcedure
     .input(
@@ -140,7 +198,10 @@ export const organizationRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const profile = await getOrCreateUserProfile(ctx.user.id);
+      const profile = await getOrCreateUserProfile(
+        ctx.user.id,
+        ctx.activeOrganizationContextKey,
+      );
       if (!profile) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -163,6 +224,140 @@ export const organizationRouter = router({
       }
 
       return updateOrganization(input.id, input.data, profile.id);
+    }),
+
+  createAgencyClientRelationship: protectedProcedure
+    .input(createAgencyClientRelationshipSchema)
+    .mutation(async ({ ctx, input }) => {
+      const profile = await getOrCreateUserProfile(
+        ctx.user.id,
+        ctx.activeOrganizationContextKey,
+      );
+      if (!profile) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User profile not found",
+        });
+      }
+
+      const agencyMembership = await getDirectOrganizationMembership(
+        ctx.user.id,
+        input.agencyOrganizationId,
+      );
+
+      if (
+        !agencyMembership ||
+        !["OWNER", "ADMIN"].includes(agencyMembership.role)
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You need direct admin access to the agency",
+        });
+      }
+
+      const advertiserAccess = await ctx.db.organization.findFirst({
+        where: {
+          id: input.advertiserOrganizationId,
+          isActive: true,
+          organizationType: OrganizationType.ADVERTISER,
+          OR: [
+            { createdById: profile.id },
+            {
+              members: {
+                some: {
+                  userProfileId: profile.id,
+                  isActive: true,
+                  role: { in: ["OWNER", "ADMIN"] },
+                },
+              },
+            },
+          ],
+        },
+        select: { id: true },
+      });
+
+      if (!advertiserAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You need direct or owner access to the advertiser organization",
+        });
+      }
+
+      try {
+        return await createAgencyClientRelationship(input, profile.id);
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unable to create agency-client relationship",
+        });
+      }
+    }),
+
+  agencyClients: protectedProcedure
+    .input(
+      z.object({
+        agencyOrganizationId: z.string().min(1),
+        status: z.nativeEnum(OrganizationRelationshipStatus).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const membership = await getDirectOrganizationMembership(
+        ctx.user.id,
+        input.agencyOrganizationId,
+      );
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have access to this agency",
+        });
+      }
+
+      const relationships = await listAgencyClients(input.agencyOrganizationId);
+
+      if (!input.status) {
+        return relationships;
+      }
+
+      return relationships.filter(
+        (relationship) => relationship.status === input.status,
+      );
+    }),
+
+  clientAgencies: protectedProcedure
+    .input(
+      z.object({
+        advertiserOrganizationId: z.string().min(1),
+        status: z.nativeEnum(OrganizationRelationshipStatus).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const accessibleContexts = await listAccessibleOrganizationContextsForUser(
+        ctx.user.id,
+      );
+      const hasAccess = accessibleContexts.some(
+        (context) => context.organizationId === input.advertiserOrganizationId,
+      );
+
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have access to this advertiser",
+        });
+      }
+
+      const relationships = await listClientAgencies(input.advertiserOrganizationId);
+
+      if (!input.status) {
+        return relationships;
+      }
+
+      return relationships.filter(
+        (relationship) => relationship.status === input.status,
+      );
     }),
 
   // List organizations (for admin)

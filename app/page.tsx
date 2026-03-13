@@ -54,8 +54,7 @@ export default async function Home({
   const typeId = getParam(searchParams?.type) || undefined;
 
   const profile = session?.user?.id ? await caller.userProfile.current() : null;
-  const organizationId =
-    profile?.organizationRoles?.[0]?.organization?.id || undefined;
+  const organizationId = profile?.activeOrganizationContext?.organizationId;
 
   const [catalog, structureTypes, zones] = await Promise.all([
     caller.catalog.faces.publicList({
