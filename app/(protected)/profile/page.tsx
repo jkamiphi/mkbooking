@@ -13,7 +13,7 @@ export default function ProfilePage() {
           Mi perfil
         </h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Administra tu información personal y preferencias
+          Administra tu informacion personal, tu organizacion activa y tus accesos
         </p>
       </div>
       <ProfileContent />

@@ -8,6 +8,11 @@ import {
 export const ORGANIZATION_CONTEXT_COOKIE_NAME = "mk_active_org_ctx";
 
 export type OrganizationAccessType = "DIRECT" | "DELEGATED";
+export type OrganizationContextDisplayCategory =
+  | "OWN_BRAND"
+  | "OWN_AGENCY"
+  | "DELEGATED_BRAND"
+  | "DIRECT_ACCESS";
 
 export interface OrganizationContextPermissions {
   canCreateRequests: boolean;
@@ -28,6 +33,10 @@ export interface AccessibleOrganizationContext {
   viaOrganizationType: OrganizationType | null;
   role: OrganizationRole;
   permissions: OrganizationContextPermissions;
+  displayCategory: OrganizationContextDisplayCategory;
+  displayLabel: string;
+  displayMeta: string;
+  isOwnedWorkspace: boolean;
 }
 
 export type OrganizationPermissionKey = keyof OrganizationContextPermissions;
@@ -194,6 +203,56 @@ function buildDelegatedPermissions(
   });
 }
 
+function resolveContextDisplayMetadata(input: {
+  accessType: OrganizationAccessType;
+  organizationType: OrganizationType;
+  role: OrganizationRole;
+  viaOrganizationName: string | null;
+}) {
+  const isOwnedWorkspace =
+    input.accessType === "DIRECT" && input.role === OrganizationRole.OWNER;
+
+  if (
+    input.accessType === "DIRECT" &&
+    input.organizationType === OrganizationType.ADVERTISER &&
+    isOwnedWorkspace
+  ) {
+    return {
+      displayCategory: "OWN_BRAND" as const,
+      displayMeta: "Propio",
+      isOwnedWorkspace,
+    };
+  }
+
+  if (
+    input.accessType === "DIRECT" &&
+    input.organizationType === OrganizationType.AGENCY &&
+    isOwnedWorkspace
+  ) {
+    return {
+      displayCategory: "OWN_AGENCY" as const,
+      displayMeta: "Agencia propia",
+      isOwnedWorkspace,
+    };
+  }
+
+  if (input.accessType === "DELEGATED") {
+    return {
+      displayCategory: "DELEGATED_BRAND" as const,
+      displayMeta: input.viaOrganizationName
+        ? `Via ${input.viaOrganizationName}`
+        : "Acceso delegado",
+      isOwnedWorkspace: false,
+    };
+  }
+
+  return {
+    displayCategory: "DIRECT_ACCESS" as const,
+    displayMeta: "Acceso directo compartido",
+    isOwnedWorkspace,
+  };
+}
+
 function sortOrganizationContexts(
   contexts: AccessibleOrganizationContext[],
 ) {
@@ -251,6 +310,12 @@ export async function listAccessibleOrganizationContextsForUser(userId: string) 
   }
 
   const directContexts = profile.organizationRoles.map((membership) => ({
+    ...resolveContextDisplayMetadata({
+      accessType: "DIRECT",
+      organizationType: membership.organization.organizationType,
+      role: membership.role,
+      viaOrganizationName: null,
+    }),
     contextKey: createOrganizationContextKey({
       accessType: "DIRECT",
       organizationId: membership.organizationId,
@@ -266,6 +331,7 @@ export async function listAccessibleOrganizationContextsForUser(userId: string) 
     viaOrganizationType: null,
     role: membership.role,
     permissions: directPermissionMatrix[membership.role],
+    displayLabel: membership.organization.name,
   }));
 
   const agencyMemberships = profile.organizationRoles.filter(
@@ -329,6 +395,12 @@ export async function listAccessibleOrganizationContextsForUser(userId: string) 
     }
 
     delegatedContexts.push({
+      ...resolveContextDisplayMetadata({
+        accessType: "DELEGATED",
+        organizationType: relationship.targetOrganization.organizationType,
+        role: agencyMembership.role,
+        viaOrganizationName: agencyMembership.sourceOrganizationName,
+      }),
       contextKey: createOrganizationContextKey({
         accessType: "DELEGATED",
         organizationId: relationship.targetOrganizationId,
@@ -347,6 +419,7 @@ export async function listAccessibleOrganizationContextsForUser(userId: string) 
         agencyMembership.role,
         relationship,
       ),
+      displayLabel: relationship.targetOrganization.name,
     });
   }
 
@@ -358,10 +431,18 @@ export async function resolveActiveOrganizationContextForUser(
   requestedContextKey?: string | null,
 ) {
   const contexts = await listAccessibleOrganizationContextsForUser(userId);
+  const hasAccessibleContexts = contexts.length > 0;
+  const hasDirectOrganizations = contexts.some(
+    (context) => context.accessType === "DIRECT",
+  );
   if (contexts.length === 0) {
     return {
       contexts,
       activeContext: null,
+      hasAccessibleContexts,
+      hasDirectOrganizations,
+      needsStarterSetup: true,
+      canSkipStarterSetup: false,
     };
   }
 
@@ -372,6 +453,10 @@ export async function resolveActiveOrganizationContextForUser(
   return {
     contexts,
     activeContext,
+    hasAccessibleContexts,
+    hasDirectOrganizations,
+    needsStarterSetup: false,
+    canSkipStarterSetup: true,
   };
 }
 

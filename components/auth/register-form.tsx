@@ -3,106 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Building2, ChevronLeft, CircleCheckBig, UserRound } from "lucide-react";
 import { signUp } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
 import { AuthBrand, AuthHomeLink } from "@/components/auth/auth-brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type CustomerType = "natural" | "business" | null;
-
-const steps = ["Tipo de cuenta", "Credenciales"] as const;
-
-interface StepIndicatorProps {
-  currentStep: number;
-}
-
-function StepIndicator({ currentStep }: StepIndicatorProps) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        {steps.map((label, index) => (
-          <div key={label} className="flex flex-col items-center gap-1">
-            <div
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
-                index <= currentStep
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-muted text-muted-foreground"
-              )}
-            >
-              {index + 1}
-            </div>
-            <p
-              className={cn(
-                "text-xs font-medium",
-                index <= currentStep ? "text-foreground" : "text-muted-foreground"
-              )}
-            >
-              {label}
-            </p>
-          </div>
-        ))}
-      </div>
-      <div className="h-1 rounded-full bg-muted">
-        <div
-          className="h-1 rounded-full bg-primary transition-all"
-          style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function AccountTypeCard({
-  title,
-  description,
-  icon,
-  selected,
-  onClick,
-}: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full rounded-lg border p-4 text-left transition-colors",
-        selected
-          ? "border-primary bg-primary/5"
-          : "border-border hover:border-primary/50 hover:bg-muted/40"
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className={cn(
-            "rounded-md p-2",
-            selected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
-          )}
-        >
-          {icon}
-        </div>
-        <div className="space-y-1">
-          <p className="font-semibold text-foreground">{title}</p>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
-    </button>
-  );
-}
-
 export function RegisterForm() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
-  const [customerType, setCustomerType] = useState<CustomerType>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -113,11 +22,6 @@ export function RegisterForm() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
-
-    if (!customerType) {
-      setError("Selecciona un tipo de cuenta para continuar.");
-      return;
-    }
 
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden.");
@@ -143,11 +47,13 @@ export function RegisterForm() {
         return;
       }
 
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("onboarding_customer_type", customerType);
-      }
+      const redirectResponse = await fetch("/api/auth/post-login-path", {
+        method: "GET",
+      });
+      const redirectData = (await redirectResponse.json()) as { path?: string };
+      const nextPath = redirectData.path || "/onboarding";
 
-      router.push("/onboarding");
+      router.push(nextPath);
       router.refresh();
     } catch {
       setError("Ocurrió un error inesperado.");
@@ -160,172 +66,117 @@ export function RegisterForm() {
     <div className="mx-auto w-full max-w-3xl">
       <AuthBrand className="mb-5" />
 
-      <Card className="overflow-hidden border-border/70 shadow-lg">
-        <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+      <Card className="overflow-hidden rounded-[2rem] border-mkmedia-blue/15 bg-white/92 shadow-[0_32px_120px_-54px_rgba(3,89,168,0.3)] backdrop-blur">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
           <div>
-            <CardHeader className="space-y-3">
-              <CardTitle className="text-2xl">Crear cuenta</CardTitle>
-              <CardDescription>
-                Regístrate y completa tu perfil comercial en unos pasos.
+            <CardHeader className="space-y-3 border-b border-mkmedia-blue/10 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))]">
+              <div className="inline-flex w-fit items-center rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
+                Crear cuenta
+              </div>
+              <CardTitle className="text-3xl text-neutral-950">Empieza con tu acceso</CardTitle>
+              <CardDescription className="max-w-xl text-sm leading-6 text-neutral-600">
+                Crea tu cuenta primero. Luego podrás crear una marca, una agencia o usar accesos compartidos desde la misma sesión.
               </CardDescription>
-              <StepIndicator currentStep={step} />
             </CardHeader>
 
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-5 pt-6">
               {error ? (
-                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                   {error}
                 </div>
               ) : null}
 
-              {step === 0 ? (
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      ¿Cómo usarás MK Booking?
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Esto nos ayuda a preparar tu proceso de onboarding.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-3">
-                    <AccountTypeCard
-                      title="Persona natural"
-                      description="Anuncias como individuo y usarás tu cédula."
-                      icon={<UserRound className="h-5 w-5" />}
-                      selected={customerType === "natural"}
-                      onClick={() => setCustomerType("natural")}
-                    />
-                    <AccountTypeCard
-                      title="Empresa / negocio"
-                      description="Operas como empresa, agencia u organización."
-                      icon={<Building2 className="h-5 w-5" />}
-                      selected={customerType === "business"}
-                      onClick={() => setCustomerType("business")}
-                    />
-                  </div>
-
-                  <Button
-                    type="button"
-                    className="w-full"
-                    disabled={!customerType}
-                    onClick={() => setStep(1)}
-                  >
-                    Continuar
-                  </Button>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="register-name">Nombre</Label>
+                  <Input
+                    id="register-name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Tu nombre o nombre del responsable"
+                    required
+                    className="h-11 rounded-2xl border-mkmedia-blue/15"
+                  />
                 </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                    Tipo seleccionado:{" "}
-                    <span className="font-medium text-foreground">
-                      {customerType === "natural" ? "Persona natural" : "Empresa / negocio"}
-                    </span>
-                  </div>
 
+                <div className="space-y-1.5">
+                  <Label htmlFor="register-email">Correo electrónico</Label>
+                  <Input
+                    id="register-email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="correo@ejemplo.com"
+                    required
+                    className="h-11 rounded-2xl border-mkmedia-blue/15"
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="register-name">
-                      {customerType === "natural" ? "Nombre completo" : "Nombre de contacto"}
-                    </Label>
+                    <Label htmlFor="register-password">Contraseña</Label>
                     <Input
-                      id="register-name"
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      placeholder={
-                        customerType === "natural" ? "Juan Pérez" : "Nombre del responsable"
-                      }
+                      id="register-password"
+                      type="password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="Minimo 8 caracteres"
                       required
+                      className="h-11 rounded-2xl border-mkmedia-blue/15"
                     />
                   </div>
-
                   <div className="space-y-1.5">
-                    <Label htmlFor="register-email">Correo electrónico</Label>
+                    <Label htmlFor="register-password-confirm">Confirmar contraseña</Label>
                     <Input
-                      id="register-email"
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder="correo@ejemplo.com"
+                      id="register-password-confirm"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      placeholder="Repite tu contraseña"
                       required
+                      className="h-11 rounded-2xl border-mkmedia-blue/15"
                     />
                   </div>
+                </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="register-password">Contraseña</Label>
-                      <Input
-                        id="register-password"
-                        type="password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        placeholder="Mínimo 8 caracteres"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="register-password-confirm">Confirmar contraseña</Label>
-                      <Input
-                        id="register-password-confirm"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(event) => setConfirmPassword(event.target.value)}
-                        placeholder="Repite tu contraseña"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="sm:w-auto"
-                      onClick={() => setStep(0)}
-                      disabled={loading}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Volver
-                    </Button>
-                    <Button type="submit" className="sm:flex-1" disabled={loading}>
-                      {loading ? "Creando cuenta..." : "Crear cuenta y continuar"}
-                    </Button>
-                  </div>
-                </form>
-              )}
+                <Button
+                  type="submit"
+                  className="h-11 w-full rounded-full bg-mkmedia-blue text-white shadow-lg shadow-mkmedia-blue/25 hover:bg-mkmedia-blue/90"
+                  disabled={loading}
+                >
+                  {loading ? "Creando cuenta..." : "Crear cuenta"}
+                </Button>
+              </form>
 
               <p className="text-center text-sm text-muted-foreground">
                 ¿Ya tienes cuenta?{" "}
-                <Link href="/login" className="font-medium text-primary hover:underline">
+                <Link href="/login" className="font-medium text-mkmedia-blue hover:underline">
                   Inicia sesión
                 </Link>
               </p>
             </CardContent>
           </div>
 
-          <aside className="hidden border-l bg-muted/30 p-6 lg:block">
-            <div className="space-y-4">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Qué sigue
-              </h2>
-              <div className="space-y-3">
-                <div className="flex gap-2 text-sm">
-                  <CircleCheckBig className="mt-0.5 h-4 w-4 text-emerald-600" />
-                  <p className="text-muted-foreground">
-                    Completarás datos personales o de empresa en onboarding.
-                  </p>
+          <aside className="border-t border-mkmedia-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(3,89,168,0.05))] p-6 lg:border-l lg:border-t-0">
+            <div className="space-y-5">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
+                  Después del acceso
+                </p>
+                <h2 className="mt-2 text-lg font-semibold text-neutral-950">
+                  Configura solo lo necesario
+                </h2>
+              </div>
+
+              <div className="space-y-3 text-sm text-neutral-600">
+                <div className="rounded-2xl border border-mkmedia-blue/15 bg-white px-4 py-3">
+                  Crea una marca o una agencia con un nombre simple cuando realmente lo necesites.
                 </div>
-                <div className="flex gap-2 text-sm">
-                  <CircleCheckBig className="mt-0.5 h-4 w-4 text-emerald-600" />
-                  <p className="text-muted-foreground">
-                    Tu cuenta quedará lista para crear campañas y reservas.
-                  </p>
+                <div className="rounded-2xl border border-mkmedia-blue/15 bg-white px-4 py-3">
+                  Si ya tienes accesos compartidos, entrarás directo a operarlos desde tu cuenta.
                 </div>
-                <div className="flex gap-2 text-sm">
-                  <CircleCheckBig className="mt-0.5 h-4 w-4 text-emerald-600" />
-                  <p className="text-muted-foreground">
-                    Puedes cambiar o completar datos más adelante.
-                  </p>
+                <div className="rounded-2xl border border-mkmedia-yellow/35 bg-mkmedia-yellow/15 px-4 py-3 text-neutral-700">
+                  Los datos fiscales y comerciales quedan para después.
                 </div>
               </div>
             </div>

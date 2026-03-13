@@ -90,8 +90,19 @@ export const createAgencyClientRelationshipSchema = z.object({
   permissions: organizationRelationshipPermissionsSchema.optional(),
 });
 
+export const createStarterOrganizationSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(120),
+  organizationType: z.enum([
+    OrganizationType.ADVERTISER,
+    OrganizationType.AGENCY,
+  ]),
+});
+
 export type CreateAgencyClientRelationshipInput = z.infer<
   typeof createAgencyClientRelationshipSchema
+>;
+export type CreateStarterOrganizationInput = z.infer<
+  typeof createStarterOrganizationSchema
 >;
 
 // ============================================================================
@@ -283,6 +294,23 @@ export async function registerAgency(
       industry: input.industry,
     },
     userProfileId
+  );
+}
+
+export async function createStarterOrganization(
+  input: CreateStarterOrganizationInput,
+  userProfileId: string,
+) {
+  const displayName = input.name.trim();
+
+  return createOrganizationWithOwner(
+    {
+      name: displayName,
+      legalName: displayName,
+      organizationType: input.organizationType,
+      legalEntityType: LegalEntityType.LEGAL_ENTITY,
+    },
+    userProfileId,
   );
 }
 

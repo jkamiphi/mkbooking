@@ -1,4 +1,5 @@
 import type { SystemRole } from "@prisma/client";
+import { resolveActiveOrganizationContextForUser } from "@/lib/services/organization-access";
 
 export function resolvePostLoginPathByRole(
   systemRole: SystemRole | null | undefined
@@ -24,4 +25,26 @@ export function resolvePostLoginPathByRole(
   }
 
   return "/profile";
+}
+
+export async function resolveAuthenticatedEntryPath(input: {
+  userId: string;
+  systemRole: SystemRole | null | undefined;
+}) {
+  const roleHome = resolvePostLoginPathByRole(input.systemRole);
+
+  if (
+    input.systemRole &&
+    input.systemRole !== "CUSTOMER"
+  ) {
+    return roleHome;
+  }
+
+  const starterState = await resolveActiveOrganizationContextForUser(input.userId);
+
+  if (starterState.needsStarterSetup) {
+    return "/onboarding";
+  }
+
+  return roleHome;
 }

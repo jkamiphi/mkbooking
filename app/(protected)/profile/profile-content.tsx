@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { startTransition, useEffect, useState } from "react";
 import {
   Bell,
+  BriefcaseBusiness,
   Building2,
   Check,
+  CheckCircle2,
   Link2,
+  LoaderCircle,
   Mail,
   PencilLine,
   Phone,
@@ -13,6 +18,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -154,11 +160,144 @@ function FieldRow({
   );
 }
 
+type ProfileOrganizationContext = {
+  contextKey: string;
+  organizationName: string;
+  organizationType: string;
+  accessType: "DIRECT" | "DELEGATED";
+  viaOrganizationName: string | null;
+  role: string;
+  displayCategory: "OWN_BRAND" | "OWN_AGENCY" | "DELEGATED_BRAND" | "DIRECT_ACCESS";
+  displayMeta: string;
+};
+
+const CONTEXT_SECTION_CONFIG = [
+  {
+    key: "OWN_BRAND",
+    title: "Mis marcas",
+    description: "Espacios propios como anunciante.",
+  },
+  {
+    key: "OWN_AGENCY",
+    title: "Mis agencias",
+    description: "Agencias propias que administras directamente.",
+  },
+  {
+    key: "DELEGATED_BRAND",
+    title: "Accesos por agencia",
+    description: "Marcas cliente a las que llegas via una agencia.",
+  },
+  {
+    key: "DIRECT_ACCESS",
+    title: "Accesos compartidos",
+    description: "Organizaciones directas que no son tuyas pero comparten acceso.",
+  },
+] as const;
+
+function ContextTone({
+  children,
+  variant = "default",
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "accent";
+}) {
+  return (
+    <span
+      className={
+        variant === "accent"
+          ? "rounded-full bg-mkmedia-blue/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-mkmedia-blue"
+          : "rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-600"
+      }
+    >
+      {children}
+    </span>
+  );
+}
+
+function formatOrganizationTypeLabel(value: string) {
+  if (value === "ADVERTISER") {
+    return "Marca";
+  }
+
+  if (value === "AGENCY") {
+    return "Agencia";
+  }
+
+  if (value === "MEDIA_OWNER") {
+    return "Media owner";
+  }
+
+  return value;
+}
+
+function WorkspaceCard({
+  context,
+  isActive,
+  isSaving,
+  onSelect,
+}: {
+  context: ProfileOrganizationContext;
+  isActive: boolean;
+  isSaving: boolean;
+  onSelect: (contextKey: string) => void;
+}) {
+  return (
+    <div
+      className={
+        isActive
+          ? "rounded-[1.5rem] border border-mkmedia-blue/20 bg-mkmedia-blue/6 px-4 py-4"
+          : "rounded-[1.5rem] border border-neutral-200/80 bg-neutral-50/80 px-4 py-4"
+      }
+    >
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate text-sm font-semibold text-neutral-950">
+              {context.organizationName}
+            </p>
+            <ContextTone>{formatOrganizationTypeLabel(context.organizationType)}</ContextTone>
+            <ContextTone variant="accent">{context.displayMeta}</ContextTone>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+            <span>{context.role}</span>
+            {context.accessType === "DELEGATED" ? (
+              <span className="inline-flex items-center gap-1">
+                <Link2 className="h-3 w-3" />
+                Via {context.viaOrganizationName}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant={isActive ? "outline" : "default"}
+          className={
+            isActive
+              ? "rounded-full border-mkmedia-blue/20 bg-white text-mkmedia-blue hover:bg-white"
+              : "rounded-full bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+          }
+          onClick={() => onSelect(context.contextKey)}
+          disabled={isSaving || isActive}
+        >
+          {isSaving ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : isActive ? (
+            <CheckCircle2 className="h-4 w-4" />
+          ) : null}
+          {isActive ? "Activa" : "Operar aqui"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function ProfileContent() {
+  const router = useRouter();
   const utils = trpc.useUtils();
   const { data: profile, isLoading, error } = trpc.userProfile.me.useQuery();
 
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [switchingContextKey, setSwitchingContextKey] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [personalDraft, setPersonalDraft] = useState({
     firstName: "",
@@ -243,6 +382,13 @@ export function ProfileContent() {
     );
   });
 
+  const groupedContexts = CONTEXT_SECTION_CONFIG.map((section) => ({
+    ...section,
+    contexts: currentProfile.organizationContexts.filter(
+      (context) => context.displayCategory === section.key,
+    ),
+  })).filter((section) => section.contexts.length > 0);
+
   function handlePersonalDraftChange(
     field: keyof typeof personalDraft,
     value: string,
@@ -300,6 +446,53 @@ export function ProfileContent() {
     });
   }
 
+  async function handleContextSwitch(nextContextKey: string) {
+    if (
+      switchingContextKey ||
+      nextContextKey === currentProfile.activeOrganizationContext?.contextKey
+    ) {
+      return;
+    }
+
+    setSwitchingContextKey(nextContextKey);
+
+    try {
+      const response = await fetch("/api/organization-context", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ contextKey: nextContextKey }),
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudo actualizar la organizacion activa.");
+      }
+
+      await Promise.all([
+        utils.userProfile.current.invalidate(),
+        utils.userProfile.me.invalidate(),
+        utils.organization.myContexts.invalidate(),
+        utils.organization.myOrganizations.invalidate(),
+        utils.catalog.requests.mine.invalidate(),
+        utils.orders.mine.invalidate(),
+      ]);
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (contextError) {
+      toast.error("No se pudo cambiar la marca o acceso", {
+        description:
+          contextError instanceof Error
+            ? contextError.message
+            : "Intenta de nuevo en unos segundos.",
+      });
+    } finally {
+      setSwitchingContextKey(null);
+    }
+  }
+
   return (
     <div className="space-y-5">
       {successMessage ? (
@@ -334,61 +527,91 @@ export function ProfileContent() {
             </dl>
 
             {currentProfile.activeOrganizationContext ? (
-              <div className="rounded-2xl border border-mkmedia-blue/15 bg-mkmedia-blue/6 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+              <div className="rounded-[1.75rem] border border-mkmedia-blue/15 bg-mkmedia-blue/6 px-5 py-4">
+                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-900">
                   <Check className="h-4 w-4 text-mkmedia-blue" />
-                  Contexto activo
+                  Organizacion activa
                 </div>
-                <p className="mt-2 text-sm font-semibold text-neutral-900">
+                <p className="mt-3 text-base font-semibold text-neutral-950">
                   {currentProfile.activeOrganizationContext.organizationName}
                 </p>
-                <p className="mt-1 text-xs text-neutral-500">
-                  {currentProfile.activeOrganizationContext.accessType === "DELEGATED"
-                    ? `Acceso delegado por ${currentProfile.activeOrganizationContext.viaOrganizationName}`
-                    : "Acceso directo"}
-                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <ContextTone>
+                    {formatOrganizationTypeLabel(
+                      currentProfile.activeOrganizationContext.organizationType,
+                    )}
+                  </ContextTone>
+                  <ContextTone variant="accent">
+                    {currentProfile.activeOrganizationContext.displayMeta}
+                  </ContextTone>
+                </div>
+                {currentProfile.activeOrganizationContext.accessType === "DELEGATED" ? (
+                  <p className="mt-2 inline-flex items-center gap-1 text-xs text-neutral-600">
+                    <Link2 className="h-3 w-3" />
+                    Via {currentProfile.activeOrganizationContext.viaOrganizationName}
+                  </p>
+                ) : null}
+                <div className="mt-4 flex items-center gap-2 text-xs text-neutral-500">
+                  <BriefcaseBusiness className="h-3.5 w-3.5 text-mkmedia-blue" />
+                  Cambiar esta seleccion afecta solicitudes, ordenes y pricing.
+                </div>
               </div>
             ) : null}
 
             {currentProfile.organizationContexts.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-                  <Building2 className="h-4 w-4 text-[#0359A8]" />
-                  Contextos disponibles
+                  <Building2 className="h-4 w-4 text-mkmedia-blue" />
+                  Marcas y accesos
                 </div>
-                <div className="space-y-2">
-                  {currentProfile.organizationContexts.map((context) => (
-                    <div
-                      key={context.contextKey}
-                      className="rounded-2xl border border-neutral-200/70 bg-neutral-50/70 px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-neutral-900">
-                            {context.organizationName}
-                          </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-                            <span>{context.organizationType}</span>
-                            <span className="rounded-full bg-mkmedia-blue/8 px-2 py-0.5 font-semibold text-mkmedia-blue">
-                              {context.role}
-                            </span>
-                            {context.accessType === "DELEGATED" ? (
-                              <span className="inline-flex items-center gap-1 text-neutral-600">
-                                <Link2 className="h-3 w-3" />
-                                {context.viaOrganizationName}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                        <span className="rounded-full bg-[#0359A8]/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#0359A8]">
-                          {context.accessType}
-                        </span>
+                <div className="space-y-4">
+                  {groupedContexts.map((section) => (
+                    <div key={section.key} className="space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-950">
+                          {section.title}
+                        </p>
+                        <p className="text-xs text-neutral-500">{section.description}</p>
+                      </div>
+                      <div className="space-y-3">
+                        {section.contexts.map((context) => (
+                          <WorkspaceCard
+                            key={context.contextKey}
+                            context={context}
+                            isActive={
+                              context.contextKey ===
+                              currentProfile.activeOrganizationContext?.contextKey
+                            }
+                            isSaving={switchingContextKey === context.contextKey}
+                            onSelect={handleContextSwitch}
+                          />
+                        ))}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div className="rounded-[1.75rem] border border-dashed border-neutral-300 bg-neutral-50/80 px-5 py-5">
+                <p className="text-sm font-semibold text-neutral-950">
+                  Todavia no tienes marcas ni accesos visibles
+                </p>
+                <p className="mt-2 text-sm leading-6 text-neutral-600">
+                  Crea tu primer espacio o vuelve al setup inicial. Si una agencia o empresa te comparte acceso, tambien aparecera aqui.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button
+                    asChild
+                    className="rounded-full bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+                  >
+                    <Link href="/onboarding">Crear mi primer espacio</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="rounded-full bg-white">
+                    <Link href="/">Explorar catalogo</Link>
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -48,9 +48,12 @@ export function ForgotPasswordForm() {
     <div className="mx-auto w-full max-w-md">
       <AuthBrand className="mb-5" />
 
-      <Card className="border-border/70 shadow-lg">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl">Recuperar contraseña</CardTitle>
+      <Card className="overflow-hidden rounded-[2rem] border-mkmedia-blue/15 bg-white/92 shadow-[0_32px_120px_-54px_rgba(3,89,168,0.3)] backdrop-blur">
+        <CardHeader className="space-y-3 border-b border-mkmedia-blue/10 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))]">
+          <div className="inline-flex w-fit items-center rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
+            Recuperacion
+          </div>
+          <CardTitle className="text-3xl text-neutral-950">Recuperar contraseña</CardTitle>
           <CardDescription>
             Te enviaremos un enlace para restablecer tu contraseña.
           </CardDescription>
@@ -58,14 +61,14 @@ export function ForgotPasswordForm() {
 
         <CardContent className="space-y-5">
           {submitted ? (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
               Si ese correo existe en el sistema, recibirás un enlace para restablecer tu
               contraseña.
             </div>
           ) : null}
 
           {error ? (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               {error}
             </div>
           ) : null}
@@ -80,16 +83,21 @@ export function ForgotPasswordForm() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="correo@ejemplo.com"
                 required
+                className="h-11 rounded-2xl border-mkmedia-blue/15"
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="h-11 w-full rounded-full bg-mkmedia-blue text-white shadow-lg shadow-mkmedia-blue/25 hover:bg-mkmedia-blue/90"
+              disabled={loading}
+            >
               {loading ? "Enviando..." : "Enviar enlace de recuperación"}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link href="/login" className="font-medium text-mkmedia-blue hover:underline">
               Volver a iniciar sesión
             </Link>
           </p>

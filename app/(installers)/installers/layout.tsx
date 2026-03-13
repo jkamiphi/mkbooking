@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
-import { resolvePostLoginPathByRole } from "@/lib/navigation/role-home";
+import { resolveAuthenticatedEntryPath } from "@/lib/navigation/role-home";
 import { InstallerAppShell } from "./_components/installer-app-shell";
 
 export default async function InstallersLayout({
@@ -18,7 +18,12 @@ export default async function InstallersLayout({
   const profile = await caller.userProfile.current();
 
   if (!profile || profile.systemRole !== "INSTALLER") {
-    redirect(resolvePostLoginPathByRole(profile?.systemRole));
+    redirect(
+      await resolveAuthenticatedEntryPath({
+        userId: session.user.id,
+        systemRole: profile?.systemRole,
+      }),
+    );
   }
 
   return (

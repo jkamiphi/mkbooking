@@ -1,8 +1,9 @@
 "use client";
 
+import { Fragment, startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
 import {
+  BriefcaseBusiness,
   Building2,
   CheckCircle2,
   ChevronDown,
@@ -28,17 +29,55 @@ type OrganizationContextSelectorProps = {
   className?: string;
 };
 
-function getAccessLabel(context: {
+type ContextLike = {
+  contextKey: string;
+  organizationName: string;
+  displayCategory: "OWN_BRAND" | "OWN_AGENCY" | "DELEGATED_BRAND" | "DIRECT_ACCESS";
+  displayMeta: string;
   accessType: "DIRECT" | "DELEGATED";
   viaOrganizationName: string | null;
-}) {
-  if (context.accessType === "DIRECT") {
-    return "Acceso directo";
+};
+
+const CONTEXT_GROUPS = [
+  {
+    key: "OWN_BRAND",
+    title: "Mis marcas",
+  },
+  {
+    key: "OWN_AGENCY",
+    title: "Mis agencias",
+  },
+  {
+    key: "DELEGATED_BRAND",
+    title: "Accesos por agencia",
+  },
+  {
+    key: "DIRECT_ACCESS",
+    title: "Otros accesos",
+  },
+] as const;
+
+function groupContexts(contexts: ContextLike[]) {
+  return CONTEXT_GROUPS.map((group) => ({
+    ...group,
+    contexts: contexts.filter((context) => context.displayCategory === group.key),
+  })).filter((group) => group.contexts.length > 0);
+}
+
+function getTriggerTitle(context: ContextLike) {
+  if (context.displayCategory === "OWN_AGENCY") {
+    return "Agencia activa";
   }
 
-  return context.viaOrganizationName
-    ? `Vía ${context.viaOrganizationName}`
-    : "Acceso delegado";
+  if (context.displayCategory === "DELEGATED_BRAND") {
+    return "Marca delegada";
+  }
+
+  if (context.displayCategory === "DIRECT_ACCESS") {
+    return "Acceso compartido";
+  }
+
+  return "Marca activa";
 }
 
 export function OrganizationContextSelector({
@@ -52,6 +91,7 @@ export function OrganizationContextSelector({
 
   const contexts = data?.contexts ?? [];
   const activeContext = data?.activeContext ?? contexts[0] ?? null;
+  const groupedContexts = groupContexts(contexts);
 
   async function handleContextChange(nextContextKey: string) {
     if (!activeContext || nextContextKey === activeContext.contextKey || isSaving) {
@@ -70,7 +110,7 @@ export function OrganizationContextSelector({
       });
 
       if (!response.ok) {
-        throw new Error("No se pudo actualizar el contexto activo.");
+        throw new Error("No se pudo actualizar el acceso activo.");
       }
 
       await Promise.all([
@@ -86,7 +126,7 @@ export function OrganizationContextSelector({
         router.refresh();
       });
     } catch (error) {
-      toast.error("No se pudo cambiar el contexto", {
+      toast.error("No se pudo cambiar la marca o acceso", {
         description:
           error instanceof Error
             ? error.message
@@ -116,6 +156,50 @@ export function OrganizationContextSelector({
 
   const isSingleContext = contexts.length <= 1;
 
+  function renderMenuContent(align: "start" | "end") {
+    return (
+      <DropdownMenuContent align={align} className="w-[22rem] border-neutral-200 bg-white">
+        <DropdownMenuLabel className="flex items-center gap-2 text-neutral-900">
+          <CheckCircle2 className="h-4 w-4 text-mkmedia-blue" />
+          Marcas y accesos
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuRadioGroup
+          value={activeContext.contextKey}
+          onValueChange={(value) => {
+            void handleContextChange(value);
+          }}
+        >
+          {groupedContexts.map((group, groupIndex) => (
+            <Fragment key={group.key}>
+              {groupIndex > 0 ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuLabel className="text-[11px] uppercase tracking-[0.16em] text-neutral-500 [font-family:var(--font-mkmedia)]">
+                {group.title}
+              </DropdownMenuLabel>
+              {group.contexts.map((context) => (
+                <DropdownMenuRadioItem
+                  key={context.contextKey}
+                  value={context.contextKey}
+                  disabled={isSaving}
+                  className="items-start py-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-neutral-900">
+                      {context.organizationName}
+                    </p>
+                    <p className="truncate text-xs text-neutral-500">
+                      {context.displayMeta}
+                    </p>
+                  </div>
+                </DropdownMenuRadioItem>
+              ))}
+            </Fragment>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    );
+  }
+
   if (variant === "sidebar") {
     const sidebarBody = (
       <>
@@ -125,24 +209,28 @@ export function OrganizationContextSelector({
           </span>
           <div className="min-w-0 flex-1 text-left">
             <p className="[font-family:var(--font-mkmedia)] text-[10px] font-semibold uppercase tracking-[0.18em] text-mkmedia-blue">
-              Operando como
+              Marcas y accesos
             </p>
             <p className="mt-1 truncate text-sm font-semibold text-neutral-950">
               {activeContext.organizationName}
             </p>
             <p className="mt-1 text-xs text-neutral-500">
-              {getAccessLabel(activeContext)}
+              {activeContext.displayMeta}
             </p>
           </div>
           {!isSingleContext ? (
             <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-neutral-400" />
           ) : null}
         </div>
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-neutral-200/80 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
+          <BriefcaseBusiness className="h-3.5 w-3.5 text-mkmedia-blue" />
+          <span className="truncate">{getTriggerTitle(activeContext)}</span>
+        </div>
         {activeContext.accessType === "DELEGATED" ? (
-          <div className="mt-3 flex items-center gap-2 rounded-xl border border-mkmedia-yellow/35 bg-mkmedia-yellow/15 px-3 py-2 text-xs text-neutral-700">
+          <div className="mt-2 flex items-center gap-2 rounded-xl border border-mkmedia-yellow/35 bg-mkmedia-yellow/15 px-3 py-2 text-xs text-neutral-700">
             <Link2 className="h-3.5 w-3.5 text-neutral-700" />
             <span className="truncate">
-              Cliente delegado por {activeContext.viaOrganizationName}
+              Operas via {activeContext.viaOrganizationName}
             </span>
           </div>
         ) : null}
@@ -176,36 +264,7 @@ export function OrganizationContextSelector({
             {sidebarBody}
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-80 border-neutral-200 bg-white">
-          <DropdownMenuLabel className="text-xs uppercase tracking-[0.16em] text-neutral-500">
-            Contexto organizacional
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuRadioGroup
-            value={activeContext.contextKey}
-            onValueChange={(value) => {
-              void handleContextChange(value);
-            }}
-          >
-            {contexts.map((context) => (
-              <DropdownMenuRadioItem
-                key={context.contextKey}
-                value={context.contextKey}
-                disabled={isSaving}
-                className="items-start py-2.5"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-neutral-900">
-                    {context.organizationName}
-                  </p>
-                  <p className="truncate text-xs text-neutral-500">
-                    {getAccessLabel(context)}
-                  </p>
-                </div>
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
+        {renderMenuContent("start")}
       </DropdownMenu>
     );
   }
@@ -230,7 +289,7 @@ export function OrganizationContextSelector({
         {activeContext.organizationName}
       </span>
       <span className="hidden text-xs text-neutral-500 sm:inline">
-        {getAccessLabel(activeContext)}
+        {activeContext.displayMeta}
       </span>
       {!isSingleContext ? <ChevronDown className="h-4 w-4 text-neutral-400" /> : null}
     </Button>
@@ -243,37 +302,7 @@ export function OrganizationContextSelector({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{compactTrigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 border-neutral-200 bg-white">
-        <DropdownMenuLabel className="flex items-center gap-2 text-neutral-900">
-          <CheckCircle2 className="h-4 w-4 text-mkmedia-blue" />
-          Contexto organizacional
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuRadioGroup
-          value={activeContext.contextKey}
-          onValueChange={(value) => {
-            void handleContextChange(value);
-          }}
-        >
-          {contexts.map((context) => (
-            <DropdownMenuRadioItem
-              key={context.contextKey}
-              value={context.contextKey}
-              disabled={isSaving}
-              className="items-start py-2.5"
-            >
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-neutral-900">
-                  {context.organizationName}
-                </p>
-                <p className="truncate text-xs text-neutral-500">
-                  {getAccessLabel(context)}
-                </p>
-              </div>
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
+      {renderMenuContent("end")}
     </DropdownMenu>
   );
 }

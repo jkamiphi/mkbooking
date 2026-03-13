@@ -14,6 +14,8 @@ import {
   checkTaxIdExists,
   createAgencyClientRelationship,
   createAgencyClientRelationshipSchema,
+  createStarterOrganization,
+  createStarterOrganizationSchema,
   listAgencyClients,
   listClientAgencies,
   createOrganizationSchema,
@@ -70,6 +72,23 @@ export const organizationRouter = router({
       ctx.activeOrganizationContextKey,
     );
   }),
+
+  createStarterOrganization: protectedProcedure
+    .input(createStarterOrganizationSchema)
+    .mutation(async ({ ctx, input }) => {
+      const profile = await getOrCreateUserProfile(
+        ctx.user.id,
+        ctx.activeOrganizationContextKey,
+      );
+      if (!profile) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User profile not found",
+        });
+      }
+
+      return createStarterOrganization(input, profile.id);
+    }),
 
   // Create a new organization
   create: protectedProcedure

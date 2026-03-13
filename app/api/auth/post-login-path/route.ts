@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { resolvePostLoginPathByRole } from "@/lib/navigation/role-home";
+import { resolveAuthenticatedEntryPath } from "@/lib/navigation/role-home";
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({
@@ -18,6 +18,9 @@ export async function GET(request: Request) {
   });
 
   return NextResponse.json({
-    path: resolvePostLoginPathByRole(profile?.systemRole),
+    path: await resolveAuthenticatedEntryPath({
+      userId: session.user.id,
+      systemRole: profile?.systemRole,
+    }),
   });
 }
