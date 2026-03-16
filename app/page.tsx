@@ -18,6 +18,12 @@ type SearchParams = {
   type?: string | string[];
 };
 
+const promoDateFormatter = new Intl.DateTimeFormat("es-PA", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
 function getParam(value?: string | string[]) {
   if (Array.isArray(value)) return value[0];
   return value;
@@ -34,6 +40,11 @@ function buildHomeUrl(options: {
   if (options.zone) params.set("zone", options.zone);
   const queryString = params.toString();
   return `/${queryString ? `?${queryString}` : ""}`;
+}
+
+function formatPromoDateLabel(value?: Date | null) {
+  if (!value) return undefined;
+  return promoDateFormatter.format(value);
 }
 
 export default async function Home({
@@ -71,14 +82,17 @@ export default async function Home({
 
   const showPrices = Boolean(session);
   const showPromo = Boolean(session && catalog.promo);
-
-  const promoValueLabel = catalog.promo
-    ? catalog.promo.type === "PERCENT"
-      ? `${catalog.promo.value}%`
-      : catalog.promo.type === "FIXED"
-        ? `${catalog.promo.value}`
-        : `${catalog.promo.value}`
-    : null;
+  const promo = showPromo && catalog.promo
+    ? {
+        name: catalog.promo.name,
+        valueLabel:
+          catalog.promo.type === "PERCENT"
+            ? `${String(catalog.promo.value)}%`
+            : String(catalog.promo.value),
+        startDateLabel: formatPromoDateLabel(catalog.promo.startDate),
+        endDateLabel: formatPromoDateLabel(catalog.promo.endDate),
+      }
+    : undefined;
   const homeStateUrl = buildHomeUrl({
     searchTerm: query,
     type: typeId,
@@ -107,8 +121,7 @@ export default async function Home({
         minimumStartDate={minimumStartDate}
         zones={zones}
         structureTypes={structureTypes}
-        showPromo={showPromo}
-        promoValueLabel={promoValueLabel}
+        promo={promo}
       />
 
       <section className="mx-auto w-full max-w-7xl px-6 pb-16">

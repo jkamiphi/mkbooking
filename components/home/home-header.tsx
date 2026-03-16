@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { UserHeaderActions } from "@/components/layout/user-header-actions";
+import { cn } from "@/lib/utils";
 
 interface HomeHeaderProps {
   user: {
@@ -11,7 +14,11 @@ interface HomeHeaderProps {
 
 export function HomeHeader({ user }: HomeHeaderProps) {
   return (
-    <header className="relative flex w-full items-start justify-between px-4 pb-6 pt-6 sm:px-6 lg:px-8 2xl:px-10">
+    <header
+      className={cn(
+        "sticky top-0 z-40 flex w-full items-center justify-between px-4 py-3 transition-all duration-200 sm:px-6 lg:px-8 2xl:px-10 border-b border-transparent bg-transparent backdrop-blur-0",
+      )}
+    >
       <Link href="/" className="flex items-center gap-2">
         <Image
           src="/images/logo/b-mkm-blue.png"

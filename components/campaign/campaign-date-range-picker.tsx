@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Calendar } from "lucide-react";
+import { Calendar, MoveLeft, MoveRight } from "lucide-react";
 import {
   addDays,
   clampDate,
@@ -197,7 +197,7 @@ export function CampaignDateRangePicker({
           min={toDateInputValue(minimumStart)}
           onChange={(event) => handleFromInputChange(event.target.value)}
           className={cn(
-            "rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none",
+            "rounded-md border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none",
             inputClassName,
           )}
         />
@@ -208,7 +208,7 @@ export function CampaignDateRangePicker({
           min={toDateInputValue(minimumToDate)}
           onChange={(event) => handleToInputChange(event.target.value)}
           className={cn(
-            "rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none",
+            "rounded-md border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none",
             inputClassName,
           )}
         />
@@ -237,7 +237,7 @@ export function CampaignDateRangePicker({
         <button
           type="button"
           onClick={() => setQuickRange(minimumStart)}
-          className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-base font-semibold text-neutral-900 hover:border-neutral-300"
+          className="w-full rounded-xs border border-neutral-200 px-4 py-3 text-left text-base font-semibold text-neutral-900 hover:border-neutral-300"
         >
           Primer rango disponible
           <span className="mt-1 block text-xs font-normal text-neutral-500">
@@ -247,7 +247,7 @@ export function CampaignDateRangePicker({
         <button
           type="button"
           onClick={() => setQuickRange(addDays(minimumStart, 7))}
-          className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-left text-base font-semibold text-neutral-900 hover:border-neutral-300"
+          className="w-full rounded-xs border border-neutral-200 px-4 py-3 text-left text-base font-semibold text-neutral-900 hover:border-neutral-300"
         >
           Siguiente semana
           <span className="mt-1 block text-xs font-normal text-neutral-500">
@@ -255,14 +255,14 @@ export function CampaignDateRangePicker({
           </span>
         </button>
 
-        <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+        <div className="rounded-xs border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
           <p className="font-medium text-neutral-700">Regla de fechas</p>
           <p>Inicio mínimo: {formatLongDateLabel(minimumStart)}</p>
           <p>Duración mínima: {minimumDurationDays} día.</p>
         </div>
       </div>
 
-      <div className="rounded-3xl border border-neutral-200 p-4">
+      <div className="rounded-xs border border-neutral-200 p-4">
         <div className="mb-4 flex items-center justify-between">
           <button
             type="button"
@@ -272,9 +272,9 @@ export function CampaignDateRangePicker({
                 : undefined
             }
             disabled={!canGoPreviousMonth}
-            className="aspect-square rounded-md border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600 disabled:cursor-not-allowed disabled:opacity-40"
+            className="aspect-square rounded-xs border border-neutral-200 px-2 py-1 text-lg font-semibold text-neutral-600 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            ←
+            <MoveLeft className="size-3" />
           </button>
           <span className="text-sm font-semibold text-neutral-900">
             {getMonthLabel(visibleMonth)}
@@ -290,9 +290,9 @@ export function CampaignDateRangePicker({
                 ),
               )
             }
-            className="aspect-square rounded-md border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600"
+            className="aspect-square rounded-xs border border-neutral-200 px-2 py-1 text-lg font-semibold text-neutral-600"
           >
-            →
+            <MoveRight className="size-3" />
           </button>
         </div>
 
@@ -344,7 +344,7 @@ export function CampaignDateRangePicker({
           })}
         </div>
 
-        <div className="mt-4 inline-flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-1 text-xs text-neutral-600">
+        <div className="mt-4 inline-flex items-center gap-2 rounded-xs border border-neutral-200 px-3 py-1 text-xs text-neutral-600">
           <Calendar className="h-3.5 w-3.5" />
           Selecciona mínimo dos fechas con 1 día de diferencia.
         </div>

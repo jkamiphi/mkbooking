@@ -2,7 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, ChevronRight, MapPin, Search, X } from "lucide-react";
+import {
+  BadgePercent,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  MapPin,
+  MapPinned,
+  Megaphone,
+  Search,
+  X,
+} from "lucide-react";
 import {
   CampaignDateRangePicker,
   formatShortDateLabel,
@@ -18,6 +28,7 @@ import {
   parseDateInputValue,
   sanitizeDateRangeStrings,
 } from "@/lib/date/campaign-date-range";
+import { cn } from "@/lib/utils";
 
 type StructureTypeOption = {
   id: string;
@@ -30,18 +41,27 @@ type ZoneOption = {
   province: { name: string };
 };
 
+type HomePromo = {
+  name: string;
+  valueLabel: string;
+  startDateLabel?: string;
+  endDateLabel?: string;
+};
+
 type HomeSearchBarProps = {
   query?: string;
   typeId?: string;
   minimumStartDate: string;
   zones: ZoneOption[];
   structureTypes: StructureTypeOption[];
-  showPromo: boolean;
-  promoValueLabel: string | null;
+  promo?: HomePromo;
 };
 
 type PanelKey = "destination" | "dates" | "type" | null;
 type MobilePanelKey = Exclude<PanelKey, null>;
+
+const desktopDockMediaQuery = "(min-width: 768px)";
+const dockTriggerTop = 16;
 
 export function HomeSearchBar({
   query,
@@ -49,19 +69,23 @@ export function HomeSearchBar({
   minimumStartDate,
   zones,
   structureTypes,
-  showPromo,
-  promoValueLabel,
+  promo,
 }: HomeSearchBarProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
+  const desktopAnchorRef = useRef<HTMLDivElement>(null);
+  const desktopFormRef = useRef<HTMLFormElement>(null);
   const [activePanel, setActivePanel] = useState<PanelKey>(null);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isPromoDialogOpen, setIsPromoDialogOpen] = useState(false);
   const [mobileActiveSection, setMobileActiveSection] =
     useState<PanelKey>("destination");
   const [queryValue, setQueryValue] = useState(query ?? "");
   const [selectedTypeId, setSelectedTypeId] = useState(typeId ?? "");
   const [fromDate, setFromDate] = useState<string | undefined>();
   const [toDate, setToDate] = useState<string | undefined>();
+  const [isDesktopDocked, setIsDesktopDocked] = useState(false);
+  const [desktopSearchHeight, setDesktopSearchHeight] = useState(0);
   const minimumStartDateValue =
     parseDateInputValue(minimumStartDate) ?? clampDate(new Date());
 
@@ -86,6 +110,7 @@ export function HomeSearchBar({
     router.push(url);
     setActivePanel(null);
     setIsMobileSearchOpen(false);
+    setIsPromoDialogOpen(false);
   }
 
   function handleSearch(event: React.FormEvent) {
@@ -104,6 +129,79 @@ export function HomeSearchBar({
     return () => window.removeEventListener("click", handleClick);
   }, []);
 
+  useEffect(() => {
+    const formNode = desktopFormRef.current;
+    if (!formNode) return;
+
+    setDesktopSearchHeight(formNode.getBoundingClientRect().height);
+
+    if (typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      setDesktopSearchHeight(entry.contentRect.height);
+    });
+
+    observer.observe(formNode);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia(desktopDockMediaQuery);
+    let frameId = 0;
+
+    function updateDockedState() {
+      if (!mediaQuery.matches) {
+        setIsDesktopDocked(false);
+        return;
+      }
+
+      if (!desktopAnchorRef.current) {
+        setIsDesktopDocked(false);
+        return;
+      }
+
+      const shouldDock =
+        desktopAnchorRef.current.getBoundingClientRect().top <= dockTriggerTop;
+
+      setIsDesktopDocked((current) => {
+        if (current === shouldDock) {
+          return current;
+        }
+        setActivePanel(null);
+        return shouldDock;
+      });
+    }
+
+    function handleScroll() {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+      frameId = window.requestAnimationFrame(updateDockedState);
+    }
+
+    function handleResize() {
+      updateDockedState();
+    }
+
+    updateDockedState();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleResize);
+    mediaQuery.addEventListener("change", handleResize);
+
+    return () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+      mediaQuery.removeEventListener("change", handleResize);
+    };
+  }, []);
+
   const selectedType = useMemo(
     () => structureTypes.find((type) => type.id === selectedTypeId),
     [structureTypes, selectedTypeId],
@@ -120,6 +218,20 @@ export function HomeSearchBar({
       : zones;
     return data.slice(0, 6);
   }, [zones, queryValue]);
+
+  const promoDateLabel = useMemo(() => {
+    if (!promo) return null;
+    if (promo.startDateLabel && promo.endDateLabel) {
+      return `Vigencia: ${promo.startDateLabel} - ${promo.endDateLabel}`;
+    }
+    if (promo.endDateLabel) {
+      return `Vigencia hasta ${promo.endDateLabel}`;
+    }
+    if (promo.startDateLabel) {
+      return `Vigente desde ${promo.startDateLabel}`;
+    }
+    return null;
+  }, [promo]);
 
   function rangeLabel() {
     if (fromDate && toDate) {
@@ -162,26 +274,37 @@ export function HomeSearchBar({
   } · ${selectedType?.name ?? "Formato"}`;
 
   const segmentBase =
-    "flex cursor-pointer flex-col rounded-3xl px-6 py-3 text-[11px] font-semibold text-neutral-500 transition";
+    "flex cursor-pointer flex-col rounded-xs px-6 py-3 text-[11px] font-semibold text-neutral-500 transition";
   const segmentActive =
     "border border-mkmedia-blue/20 bg-mkmedia-blue/8 text-mkmedia-blue shadow-lg shadow-mkmedia-blue/10";
 
   return (
-    <section className="relative mx-auto w-full max-w-min px-6 pb-12 pt-4">
-      <div className="mt-4 md:hidden">
+    <section className="relative mx-auto w-full max-w-7xl px-4 pb-12 pt-4 sm:px-6 lg:px-8 2xl:px-10">
+      <div className="mt-4 flex items-center gap-2 md:hidden border border-mkmedia-blue/20 bg-white/95 px-5 py-3 text-left shadow-xl shadow-mkmedia-blue/10 backdrop-blur-xl">
         <button
           type="button"
           onClick={openMobileSearch}
-          className="w-[min(100vw-3rem,30rem)] rounded-md border border-mkmedia-blue/20 bg-white/95 px-5 py-3 text-left shadow-xl shadow-mkmedia-blue/10 backdrop-blur-xl"
+          className="min-w-0 flex-1 rounded-md justify-start text-sm font-semibold text-neutral-900"
         >
           <span className="flex items-center gap-2 text-base font-semibold text-neutral-900">
             <Search className="h-4 w-4 text-neutral-500" />
             Empieza tu búsqueda
           </span>
-          <span className="mt-1 block truncate text-xs font-medium text-neutral-500">
+          <span className="mt-1 block truncate text-xs font-medium text-neutral-500 text-left">
             {mobileSummary}
           </span>
         </button>
+
+        {promo ? (
+          <button
+            type="button"
+            onClick={() => setIsPromoDialogOpen(true)}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xs border border-mkmedia-yellow/70 bg-mkmedia-yellow/20 text-mkmedia-blue shadow-sm transition hover:bg-mkmedia-yellow/30"
+            aria-label="Ver promoción activa"
+          >
+            <BadgePercent className="h-4 w-4" />
+          </button>
+        ) : null}
       </div>
 
       <Dialog open={isMobileSearchOpen} onOpenChange={setIsMobileSearchOpen}>
@@ -202,7 +325,7 @@ export function HomeSearchBar({
               <button
                 type="button"
                 onClick={() => setIsMobileSearchOpen(false)}
-                className="rounded-md border border-neutral-200 bg-white p-2 text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700"
+                className="rounded-xs border border-neutral-200 bg-white p-2 text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700"
                 aria-label="Cerrar buscador"
               >
                 <X className="h-4 w-4" />
@@ -210,7 +333,7 @@ export function HomeSearchBar({
             </div>
 
             <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-6">
-              <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+              <section className="overflow-hidden rounded-xs border border-neutral-200 bg-white shadow-sm">
                 <button
                   type="button"
                   onClick={() =>
@@ -230,12 +353,14 @@ export function HomeSearchBar({
                   </span>
                   {mobileActiveSection !== "destination" ? (
                     <ChevronRight className="h-4 w-4 text-neutral-400" />
-                  ) : null}
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-neutral-400" />
+                  )}
                 </button>
 
                 {mobileActiveSection === "destination" ? (
                   <div className="space-y-3 border-t border-neutral-200 px-4 pb-4 pt-3">
-                    <label className="flex items-center gap-2 rounded-2xl border border-neutral-200 px-3 py-3">
+                    <label className="flex items-center gap-2 rounded-xs border border-neutral-200 px-3 py-3">
                       <Search className="h-4 w-4 text-neutral-500" />
                       <input
                         value={queryValue}
@@ -257,10 +382,10 @@ export function HomeSearchBar({
                               );
                               setMobileActiveSection("dates");
                             }}
-                            className="flex w-full items-center gap-3 rounded-2xl border border-neutral-200 px-3 py-2.5 text-left transition hover:border-neutral-300"
+                            className="flex w-full items-center gap-3 rounded-xs border border-neutral-200 px-3 py-2.5 text-left transition hover:border-neutral-300"
                           >
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
-                              <MapPin className="h-4 w-4" />
+                            <span className="flex h-9 w-9 items-center justify-center rounded-xs bg-neutral-100 text-neutral-600">
+                              <MapPinned className="h-4 w-4" />
                             </span>
                             <span className="min-w-0">
                               <span className="block truncate text-sm font-semibold text-neutral-900">
@@ -282,7 +407,7 @@ export function HomeSearchBar({
                 ) : null}
               </section>
 
-              <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+              <section className="overflow-hidden rounded-xs border border-neutral-200 bg-white shadow-sm">
                 <button
                   type="button"
                   onClick={() =>
@@ -302,7 +427,9 @@ export function HomeSearchBar({
                   </span>
                   {mobileActiveSection !== "dates" ? (
                     <ChevronRight className="h-4 w-4 text-neutral-400" />
-                  ) : null}
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-neutral-400" />
+                  )}
                 </button>
 
                 {mobileActiveSection === "dates" ? (
@@ -325,7 +452,7 @@ export function HomeSearchBar({
                 ) : null}
               </section>
 
-              <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+              <section className="overflow-hidden rounded-xs border border-neutral-200 bg-white shadow-sm">
                 <button
                   type="button"
                   onClick={() =>
@@ -345,7 +472,9 @@ export function HomeSearchBar({
                   </span>
                   {mobileActiveSection !== "type" ? (
                     <ChevronRight className="h-4 w-4 text-neutral-400" />
-                  ) : null}
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-neutral-400" />
+                  )}
                 </button>
 
                 {mobileActiveSection === "type" ? (
@@ -359,11 +488,12 @@ export function HomeSearchBar({
                           onClick={() =>
                             setSelectedTypeId(selected ? "" : type.id)
                           }
-                          className={`rounded-md border px-3 py-2 text-xs font-semibold transition ${
+                          className={cn(
+                            "rounded-xs border px-3 py-2 text-xs font-semibold transition",
                             selected
                               ? "border-mkmedia-blue bg-mkmedia-blue text-white"
-                              : "border-mkmedia-blue/20 text-neutral-700 hover:border-mkmedia-blue/35"
-                          }`}
+                              : "border-mkmedia-blue/20 text-neutral-700 hover:border-mkmedia-blue/35",
+                          )}
                         >
                           {type.name}
                         </button>
@@ -386,7 +516,7 @@ export function HomeSearchBar({
                 <button
                   type="button"
                   onClick={executeSearch}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-md bg-mkmedia-blue px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 transition hover:bg-mkmedia-blue/90"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xs bg-mkmedia-blue px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 transition hover:bg-mkmedia-blue/90"
                 >
                   <Search className="h-4 w-4" />
                   Buscar
@@ -397,185 +527,291 @@ export function HomeSearchBar({
         </DialogContent>
       </Dialog>
 
-      <form onSubmit={handleSearch} className="mt-8 hidden md:block">
-        <div ref={containerRef} className="relative">
-          <div className="rounded-md border border-mkmedia-blue/20 bg-white/90 shadow-xl shadow-mkmedia-blue/12 backdrop-blur-xl">
-            <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto p-2 md:gap-0 md:overflow-visible">
+      <div className="mt-8 hidden md:block">
+        <div
+          ref={desktopAnchorRef}
+          className="relative mx-auto w-full max-w-232"
+          style={
+            isDesktopDocked && desktopSearchHeight > 0
+              ? { height: desktopSearchHeight }
+              : undefined
+          }
+        >
+          <form
+            ref={desktopFormRef}
+            onSubmit={handleSearch}
+            className={cn(
+              "transition-all duration-300 ease-out",
+              isDesktopDocked
+                ? "fixed left-1/2 top-3 z-50 w-[min(100vw-8rem,58rem)] -translate-x-1/2 lg:w-[min(100vw-24rem,58rem)]"
+                : "relative w-full",
+            )}
+          >
+            <div ref={containerRef} className="relative">
               <div
-                className={`${segmentBase} min-w-[260px] md:rounded-none md:rounded-l-full ${
-                  activePanel === "destination" ? segmentActive : ""
-                }`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setActivePanel("destination")}
+                className={cn(
+                  "rounded-md border border-mkmedia-blue/20 bg-white/90 backdrop-blur-xl transition-[transform,box-shadow] duration-300",
+                  isDesktopDocked
+                    ? "scale-[0.99] shadow-2xl shadow-mkmedia-blue/20"
+                    : "shadow-xl shadow-mkmedia-blue/12",
+                )}
               >
-                Destino
-                <span className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
-                  <Search className="h-4 w-4 text-neutral-400" />
-                  <input
-                    value={queryValue}
-                    onChange={(event) => setQueryValue(event.target.value)}
-                    onFocus={() => setActivePanel("destination")}
-                    placeholder="Ciudad de Panamá, Vía España, Albrook..."
-                    className="w-full bg-transparent placeholder:text-neutral-400 focus:outline-none"
-                  />
-                </span>
-              </div>
+                <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto p-2 md:gap-0 md:overflow-visible">
+                  <div
+                    className={cn(
+                      segmentBase,
+                      "min-w-65 md:rounded-none",
+                      activePanel === "destination" && segmentActive,
+                    )}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActivePanel("destination")}
+                  >
+                    Destino
+                    <span className="mt-1 flex items-center gap-2 text-sm font-medium text-neutral-900">
+                      <Search className="h-4 w-4 text-neutral-400" />
+                      <input
+                        value={queryValue}
+                        onChange={(event) => setQueryValue(event.target.value)}
+                        onFocus={() => setActivePanel("destination")}
+                        placeholder="Ciudad de Panamá, Vía España, Albrook..."
+                        className="w-full bg-transparent placeholder:text-neutral-400 focus:outline-none"
+                      />
+                    </span>
+                  </div>
 
-              <div className="hidden h-8 w-px bg-mkmedia-blue/15 md:block" />
+                  <div className="hidden h-8 w-px bg-mkmedia-blue/15 md:block" />
 
-              <div
-                className={`${segmentBase} min-w-[180px] md:rounded-none ${
-                  activePanel === "dates" ? segmentActive : ""
-                }`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setActivePanel("dates")}
-              >
-                Fechas
-                <span className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-neutral-900">
-                  <Calendar className="h-4 w-4 text-neutral-400" />
-                  {rangeLabel()}
-                </span>
-              </div>
+                  <div
+                    className={cn(
+                      segmentBase,
+                      "min-w-45 md:rounded-none",
+                      activePanel === "dates" && segmentActive,
+                    )}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActivePanel("dates")}
+                  >
+                    Fechas
+                    <span className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-neutral-900">
+                      <Calendar className="h-4 w-4 text-neutral-400" />
+                      {rangeLabel()}
+                    </span>
+                  </div>
 
-              <div className="hidden h-8 w-px bg-mkmedia-blue/15 md:block" />
+                  <div className="hidden h-8 w-px bg-mkmedia-blue/15 md:block" />
 
-              <div
-                className={`${segmentBase} min-w-[220px] md:rounded-r-full ${
-                  activePanel === "type" ? segmentActive : ""
-                }`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setActivePanel("type")}
-              >
-                Tipo de estructura
-                <span className="mt-1 text-sm font-medium text-neutral-900">
-                  {selectedType?.name ?? "Agregar una estructura"}
-                </span>
-              </div>
+                  <div
+                    className={cn(
+                      segmentBase,
+                      "min-w-55",
+                      activePanel === "type" && segmentActive,
+                    )}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActivePanel("type")}
+                  >
+                    Tipo de estructura
+                    <span className="mt-1 text-sm font-medium text-neutral-900">
+                      {selectedType?.name ?? "Agregar una estructura"}
+                    </span>
+                  </div>
 
-              <div className="flex items-center px-2">
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 rounded-md bg-mkmedia-blue px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 hover:bg-mkmedia-blue/90"
-                >
-                  <span className="hidden md:inline">Buscar</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {activePanel ? (
-            <div className="absolute left-1/2 top-full z-30 mt-4 w-full max-w-lg -translate-x-1/2 rounded-3xl border border-mkmedia-blue/15 bg-white p-6 shadow-2xl md:max-w-2xl">
-              {activePanel === "destination" ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-neutral-900">
-                        Por la zona
-                      </p>
-                      <p className="text-xs text-neutral-500">
-                        Descubre qué hay a tu alrededor
-                      </p>
+                  {promo ? (
+                    <div className="flex items-center pl-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsPromoDialogOpen(true)}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-xs border border-mkmedia-yellow/70 bg-mkmedia-yellow/20 text-mkmedia-blue shadow-sm transition hover:bg-mkmedia-yellow/35"
+                        aria-label="Ver promoción activa"
+                      >
+                        <BadgePercent className="h-4 w-4" />
+                      </button>
                     </div>
+                  ) : null}
+
+                  <div className="flex items-center px-2">
                     <button
-                      type="button"
-                      onClick={() => setActivePanel(null)}
-                      className="rounded-md border border-neutral-200 p-2 text-neutral-500 hover:text-neutral-700"
+                      type="submit"
+                      className="flex items-center gap-2 rounded-xs bg-mkmedia-blue px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 hover:bg-mkmedia-blue/90"
                     >
-                      <X className="h-4 w-4" />
+                      <span className="hidden md:inline">Buscar</span>
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {filteredZones.map((zone) => (
-                      <button
-                        key={zone.id}
-                        type="button"
-                        onClick={() => {
-                          setQueryValue(`${zone.name}, ${zone.province.name}`);
-                          setActivePanel(null);
-                        }}
-                        className="flex items-center gap-3 rounded-2xl border border-neutral-200 px-4 py-3 text-left text-sm hover:border-neutral-300"
-                      >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-600">
-                          <MapPin className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className="block font-semibold text-neutral-900">
-                            {zone.name}
-                          </span>
-                          <span className="text-xs text-neutral-500">
-                            {zone.province.name}
-                          </span>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
                 </div>
-              ) : null}
+              </div>
 
-              {activePanel === "dates" ? (
-                <CampaignDateRangePicker
-                  variant="calendar"
-                  fromDate={fromDate}
-                  toDate={toDate}
-                  minimumStartDate={minimumStartDate}
-                  minimumDurationDays={1}
-                  onChange={(nextFromDate, nextToDate) => {
-                    setFromDate(nextFromDate);
-                    setToDate(nextToDate);
-                  }}
-                />
-              ) : null}
-
-              {activePanel === "type" ? (
-                <div className="space-y-4">
-                  <p className="text-sm font-semibold text-neutral-900">
-                    Selecciona un tipo de estructura
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    {structureTypes.map((type) => {
-                      const selected = type.id === selectedTypeId;
-                      return (
+              {activePanel ? (
+                <div
+                  className={cn(
+                    "absolute left-1/2 top-full mt-4 w-full max-w-lg -translate-x-1/2 rounded-md border border-mkmedia-blue/15 bg-white p-6 shadow-2xl md:max-w-2xl",
+                    isDesktopDocked ? "z-60" : "z-30",
+                  )}
+                >
+                  {activePanel === "destination" ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-neutral-900">
+                            Por la zona
+                          </p>
+                          <p className="text-xs text-neutral-500">
+                            Descubre qué hay a tu alrededor
+                          </p>
+                        </div>
                         <button
-                          key={type.id}
                           type="button"
-                          onClick={() => {
-                            setSelectedTypeId(selected ? "" : type.id);
-                            setActivePanel(null);
-                          }}
-                          className={`rounded-md border px-4 py-2 text-xs font-semibold transition ${
-                            selected
-                              ? "border-mkmedia-blue bg-mkmedia-blue text-white"
-                              : "border-mkmedia-blue/20 text-neutral-700 hover:border-mkmedia-blue/35"
-                          }`}
+                          onClick={() => setActivePanel(null)}
+                          className="rounded-xs border border-neutral-200 p-2 text-neutral-500 hover:text-neutral-700"
                         >
-                          {type.name}
+                          <X className="h-4 w-4" />
                         </button>
-                      );
-                    })}
-                  </div>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {filteredZones.map((zone) => (
+                          <button
+                            key={zone.id}
+                            type="button"
+                            onClick={() => {
+                              setQueryValue(
+                                `${zone.name}, ${zone.province.name}`,
+                              );
+                              setActivePanel(null);
+                            }}
+                            className="flex items-center gap-2 rounded-xs border border-neutral-200 px-4 py-3 text-left text-sm hover:border-neutral-300"
+                          >
+                            <span className="flex size-8 items-center justify-centertext-neutral-600">
+                              <MapPinned className="size-6" />
+                            </span>
+                            <span>
+                              <span className="block font-semibold text-neutral-900">
+                                {zone.name}
+                              </span>
+                              <span className="text-xs text-neutral-500">
+                                {zone.province.name}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {activePanel === "dates" ? (
+                    <CampaignDateRangePicker
+                      variant="calendar"
+                      fromDate={fromDate}
+                      toDate={toDate}
+                      minimumStartDate={minimumStartDate}
+                      minimumDurationDays={1}
+                      onChange={(nextFromDate, nextToDate) => {
+                        setFromDate(nextFromDate);
+                        setToDate(nextToDate);
+                      }}
+                    />
+                  ) : null}
+
+                  {activePanel === "type" ? (
+                    <div className="space-y-4">
+                      <p className="text-sm font-semibold text-neutral-900">
+                        Selecciona un tipo de estructura
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        {structureTypes.map((type) => {
+                          const selected = type.id === selectedTypeId;
+                          return (
+                            <button
+                              key={type.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedTypeId(selected ? "" : type.id);
+                                setActivePanel(null);
+                              }}
+                              className={cn(
+                                "rounded-xs border px-4 py-2 text-xs font-semibold transition",
+                                selected
+                                  ? "border-mkmedia-blue bg-mkmedia-blue text-white"
+                                  : "border-mkmedia-blue/20 text-neutral-700 hover:border-mkmedia-blue/35",
+                              )}
+                            >
+                              {type.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
-          ) : null}
+          </form>
         </div>
-      </form>
+      </div>
 
-      {showPromo ? (
-        <div
-          className="mt-6 flex items-center gap-3 rounded-md border border-mkmedia-yellow/60 bg-mkmedia-yellow/15 px-4 py-3 text-sm text-mkmedia-blue"
-          style={{ animation: "rise 0.7s ease 0.1s forwards" }}
-        >
-          <span className="font-semibold">
-            {promoValueLabel
-              ? `${promoValueLabel} de descuento en campañas activas`
-              : "Descuento activo en campañas"}
-          </span>
-        </div>
-      ) : null}
+      <Dialog open={isPromoDialogOpen} onOpenChange={setIsPromoDialogOpen}>
+        <DialogContent className="max-w-md rounded-md border-0 bg-linear-to-br from-neutral-50 to-white p-0 shadow-2xl">
+          <div className="flex flex-col items-center px-8 pb-6 pt-8 text-center">
+            {/* Icon */}
+            <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-blue-100 to-blue-50">
+              <Megaphone
+                className="h-9 w-9 text-mkmedia-blue"
+                strokeWidth={2}
+              />
+            </div>
+
+            {/* Header */}
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500 [font-family:var(--font-mkmedia)]">
+              Grupo MK MEDIA
+            </span>
+            <DialogTitle className="mt-2 text-2xl font-bold text-[#4338ca]">
+              {promo?.name ?? "Promoción activa"}
+            </DialogTitle>
+            <DialogDescription className="mt-2 text-sm text-neutral-600">
+              Oferta activa para campañas del catálogo.
+            </DialogDescription>
+
+            {/* Discount Box */}
+            <div className="mt-6 w-full">
+              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Descuento especial
+              </p>
+              <div className="mt-2 flex items-baseline justify-center gap-2">
+                <span className="text-4xl font-bold text-mkmedia-blue">
+                  {promo?.valueLabel ?? "10%"}
+                </span>
+                <span className="text-base text-neutral-700">
+                  en campañas activas
+                </span>
+              </div>
+            </div>
+
+            {/* Date */}
+            {promoDateLabel ? (
+              <p className="mt-4 text-xs text-neutral-500">{promoDateLabel}</p>
+            ) : null}
+
+            {/* Actions */}
+            <div className="mt-6 flex w-full gap-3">
+              <button
+                type="button"
+                onClick={() => setIsPromoDialogOpen(false)}
+                className="flex-1 rounded-xs border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={executeSearch}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xs bg-mkmedia-blue px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-mkmedia-blue/90"
+              >
+                <Search className="h-4 w-4" />
+                Buscar ahora
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
