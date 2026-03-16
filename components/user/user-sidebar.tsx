@@ -52,6 +52,9 @@ const navigationItems = [
     icon: Bell,
     match: (path: string) => path.startsWith("/notifications"),
   },
+] as const;
+
+const usefulLinks = [
   {
     href: "/",
     label: "Inicio",
@@ -123,7 +126,7 @@ function NavItem({
       onClick={onNavigate}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+        "group flex items-center gap-3 rounded-xs px-3 py-2 text-sm font-medium transition",
         isActive
           ? "bg-mkmedia-blue/[0.08] text-mkmedia-blue"
           : "text-neutral-700 hover:bg-white hover:text-neutral-950",
@@ -152,9 +155,13 @@ function SidebarPanel({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[linear-gradient(180deg,#f9f9fa_0%,#f4f5f7_100%)]">
       <header className="border-b border-neutral-200/80 px-4 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <Link href="/" onClick={onNavigate} className="flex min-w-0 items-start gap-3">
-            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-mkmedia-blue/15">
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href="/"
+            onClick={onNavigate}
+            className="flex min-w-0 items-start gap-3"
+          >
+            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center">
               <Image
                 src="/images/logo/b-mkm-blue.png"
                 alt="Logo MK MEDIA"
@@ -215,8 +222,30 @@ function SidebarPanel({
                   isActive={isActive}
                   onNavigate={onNavigate}
                   trailing={
-                    isNotifications ? <NotificationBadge count={unreadCount} /> : null
+                    isNotifications ? (
+                      <NotificationBadge count={unreadCount} />
+                    ) : null
                   }
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="space-y-2 mt-4">
+          <SectionLabel>Enlaces Útiles</SectionLabel>
+          <div className="space-y-1">
+            {usefulLinks.map((item) => {
+              const isActive = item.match(pathname);
+
+              return (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  isActive={isActive}
+                  onNavigate={onNavigate}
                 />
               );
             })}
@@ -279,7 +308,7 @@ export function UserSidebar({ user }: UserSidebarProps) {
             <SheetTrigger asChild>
               <button
                 type="button"
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-mkmedia-blue/[0.08] px-3.5 text-sm font-medium text-mkmedia-blue ring-1 ring-mkmedia-blue/15 transition hover:bg-mkmedia-blue/[0.12]"
+                className="inline-flex h-10 items-center gap-2 px-3.5 text-sm font-medium text-mkmedia-blue transition hover:bg-mkmedia-blue/[0.12]"
                 aria-label="Abrir menu de navegacion"
               >
                 <Menu className="h-4 w-4" />
@@ -288,18 +317,15 @@ export function UserSidebar({ user }: UserSidebarProps) {
             </SheetTrigger>
 
             <Link href="/" className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white ring-1 ring-mkmedia-blue/15">
+              <span className="flex size-12 items-center justify-center">
                 <Image
                   src="/images/logo/b-mkm-blue.png"
                   alt="Logo MK MEDIA"
                   width={72}
                   height={36}
-                  className="h-auto w-7"
+                  className="h-auto w-10"
                 />
               </span>
-              <p className="[font-family:var(--font-mkmedia)] text-[10px] font-semibold uppercase tracking-[0.18em] text-mkmedia-blue">
-                MK MEDIA
-              </p>
             </Link>
           </div>
 

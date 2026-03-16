@@ -64,7 +64,7 @@ export function LoginForm() {
             Iniciar sesion
           </CardTitle>
           <CardDescription>
-            Accede a tu cuenta para gestionar campanas, reservas y solicitudes
+            Accede a tu cuenta para gestionar campañas, reservas y solicitudes
             desde tus marcas o accesos compartidos.
           </CardDescription>
         </CardHeader>
