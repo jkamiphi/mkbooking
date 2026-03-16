@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 type OrganizationContextSelectorProps = {
-  variant?: "compact" | "sidebar";
+  variant?: "compact" | "sidebar" | "footer";
   className?: string;
 };
 
@@ -142,7 +142,9 @@ export function OrganizationContextSelector({
       <div
         className={cn(
           variant === "sidebar"
-            ? "h-20 animate-pulse rounded-2xl border border-neutral-200/80 bg-neutral-50/70"
+            ? "h-24 animate-pulse rounded-[1.35rem] bg-white/80 ring-1 ring-neutral-200/80"
+            : variant === "footer"
+              ? "h-14 animate-pulse rounded-xl bg-white/80 ring-1 ring-neutral-200/80"
             : "h-10 w-44 animate-pulse rounded-full border border-neutral-200/80 bg-white/80",
           className,
         )}
@@ -204,11 +206,11 @@ export function OrganizationContextSelector({
     const sidebarBody = (
       <>
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-mkmedia-blue/20 bg-mkmedia-blue/8 text-mkmedia-blue">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-mkmedia-blue/[0.08] text-mkmedia-blue ring-1 ring-mkmedia-blue/12">
             <Building2 className="h-4 w-4" />
           </span>
           <div className="min-w-0 flex-1 text-left">
-            <p className="[font-family:var(--font-mkmedia)] text-[10px] font-semibold uppercase tracking-[0.18em] text-mkmedia-blue">
+            <p className="[font-family:var(--font-mkmedia)] text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
               Marcas y accesos
             </p>
             <p className="mt-1 truncate text-sm font-semibold text-neutral-950">
@@ -222,12 +224,12 @@ export function OrganizationContextSelector({
             <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-neutral-400" />
           ) : null}
         </div>
-        <div className="mt-3 flex items-center gap-2 rounded-xl border border-neutral-200/80 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-neutral-50/80 px-3 py-2 text-xs text-neutral-700 ring-1 ring-neutral-200/80">
           <BriefcaseBusiness className="h-3.5 w-3.5 text-mkmedia-blue" />
           <span className="truncate">{getTriggerTitle(activeContext)}</span>
         </div>
         {activeContext.accessType === "DELEGATED" ? (
-          <div className="mt-2 flex items-center gap-2 rounded-xl border border-mkmedia-yellow/35 bg-mkmedia-yellow/15 px-3 py-2 text-xs text-neutral-700">
+          <div className="mt-2 flex items-center gap-2 rounded-xl bg-mkmedia-yellow/15 px-3 py-2 text-xs text-neutral-700 ring-1 ring-mkmedia-yellow/35">
             <Link2 className="h-3.5 w-3.5 text-neutral-700" />
             <span className="truncate">
               Operas via {activeContext.viaOrganizationName}
@@ -241,7 +243,7 @@ export function OrganizationContextSelector({
       return (
         <div
           className={cn(
-            "rounded-3xl border border-neutral-200/80 bg-white px-4 py-4 shadow-sm",
+            "rounded-[1.35rem] bg-white/88 px-3.5 py-3 ring-1 ring-neutral-200/80",
             className,
           )}
         >
@@ -256,7 +258,7 @@ export function OrganizationContextSelector({
           <button
             type="button"
             className={cn(
-              "w-full rounded-3xl border border-neutral-200/80 bg-white px-4 py-4 text-left shadow-sm transition hover:border-mkmedia-blue/30 hover:bg-mkmedia-blue/[0.04]",
+              "w-full rounded-[1.35rem] bg-white/88 px-3.5 py-3 text-left ring-1 ring-neutral-200/80 transition hover:bg-white hover:ring-mkmedia-blue/20",
               className,
             )}
             disabled={isSaving}
@@ -265,6 +267,42 @@ export function OrganizationContextSelector({
           </button>
         </DropdownMenuTrigger>
         {renderMenuContent("start")}
+      </DropdownMenu>
+    );
+  }
+
+  if (variant === "footer") {
+    const footerTrigger = (
+      <button
+        type="button"
+        className={cn(
+          "flex h-12 w-full items-center gap-2 rounded-xl bg-white px-3 text-left ring-1 ring-neutral-200/80 transition hover:bg-neutral-50",
+          "hover:ring-mkmedia-blue/20",
+          className,
+        )}
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <LoaderCircle className="h-4 w-4 animate-spin text-mkmedia-blue" />
+        ) : (
+          <Building2 className="h-4 w-4 text-mkmedia-blue" />
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-neutral-900">
+            {activeContext.organizationName}
+          </span>
+          <span className="block truncate text-xs text-neutral-500">
+            {activeContext.displayMeta}
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" />
+      </button>
+    );
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>{footerTrigger}</DropdownMenuTrigger>
+        {renderMenuContent("end")}
       </DropdownMenu>
     );
   }

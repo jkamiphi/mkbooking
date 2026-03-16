@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 
 export const metadata = {
-  title: "Nueva contraseña - MK Booking",
-  description: "Define una nueva contraseña para tu cuenta.",
+  title: "Nueva contraseña",
+  description:
+    "Define una nueva contraseña para tu cuenta. Accede a tu cuenta de Grupo MK MEDIA nuevamente.",
 };
 
 export default function ResetPasswordPage() {

@@ -1,8 +1,9 @@
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
 export const metadata = {
-  title: "Recuperar contraseña - MK Booking",
-  description: "Solicita un enlace para restablecer tu contraseña.",
+  title: "Recuperar contraseña",
+  description:
+    "Solicita un enlace para restablecer tu contraseña. Accede a tu cuenta de Grupo MK MEDIA nuevamente.",
 };
 
 export default function ForgotPasswordPage() {

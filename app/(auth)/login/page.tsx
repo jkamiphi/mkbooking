@@ -1,8 +1,9 @@
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata = {
-  title: "Iniciar sesión - MK Booking",
-  description: "Accede a tu cuenta de MK Booking.",
+  title: "Iniciar sesión",
+  description:
+    "Accede a tu cuenta de Grupo MK MEDIA. Gestiona tus campañas, consulta tu historial de compras y más.",
 };
 
 export default function LoginPage() {

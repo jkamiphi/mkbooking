@@ -1,8 +1,9 @@
 import { RegisterForm } from "@/components/auth/register-form";
 
 export const metadata = {
-  title: "Crear cuenta - MK Booking",
-  description: "Registra una cuenta nueva para comenzar en MK Booking",
+  title: "Crear cuenta nueva",
+  description:
+    "Registra una cuenta nueva para comenzar en Grupo MK MEDIA. Gestiona tus campañas, consulta tu historial de compras y más.",
 };
 
 export default function RegisterPage() {

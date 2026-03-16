@@ -37,8 +37,11 @@ export default async function OnboardingLayout({
   return (
     <div className="min-h-dvh bg-[radial-gradient(circle_at_top_left,_rgba(252,184,20,0.16),_transparent_26%),linear-gradient(180deg,_#f6f9ff_0%,_#ffffff_54%,_#fffdf7_100%)] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100dvh-3rem)] w-full max-w-7xl flex-col">
-        <header className="mb-6 flex items-center justify-between gap-4 rounded-[1.75rem] border border-mkmedia-blue/12 bg-white/72 px-4 py-3 shadow-[0_20px_60px_-42px_rgba(3,89,168,0.35)] backdrop-blur sm:px-6">
-          <Link href="/" className="inline-flex items-center gap-3 text-neutral-950">
+        <header className="mb-6 flex items-center justify-between gap-4 rounded-md border border-mkmedia-blue/12 bg-white/72 px-4 py-3 shadow-[0_20px_60px_-42px_rgba(3,89,168,0.35)] backdrop-blur sm:px-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-3 text-neutral-950"
+          >
             <Image
               src="/images/logo/b-mkm-blue.png"
               alt="Logo MK MEDIA"
@@ -47,10 +50,7 @@ export default async function OnboardingLayout({
               className="h-10 w-auto"
             />
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
-                MK MEDIA
-              </p>
-              <p className="text-sm text-neutral-600">Setup inicial de cuenta</p>
+              <p className="text-neutral-600">Setup inicial de cuenta</p>
             </div>
           </Link>
 

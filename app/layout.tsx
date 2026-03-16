@@ -15,8 +15,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MKM Booking",
-  description: "OOH Booking Platform",
+  title: {
+    default: "Grupo MK MEDIA",
+    template: "%s - Grupo MK MEDIA",
+  },
+  description: "Publicidad exterior inteligente",
 };
 
 export default function RootLayout({

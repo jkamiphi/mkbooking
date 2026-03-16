@@ -20,7 +20,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,7 +35,8 @@ const NOTIFICATION_ROWS = [
   {
     type: "ORDER_CONFIRMED",
     label: "Orden confirmada",
-    description: "Cuando MK Booking confirma la orden y arranca el flujo interno.",
+    description:
+      "Cuando MK Booking confirma la orden y arranca el flujo interno.",
   },
   {
     type: "SALES_REVIEW_APPROVED",
@@ -154,7 +161,11 @@ function FieldRow({
     <div className="flex items-start justify-between gap-4 border-t border-neutral-200/70 py-3 first:border-t-0 first:pt-0 last:pb-0">
       <dt className="text-sm font-medium text-neutral-500">{label}</dt>
       <dd className="max-w-[18rem] text-right text-sm text-neutral-900">
-        {value?.trim() ? value : <span className="text-neutral-400">Sin registrar</span>}
+        {value?.trim() ? (
+          value
+        ) : (
+          <span className="text-neutral-400">Sin registrar</span>
+        )}
       </dd>
     </div>
   );
@@ -167,7 +178,11 @@ type ProfileOrganizationContext = {
   accessType: "DIRECT" | "DELEGATED";
   viaOrganizationName: string | null;
   role: string;
-  displayCategory: "OWN_BRAND" | "OWN_AGENCY" | "DELEGATED_BRAND" | "DIRECT_ACCESS";
+  displayCategory:
+    | "OWN_BRAND"
+    | "OWN_AGENCY"
+    | "DELEGATED_BRAND"
+    | "DIRECT_ACCESS";
   displayMeta: string;
 };
 
@@ -190,7 +205,8 @@ const CONTEXT_SECTION_CONFIG = [
   {
     key: "DIRECT_ACCESS",
     title: "Accesos compartidos",
-    description: "Organizaciones directas que no son tuyas pero comparten acceso.",
+    description:
+      "Organizaciones directas que no son tuyas pero comparten acceso.",
   },
 ] as const;
 
@@ -245,8 +261,8 @@ function WorkspaceCard({
     <div
       className={
         isActive
-          ? "rounded-[1.5rem] border border-mkmedia-blue/20 bg-mkmedia-blue/6 px-4 py-4"
-          : "rounded-[1.5rem] border border-neutral-200/80 bg-neutral-50/80 px-4 py-4"
+          ? "rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/6 px-4 py-4"
+          : "rounded-md border border-neutral-200/80 bg-neutral-50/80 px-4 py-4"
       }
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -255,7 +271,9 @@ function WorkspaceCard({
             <p className="truncate text-sm font-semibold text-neutral-950">
               {context.organizationName}
             </p>
-            <ContextTone>{formatOrganizationTypeLabel(context.organizationType)}</ContextTone>
+            <ContextTone>
+              {formatOrganizationTypeLabel(context.organizationType)}
+            </ContextTone>
             <ContextTone variant="accent">{context.displayMeta}</ContextTone>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
@@ -297,16 +315,17 @@ export function ProfileContent() {
   const { data: profile, isLoading, error } = trpc.userProfile.me.useQuery();
 
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
-  const [switchingContextKey, setSwitchingContextKey] = useState<string | null>(null);
+  const [switchingContextKey, setSwitchingContextKey] = useState<string | null>(
+    null,
+  );
   const [successMessage, setSuccessMessage] = useState("");
   const [personalDraft, setPersonalDraft] = useState({
     firstName: "",
     lastName: "",
     phone: "",
   });
-  const [notificationDraft, setNotificationDraft] = useState<NotificationDraft | null>(
-    null,
-  );
+  const [notificationDraft, setNotificationDraft] =
+    useState<NotificationDraft | null>(null);
 
   const updateProfile = trpc.userProfile.update.useMutation({
     onSuccess: async () => {
@@ -321,7 +340,9 @@ export function ProfileContent() {
       onSuccess: async () => {
         await utils.userProfile.me.invalidate();
         setNotificationDraft(null);
-        setSuccessMessage("Las preferencias de notificación fueron actualizadas.");
+        setSuccessMessage(
+          "Las preferencias de notificación fueron actualizadas.",
+        );
       },
     });
 
@@ -368,7 +389,8 @@ export function ProfileContent() {
 
   const currentProfile = profile;
   const effectiveNotificationDraft =
-    notificationDraft ?? buildNotificationDraft(currentProfile.notificationPreferences);
+    notificationDraft ??
+    buildNotificationDraft(currentProfile.notificationPreferences);
 
   const hasNotificationChanges = NOTIFICATION_ROWS.some((row) => {
     const serverPreference = currentProfile.notificationPreferences.find(
@@ -377,7 +399,8 @@ export function ProfileContent() {
     const draftPreference = effectiveNotificationDraft[row.type];
 
     return (
-      (serverPreference?.emailEnabled ?? true) !== draftPreference.emailEnabled ||
+      (serverPreference?.emailEnabled ?? true) !==
+        draftPreference.emailEnabled ||
       (serverPreference?.inAppEnabled ?? true) !== draftPreference.inAppEnabled
     );
   });
@@ -406,7 +429,8 @@ export function ProfileContent() {
   ) {
     setNotificationDraft((current) => {
       const baseDraft =
-        current ?? buildNotificationDraft(currentProfile.notificationPreferences);
+        current ??
+        buildNotificationDraft(currentProfile.notificationPreferences);
 
       return {
         ...baseDraft,
@@ -519,7 +543,10 @@ export function ProfileContent() {
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
             <dl className="space-y-0">
-              <FieldRow label="Correo electrónico" value={currentProfile.user.email} />
+              <FieldRow
+                label="Correo electrónico"
+                value={currentProfile.user.email}
+              />
               <FieldRow
                 label="Miembro desde"
                 value={formatDate(currentProfile.createdAt)}
@@ -545,10 +572,15 @@ export function ProfileContent() {
                     {currentProfile.activeOrganizationContext.displayMeta}
                   </ContextTone>
                 </div>
-                {currentProfile.activeOrganizationContext.accessType === "DELEGATED" ? (
+                {currentProfile.activeOrganizationContext.accessType ===
+                "DELEGATED" ? (
                   <p className="mt-2 inline-flex items-center gap-1 text-xs text-neutral-600">
                     <Link2 className="h-3 w-3" />
-                    Via {currentProfile.activeOrganizationContext.viaOrganizationName}
+                    Via{" "}
+                    {
+                      currentProfile.activeOrganizationContext
+                        .viaOrganizationName
+                    }
                   </p>
                 ) : null}
                 <div className="mt-4 flex items-center gap-2 text-xs text-neutral-500">
@@ -571,7 +603,9 @@ export function ProfileContent() {
                         <p className="text-sm font-semibold text-neutral-950">
                           {section.title}
                         </p>
-                        <p className="text-xs text-neutral-500">{section.description}</p>
+                        <p className="text-xs text-neutral-500">
+                          {section.description}
+                        </p>
                       </div>
                       <div className="space-y-3">
                         {section.contexts.map((context) => (
@@ -580,9 +614,12 @@ export function ProfileContent() {
                             context={context}
                             isActive={
                               context.contextKey ===
-                              currentProfile.activeOrganizationContext?.contextKey
+                              currentProfile.activeOrganizationContext
+                                ?.contextKey
                             }
-                            isSaving={switchingContextKey === context.contextKey}
+                            isSaving={
+                              switchingContextKey === context.contextKey
+                            }
                             onSelect={handleContextSwitch}
                           />
                         ))}
@@ -597,7 +634,8 @@ export function ProfileContent() {
                   Todavia no tienes marcas ni accesos visibles
                 </p>
                 <p className="mt-2 text-sm leading-6 text-neutral-600">
-                  Crea tu primer espacio o vuelve al setup inicial. Si una agencia o empresa te comparte acceso, tambien aparecera aqui.
+                  Crea tu primer espacio o vuelve al setup inicial. Si una
+                  agencia o empresa te comparte acceso, tambien aparecera aqui.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Button
@@ -606,7 +644,11 @@ export function ProfileContent() {
                   >
                     <Link href="/onboarding">Crear mi primer espacio</Link>
                   </Button>
-                  <Button asChild variant="outline" className="rounded-full bg-white">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="rounded-full bg-white"
+                  >
                     <Link href="/">Explorar catalogo</Link>
                   </Button>
                 </div>
@@ -655,7 +697,10 @@ export function ProfileContent() {
                     <Input
                       value={personalDraft.firstName}
                       onChange={(event) =>
-                        handlePersonalDraftChange("firstName", event.target.value)
+                        handlePersonalDraftChange(
+                          "firstName",
+                          event.target.value,
+                        )
                       }
                       placeholder="Tu nombre"
                     />
@@ -667,7 +712,10 @@ export function ProfileContent() {
                     <Input
                       value={personalDraft.lastName}
                       onChange={(event) =>
-                        handlePersonalDraftChange("lastName", event.target.value)
+                        handlePersonalDraftChange(
+                          "lastName",
+                          event.target.value,
+                        )
                       }
                       placeholder="Tu apellido"
                     />
@@ -695,7 +743,9 @@ export function ProfileContent() {
                     className="rounded-full bg-[#0359A8] text-white hover:bg-[#024a8f]"
                   >
                     <Save className="h-4 w-4" />
-                    {updateProfile.isPending ? "Guardando..." : "Guardar cambios"}
+                    {updateProfile.isPending
+                      ? "Guardando..."
+                      : "Guardar cambios"}
                   </Button>
                   <Button
                     type="button"
@@ -730,7 +780,8 @@ export function ProfileContent() {
               <div>
                 <CardTitle>Preferencias de notificación</CardTitle>
                 <CardDescription>
-                  Elige qué hitos quieres recibir por correo y cuáles mantener en tu bandeja in-app.
+                  Elige qué hitos quieres recibir por correo y cuáles mantener
+                  en tu bandeja in-app.
                 </CardDescription>
               </div>
             </div>
@@ -738,7 +789,10 @@ export function ProfileContent() {
             <Button
               type="button"
               onClick={handleNotificationSave}
-              disabled={!hasNotificationChanges || updateNotificationPreferences.isPending}
+              disabled={
+                !hasNotificationChanges ||
+                updateNotificationPreferences.isPending
+              }
               className="rounded-full bg-neutral-900 text-white hover:bg-neutral-800"
             >
               <Save className="h-4 w-4" />
@@ -762,8 +816,12 @@ export function ProfileContent() {
                 className="grid gap-4 px-4 py-4 md:grid-cols-[minmax(0,1fr)_88px_88px] md:items-center"
               >
                 <div>
-                  <p className="text-sm font-semibold text-neutral-900">{row.label}</p>
-                  <p className="mt-1 text-sm text-neutral-500">{row.description}</p>
+                  <p className="text-sm font-semibold text-neutral-900">
+                    {row.label}
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    {row.description}
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-between rounded-2xl border border-neutral-200/70 bg-neutral-50/70 px-3 py-2 md:justify-center md:border-0 md:bg-transparent md:px-0 md:py-0">
@@ -773,7 +831,11 @@ export function ProfileContent() {
                   <Checkbox
                     checked={effectiveNotificationDraft[row.type].emailEnabled}
                     onCheckedChange={(value) =>
-                      handleNotificationToggle(row.type, "emailEnabled", value === true)
+                      handleNotificationToggle(
+                        row.type,
+                        "emailEnabled",
+                        value === true,
+                      )
                     }
                     disabled={updateNotificationPreferences.isPending}
                     aria-label={`Recibir ${row.label} por correo`}
@@ -788,7 +850,11 @@ export function ProfileContent() {
                   <Checkbox
                     checked={effectiveNotificationDraft[row.type].inAppEnabled}
                     onCheckedChange={(value) =>
-                      handleNotificationToggle(row.type, "inAppEnabled", value === true)
+                      handleNotificationToggle(
+                        row.type,
+                        "inAppEnabled",
+                        value === true,
+                      )
                     }
                     disabled={updateNotificationPreferences.isPending}
                     aria-label={`Recibir ${row.label} en la bandeja in-app`}
@@ -803,7 +869,8 @@ export function ProfileContent() {
             <div className="flex items-start gap-2">
               <Mail className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                El correo de cuenta se mantiene como referencia y no es editable desde esta pantalla.
+                El correo de cuenta se mantiene como referencia y no es editable
+                desde esta pantalla.
               </p>
             </div>
           </div>
