@@ -172,7 +172,7 @@ export function HomeSearchBar({
         <button
           type="button"
           onClick={openMobileSearch}
-          className="w-[min(100vw-3rem,30rem)] rounded-full border border-mkmedia-blue/20 bg-white/95 px-5 py-3 text-left shadow-xl shadow-mkmedia-blue/10 backdrop-blur-xl"
+          className="w-[min(100vw-3rem,30rem)] rounded-md border border-mkmedia-blue/20 bg-white/95 px-5 py-3 text-left shadow-xl shadow-mkmedia-blue/10 backdrop-blur-xl"
         >
           <span className="flex items-center gap-2 text-base font-semibold text-neutral-900">
             <Search className="h-4 w-4 text-neutral-500" />
@@ -202,7 +202,7 @@ export function HomeSearchBar({
               <button
                 type="button"
                 onClick={() => setIsMobileSearchOpen(false)}
-                className="rounded-full border border-neutral-200 bg-white p-2 text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700"
+                className="rounded-md border border-neutral-200 bg-white p-2 text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700"
                 aria-label="Cerrar buscador"
               >
                 <X className="h-4 w-4" />
@@ -252,7 +252,9 @@ export function HomeSearchBar({
                             key={zone.id}
                             type="button"
                             onClick={() => {
-                              setQueryValue(`${zone.name}, ${zone.province.name}`);
+                              setQueryValue(
+                                `${zone.name}, ${zone.province.name}`,
+                              );
                               setMobileActiveSection("dates");
                             }}
                             className="flex w-full items-center gap-3 rounded-2xl border border-neutral-200 px-3 py-2.5 text-left transition hover:border-neutral-300"
@@ -354,8 +356,10 @@ export function HomeSearchBar({
                         <button
                           key={type.id}
                           type="button"
-                          onClick={() => setSelectedTypeId(selected ? "" : type.id)}
-                          className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                          onClick={() =>
+                            setSelectedTypeId(selected ? "" : type.id)
+                          }
+                          className={`rounded-md border px-3 py-2 text-xs font-semibold transition ${
                             selected
                               ? "border-mkmedia-blue bg-mkmedia-blue text-white"
                               : "border-mkmedia-blue/20 text-neutral-700 hover:border-mkmedia-blue/35"
@@ -382,7 +386,7 @@ export function HomeSearchBar({
                 <button
                   type="button"
                   onClick={executeSearch}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-mkmedia-blue px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 transition hover:bg-mkmedia-blue/90"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-md bg-mkmedia-blue px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 transition hover:bg-mkmedia-blue/90"
                 >
                   <Search className="h-4 w-4" />
                   Buscar
@@ -395,7 +399,7 @@ export function HomeSearchBar({
 
       <form onSubmit={handleSearch} className="mt-8 hidden md:block">
         <div ref={containerRef} className="relative">
-          <div className="rounded-full border border-mkmedia-blue/20 bg-white/90 shadow-xl shadow-mkmedia-blue/12 backdrop-blur-xl">
+          <div className="rounded-md border border-mkmedia-blue/20 bg-white/90 shadow-xl shadow-mkmedia-blue/12 backdrop-blur-xl">
             <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto p-2 md:gap-0 md:overflow-visible">
               <div
                 className={`${segmentBase} min-w-[260px] md:rounded-none md:rounded-l-full ${
@@ -454,7 +458,7 @@ export function HomeSearchBar({
               <div className="flex items-center px-2">
                 <button
                   type="submit"
-                  className="flex items-center gap-2 rounded-full bg-mkmedia-blue px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 hover:bg-mkmedia-blue/90"
+                  className="flex items-center gap-2 rounded-md bg-mkmedia-blue px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-mkmedia-blue/25 hover:bg-mkmedia-blue/90"
                 >
                   <span className="hidden md:inline">Buscar</span>
                   <ChevronRight className="h-4 w-4" />
@@ -479,7 +483,7 @@ export function HomeSearchBar({
                     <button
                       type="button"
                       onClick={() => setActivePanel(null)}
-                      className="rounded-full border border-neutral-200 p-2 text-neutral-500 hover:text-neutral-700"
+                      className="rounded-md border border-neutral-200 p-2 text-neutral-500 hover:text-neutral-700"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -542,7 +546,7 @@ export function HomeSearchBar({
                             setSelectedTypeId(selected ? "" : type.id);
                             setActivePanel(null);
                           }}
-                          className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                          className={`rounded-md border px-4 py-2 text-xs font-semibold transition ${
                             selected
                               ? "border-mkmedia-blue bg-mkmedia-blue text-white"
                               : "border-mkmedia-blue/20 text-neutral-700 hover:border-mkmedia-blue/35"
@@ -562,7 +566,7 @@ export function HomeSearchBar({
 
       {showPromo ? (
         <div
-          className="mt-6 flex items-center gap-3 rounded-2xl border border-mkmedia-yellow/60 bg-mkmedia-yellow/15 px-4 py-3 text-sm text-mkmedia-blue"
+          className="mt-6 flex items-center gap-3 rounded-md border border-mkmedia-yellow/60 bg-mkmedia-yellow/15 px-4 py-3 text-sm text-mkmedia-blue"
           style={{ animation: "rise 0.7s ease 0.1s forwards" }}
         >
           <span className="font-semibold">

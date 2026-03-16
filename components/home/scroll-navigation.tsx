@@ -24,14 +24,14 @@ export function ScrollNavigation({ targetId, title }: ScrollNavigationProps) {
       <div className="flex items-center gap-2">
         <button
           onClick={() => handleScroll("left")}
-          className="rounded-full border border-neutral-200 p-2 text-neutral-600 hover:bg-neutral-50 transition"
+          className="rounded-md border border-neutral-200 p-2 text-neutral-600 hover:bg-neutral-50 transition"
           aria-label="Anterior"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           onClick={() => handleScroll("right")}
-          className="rounded-full border border-neutral-200 p-2 text-neutral-600 hover:bg-neutral-50 transition"
+          className="rounded-md border border-neutral-200 p-2 text-neutral-600 hover:bg-neutral-50 transition"
           aria-label="Siguiente"
         >
           <ChevronRight className="h-4 w-4" />

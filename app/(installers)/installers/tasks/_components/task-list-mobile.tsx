@@ -8,7 +8,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-type TaskStatusFilter = "ALL" | "ASSIGNED" | "IN_PROGRESS" | "REOPENED" | "PENDING_REVIEW" | "COMPLETED";
+type TaskStatusFilter =
+  | "ALL"
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "REOPENED"
+  | "PENDING_REVIEW"
+  | "COMPLETED";
 
 function statusLabel(status: string) {
   if (status === "PENDING_ASSIGNMENT") return "Pendiente asignación";
@@ -68,21 +74,29 @@ export function TaskListMobile() {
       <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <MetricCard label="Pendientes" value={stats?.pending ?? 0} />
         <MetricCard label="En progreso" value={stats?.inProgress ?? 0} />
-        <MetricCard label="En revisión" value={(stats as { inReview?: number } | undefined)?.inReview ?? 0} />
-        <MetricCard label="Reabiertas" value={(stats as { reopened?: number } | undefined)?.reopened ?? 0} />
+        <MetricCard
+          label="En revisión"
+          value={(stats as { inReview?: number } | undefined)?.inReview ?? 0}
+        />
+        <MetricCard
+          label="Reabiertas"
+          value={(stats as { reopened?: number } | undefined)?.reopened ?? 0}
+        />
       </section>
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-2">
         <div className="scrollbar-hide -mx-1 overflow-x-auto px-1">
           <div className="flex w-max items-center gap-2">
-              {([
+            {(
+              [
                 { value: "ALL", label: "Resumen" },
                 { value: "ASSIGNED", label: "Asignadas" },
                 { value: "IN_PROGRESS", label: "En progreso" },
                 { value: "REOPENED", label: "Reabiertas" },
                 { value: "PENDING_REVIEW", label: "En revisión" },
                 { value: "COMPLETED", label: "Completadas" },
-              ] as const).map((option) => (
+              ] as const
+            ).map((option) => (
               <button
                 key={option.value}
                 type="button"
@@ -119,12 +133,19 @@ export function TaskListMobile() {
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="inline-flex max-w-full items-center rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-neutral-700">
-                      <span className="truncate whitespace-nowrap">OT {task.orderCode}</span>
+                    <p className="inline-flex max-w-full items-center rounded-md border border-neutral-200 bg-neutral-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-neutral-700">
+                      <span className="truncate whitespace-nowrap">
+                        OT {task.orderCode}
+                      </span>
                     </p>
-                    <p className="mt-1 truncate text-base font-semibold text-neutral-900">Cara {task.faceCode}</p>
+                    <p className="mt-1 truncate text-base font-semibold text-neutral-900">
+                      Cara {task.faceCode}
+                    </p>
                   </div>
-                  <Badge variant={statusVariant(task.status)} className="shrink-0 whitespace-nowrap">
+                  <Badge
+                    variant={statusVariant(task.status)}
+                    className="shrink-0 whitespace-nowrap"
+                  >
                     {statusLabel(task.status)}
                   </Badge>
                 </div>
@@ -136,7 +157,9 @@ export function TaskListMobile() {
                       {task.zoneName}, {task.provinceName}
                     </span>
                   </p>
-                  <p className="truncate pl-5">{task.assetAddress || "Dirección no disponible"}</p>
+                  <p className="truncate pl-5">
+                    {task.assetAddress || "Dirección no disponible"}
+                  </p>
                   <p className="truncate pl-5">
                     {task.organizationName || task.clientName || "Sin cliente"}
                   </p>
@@ -172,7 +195,9 @@ function MetricCard({ label, value }: { label: string; value: number }) {
       <p className="truncate whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-neutral-900">{value}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight text-neutral-900">
+        {value}
+      </p>
     </Card>
   );
 }

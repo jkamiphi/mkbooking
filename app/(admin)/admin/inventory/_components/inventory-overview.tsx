@@ -72,7 +72,9 @@ export async function InventoryOverview() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total de activos</CardDescription>
-            <CardTitle className="text-2xl">{formatNumber(totalAssets)}</CardTitle>
+            <CardTitle className="text-2xl">
+              {formatNumber(totalAssets)}
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 text-xs text-muted-foreground">
             Estructuras registradas en inventario.
@@ -81,7 +83,9 @@ export async function InventoryOverview() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total de caras</CardDescription>
-            <CardTitle className="text-2xl">{formatNumber(totalFaces)}</CardTitle>
+            <CardTitle className="text-2xl">
+              {formatNumber(totalFaces)}
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 text-xs text-muted-foreground">
             Superficies vendibles configuradas.
@@ -90,7 +94,9 @@ export async function InventoryOverview() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Activos digitales</CardDescription>
-            <CardTitle className="text-2xl">{formatNumber(digitalAssets)}</CardTitle>
+            <CardTitle className="text-2xl">
+              {formatNumber(digitalAssets)}
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 text-xs text-muted-foreground">
             Inventario con capacidad digital.
@@ -99,7 +105,9 @@ export async function InventoryOverview() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Activos iluminados</CardDescription>
-            <CardTitle className="text-2xl">{formatNumber(illuminatedAssets)}</CardTitle>
+            <CardTitle className="text-2xl">
+              {formatNumber(illuminatedAssets)}
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 text-xs text-muted-foreground">
             Estructuras con iluminación activa.
@@ -111,7 +119,9 @@ export async function InventoryOverview() {
         <Card className="xl:col-span-2">
           <CardHeader>
             <CardTitle>Estado operativo</CardTitle>
-            <CardDescription>Distribución de activos y caras por estado.</CardDescription>
+            <CardDescription>
+              Distribución de activos y caras por estado.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-2">
             <div className="space-y-3">
@@ -126,14 +136,16 @@ export async function InventoryOverview() {
                 return (
                   <div key={`assets-${status}`} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{statusLabels[status]}</span>
+                      <span className="text-muted-foreground">
+                        {statusLabels[status]}
+                      </span>
                       <span className="font-medium text-foreground">
                         {formatNumber(count)} ({percentage}%)
                       </span>
                     </div>
-                    <div className="h-2 rounded-full bg-muted">
+                    <div className="h-2 rounded-md bg-muted">
                       <div
-                        className={`h-2 rounded-full ${statusBarClass[status]}`}
+                        className={`h-2 rounded-md ${statusBarClass[status]}`}
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -154,14 +166,16 @@ export async function InventoryOverview() {
                 return (
                   <div key={`faces-${status}`} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{statusLabels[status]}</span>
+                      <span className="text-muted-foreground">
+                        {statusLabels[status]}
+                      </span>
                       <span className="font-medium text-foreground">
                         {formatNumber(count)} ({percentage}%)
                       </span>
                     </div>
-                    <div className="h-2 rounded-full bg-muted">
+                    <div className="h-2 rounded-md bg-muted">
                       <div
-                        className={`h-2 rounded-full ${statusBarClass[status]}`}
+                        className={`h-2 rounded-md ${statusBarClass[status]}`}
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -204,8 +218,9 @@ export async function InventoryOverview() {
                 </Badge>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                {formatNumber(maintenanceAssets)} activos y {formatNumber(maintenanceFaces)}{" "}
-                caras con estado de mantenimiento.
+                {formatNumber(maintenanceAssets)} activos y{" "}
+                {formatNumber(maintenanceFaces)} caras con estado de
+                mantenimiento.
               </p>
             </div>
 
@@ -245,7 +260,11 @@ export async function InventoryOverview() {
                       {formatRelativeDate(asset.createdAt)}
                     </p>
                   </div>
-                  <Badge variant={statusBadgeVariant[asset.status as InventoryStatus]}>
+                  <Badge
+                    variant={
+                      statusBadgeVariant[asset.status as InventoryStatus]
+                    }
+                  >
                     {statusLabels[asset.status as InventoryStatus]}
                   </Badge>
                 </Link>
@@ -276,7 +295,9 @@ export async function InventoryOverview() {
                       {face.asset.code} - {face.code}
                     </p>
                   </div>
-                  <Badge variant={statusBadgeVariant[face.status as InventoryStatus]}>
+                  <Badge
+                    variant={statusBadgeVariant[face.status as InventoryStatus]}
+                  >
                     {statusLabels[face.status as InventoryStatus]}
                   </Badge>
                 </Link>

@@ -32,7 +32,11 @@ type OrganizationContextSelectorProps = {
 type ContextLike = {
   contextKey: string;
   organizationName: string;
-  displayCategory: "OWN_BRAND" | "OWN_AGENCY" | "DELEGATED_BRAND" | "DIRECT_ACCESS";
+  displayCategory:
+    | "OWN_BRAND"
+    | "OWN_AGENCY"
+    | "DELEGATED_BRAND"
+    | "DIRECT_ACCESS";
   displayMeta: string;
   accessType: "DIRECT" | "DELEGATED";
   viaOrganizationName: string | null;
@@ -60,7 +64,9 @@ const CONTEXT_GROUPS = [
 function groupContexts(contexts: ContextLike[]) {
   return CONTEXT_GROUPS.map((group) => ({
     ...group,
-    contexts: contexts.filter((context) => context.displayCategory === group.key),
+    contexts: contexts.filter(
+      (context) => context.displayCategory === group.key,
+    ),
   })).filter((group) => group.contexts.length > 0);
 }
 
@@ -94,7 +100,11 @@ export function OrganizationContextSelector({
   const groupedContexts = groupContexts(contexts);
 
   async function handleContextChange(nextContextKey: string) {
-    if (!activeContext || nextContextKey === activeContext.contextKey || isSaving) {
+    if (
+      !activeContext ||
+      nextContextKey === activeContext.contextKey ||
+      isSaving
+    ) {
       return;
     }
 
@@ -145,7 +155,7 @@ export function OrganizationContextSelector({
             ? "h-24 animate-pulse rounded-[1.35rem] bg-white/80 ring-1 ring-neutral-200/80"
             : variant === "footer"
               ? "h-14 animate-pulse rounded-xl bg-white/80 ring-1 ring-neutral-200/80"
-            : "h-10 w-44 animate-pulse rounded-full border border-neutral-200/80 bg-white/80",
+              : "h-10 w-44 animate-pulse rounded-md border border-neutral-200/80 bg-white/80",
           className,
         )}
       />
@@ -160,7 +170,10 @@ export function OrganizationContextSelector({
 
   function renderMenuContent(align: "start" | "end") {
     return (
-      <DropdownMenuContent align={align} className="w-[22rem] border-neutral-200 bg-white">
+      <DropdownMenuContent
+        align={align}
+        className="w-[22rem] border-neutral-200 bg-white"
+      >
         <DropdownMenuLabel className="flex items-center gap-2 text-neutral-900">
           <CheckCircle2 className="h-4 w-4 text-mkmedia-blue" />
           Marcas y accesos
@@ -312,7 +325,7 @@ export function OrganizationContextSelector({
       type="button"
       variant="ghost"
       className={cn(
-        "h-10 rounded-full border border-neutral-200 bg-white/90 px-3 text-neutral-700 shadow-sm hover:bg-white",
+        "h-10 rounded-md border border-neutral-200 bg-white/90 px-3 text-neutral-700 shadow-sm hover:bg-white",
         isSingleContext ? "cursor-default" : "hover:border-mkmedia-blue/30",
         className,
       )}
@@ -329,7 +342,9 @@ export function OrganizationContextSelector({
       <span className="hidden text-xs text-neutral-500 sm:inline">
         {activeContext.displayMeta}
       </span>
-      {!isSingleContext ? <ChevronDown className="h-4 w-4 text-neutral-400" /> : null}
+      {!isSingleContext ? (
+        <ChevronDown className="h-4 w-4 text-neutral-400" />
+      ) : null}
     </Button>
   );
 

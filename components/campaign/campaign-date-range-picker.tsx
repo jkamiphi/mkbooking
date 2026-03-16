@@ -177,7 +177,10 @@ export function CampaignDateRangePicker({
     const normalizedStart = startDate < minimumStart ? minimumStart : startDate;
     const normalizedEnd = addDays(normalizedStart, minimumDurationDays);
 
-    onChange(toDateInputValue(normalizedStart), toDateInputValue(normalizedEnd));
+    onChange(
+      toDateInputValue(normalizedStart),
+      toDateInputValue(normalizedEnd),
+    );
   }
 
   if (variant === "inputs") {
@@ -228,7 +231,9 @@ export function CampaignDateRangePicker({
   return (
     <div className={cn("grid gap-6 md:grid-cols-[220px_1fr]", className)}>
       <div className="space-y-3">
-        <p className="text-sm font-semibold text-neutral-900">Selecciones rápidas</p>
+        <p className="text-sm font-semibold text-neutral-900">
+          Selecciones rápidas
+        </p>
         <button
           type="button"
           onClick={() => setQuickRange(minimumStart)}
@@ -267,7 +272,7 @@ export function CampaignDateRangePicker({
                 : undefined
             }
             disabled={!canGoPreviousMonth}
-            className="aspect-square rounded-full border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600 disabled:cursor-not-allowed disabled:opacity-40"
+            className="aspect-square rounded-md border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600 disabled:cursor-not-allowed disabled:opacity-40"
           >
             ←
           </button>
@@ -278,10 +283,14 @@ export function CampaignDateRangePicker({
             type="button"
             onClick={() =>
               setVisibleMonth(
-                new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1),
+                new Date(
+                  visibleMonth.getFullYear(),
+                  visibleMonth.getMonth() + 1,
+                  1,
+                ),
               )
             }
-            className="aspect-square rounded-full border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600"
+            className="aspect-square rounded-md border border-neutral-200 px-3 py-1 text-lg font-semibold text-neutral-600"
           >
             →
           </button>
@@ -302,7 +311,9 @@ export function CampaignDateRangePicker({
             }
 
             const isDisabled = day < minimumStart;
-            const isStart = parsedFromDate ? isSameDay(day, parsedFromDate) : false;
+            const isStart = parsedFromDate
+              ? isSameDay(day, parsedFromDate)
+              : false;
             const isEnd = parsedToDate ? isSameDay(day, parsedToDate) : false;
             const isInRange =
               parsedFromDate &&
@@ -317,13 +328,14 @@ export function CampaignDateRangePicker({
                 onClick={() => handleCalendarRangeSelect(day)}
                 disabled={isDisabled}
                 className={cn(
-                  "aspect-square flex h-10 w-10 items-center justify-center rounded-full font-semibold transition",
+                  "aspect-square flex h-10 w-10 items-center justify-center rounded-md font-semibold transition",
                   isStart || isEnd
                     ? "bg-neutral-900 text-white"
                     : isInRange
                       ? "bg-neutral-100 text-neutral-900"
                       : "text-neutral-700 hover:bg-neutral-100",
-                  isDisabled && "cursor-not-allowed bg-transparent text-neutral-300 hover:bg-transparent",
+                  isDisabled &&
+                    "cursor-not-allowed bg-transparent text-neutral-300 hover:bg-transparent",
                 )}
               >
                 {day.getDate()}
@@ -332,7 +344,7 @@ export function CampaignDateRangePicker({
           })}
         </div>
 
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-600">
+        <div className="mt-4 inline-flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-1 text-xs text-neutral-600">
           <Calendar className="h-3.5 w-3.5" />
           Selecciona mínimo dos fechas con 1 día de diferencia.
         </div>

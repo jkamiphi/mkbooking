@@ -8,7 +8,11 @@ interface HomeFooterProps {
   fullWidth?: boolean;
 }
 
-export function HomeFooter({ showPrices, className, fullWidth = false }: HomeFooterProps) {
+export function HomeFooter({
+  showPrices,
+  className,
+  fullWidth = false,
+}: HomeFooterProps) {
   return (
     <footer
       className={cn(
@@ -26,13 +30,16 @@ export function HomeFooter({ showPrices, className, fullWidth = false }: HomeFoo
       >
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <Image src="/images/logo/b-mkm-blue.png" alt="Logo" width={78.4} height={40} />
-            <span className="mt-2 inline-flex rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
-              MK MEDIA
-            </span>
+            <Image
+              src="/images/logo/b-mkm-blue.png"
+              alt="Logo"
+              width={78.4}
+              height={40}
+            />
             <p className="mt-2 max-w-md text-sm text-neutral-600">
-              Marketplace OOH en Panamá para descubrir, reservar y operar
-              campañas con una experiencia simple.
+              Conectamos marcas, agencias y propietarios de espacios
+              publicitarios en Panamá. Descubre, reserva y opera campañas OOH en
+              un solo lugar.
             </p>
           </div>
 
@@ -54,15 +61,18 @@ export function HomeFooter({ showPrices, className, fullWidth = false }: HomeFoo
                 Crear cuenta
               </Link>
             ) : null}
-            <a href="mailto:hola@mkbooking.com" className="hover:text-mkmedia-blue">
+            <a
+              href="mailto:hola@mkbooking.com"
+              className="hover:text-mkmedia-blue"
+            >
               Contacto
             </a>
           </nav>
         </div>
 
         <div className="mt-6 flex flex-col gap-2 border-t border-mkmedia-blue/15 pt-4 text-xs text-neutral-500 md:flex-row md:items-center md:justify-between">
-          <p>© {new Date().getFullYear()} MKM Booking.</p>
-          <p>hola@mkbooking.com · +507 6000-0000 · Panamá</p>
+          <p>© {new Date().getFullYear()} Grupo MK MEDIA.</p>
+          <p>hola@grupomkmedia.com · +507 6000-0000 · Panamá</p>
         </div>
       </div>
     </footer>

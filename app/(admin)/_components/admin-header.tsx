@@ -56,11 +56,11 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
   const pathname = usePathname();
   const navigation = useMemo(
     () => getAdminNavigationByRole(systemRole),
-    [systemRole]
+    [systemRole],
   );
   const userInitials = useMemo(
     () => getUserInitials(user.name, user.email),
-    [user.email, user.name]
+    [user.email, user.name],
   );
   const roleLabel = useMemo(() => getSystemRoleLabel(systemRole), [systemRole]);
   const { data: unreadData } = trpc.notifications.unreadCount.useQuery();
@@ -68,10 +68,10 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const defaultExpandedGroups = useMemo(
     () => getAdminNavigationDefaultExpandedGroups(navigation, pathname),
-    [navigation, pathname]
+    [navigation, pathname],
   );
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
   const [signingOut, setSigningOut] = useState(false);
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -155,13 +155,15 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
               </div>
             </Link>
 
-            <span className="hidden md:inline-flex items-center rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/6 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-mkmedia-blue dark:border-mkmedia-blue/30 dark:bg-mkmedia-blue/20 dark:text-mkmedia-yellow">
+            <span className="hidden md:inline-flex items-center rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/6 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-mkmedia-blue dark:border-mkmedia-blue/30 dark:bg-mkmedia-blue/20 dark:text-mkmedia-yellow">
               Admin
             </span>
 
-            <div className="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-mkmedia-blue/15 bg-mkmedia-blue/6 px-3 py-1 text-xs text-mkmedia-blue dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200">
+            <div className="hidden lg:inline-flex items-center gap-1.5 rounded-md border border-mkmedia-blue/15 bg-mkmedia-blue/6 px-3 py-1 text-xs text-mkmedia-blue dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200">
               <Shield className="h-3.5 w-3.5" />
-              <span className="[font-family:var(--font-mkmedia)]">{roleLabel}</span>
+              <span className="[font-family:var(--font-mkmedia)]">
+                {roleLabel}
+              </span>
             </div>
           </div>
 
@@ -170,13 +172,13 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
               asChild
               variant="ghost"
               size="icon-sm"
-              className="relative rounded-full border border-mkmedia-blue/15 bg-white text-mkmedia-blue shadow-sm hover:border-mkmedia-blue/30 hover:bg-mkmedia-blue/5 hover:text-mkmedia-blue dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="relative rounded-md border border-mkmedia-blue/15 bg-white text-mkmedia-blue shadow-sm hover:border-mkmedia-blue/30 hover:bg-mkmedia-blue/5 hover:text-mkmedia-blue dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
               aria-label="Notificaciones"
             >
               <Link href="/notifications" aria-label="Abrir notificaciones">
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-mkmedia-yellow px-1 text-[10px] font-semibold text-neutral-900">
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-md bg-mkmedia-yellow px-1 text-[10px] font-semibold text-neutral-900">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 ) : null}
@@ -188,7 +190,7 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-10 rounded-full border border-mkmedia-blue/15 bg-white px-1.5 pr-2 shadow-sm hover:border-mkmedia-blue/30 hover:bg-mkmedia-blue/5 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800"
+                  className="h-10 rounded-md border border-mkmedia-blue/15 bg-white px-1.5 pr-2 shadow-sm hover:border-mkmedia-blue/30 hover:bg-mkmedia-blue/5 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800"
                   aria-label="Abrir menú de usuario"
                 >
                   <Avatar className="h-7 w-7 border border-mkmedia-blue/15 dark:border-neutral-700">
@@ -216,7 +218,9 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
                 <DropdownMenuLabel className="pt-0">
                   <div className="inline-flex items-center gap-2 rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/6 px-2 py-1 text-xs text-mkmedia-blue dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
                     <Shield className="h-3.5 w-3.5" />
-                    <span className="[font-family:var(--font-mkmedia)]">{roleLabel}</span>
+                    <span className="[font-family:var(--font-mkmedia)]">
+                      {roleLabel}
+                    </span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -280,7 +284,9 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
                   </p>
                   <div className="inline-flex items-center gap-2 rounded-lg border border-mkmedia-blue/20 bg-mkmedia-blue/6 px-3 py-1.5 text-xs text-mkmedia-blue dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
                     <Shield className="h-3.5 w-3.5" />
-                    <span className="[font-family:var(--font-mkmedia)]">{roleLabel}</span>
+                    <span className="[font-family:var(--font-mkmedia)]">
+                      {roleLabel}
+                    </span>
                   </div>
                 </div>
                 <Button
@@ -301,7 +307,7 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
                 if (!isAdminNavigationGroup(node)) {
                   const isActive = isAdminNavigationHrefActive(
                     pathname,
-                    node.href
+                    node.href,
                   );
 
                   return (
@@ -313,7 +319,7 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
                         "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                         isActive
                           ? "bg-mkmedia-blue/8 text-mkmedia-blue dark:bg-mkmedia-blue/20 dark:text-mkmedia-yellow"
-                          : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                          : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800",
                       )}
                       aria-current={isActive ? "page" : undefined}
                     >
@@ -325,7 +331,7 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
 
                 const activeChildHref = getAdminNavigationGroupActiveChildHref(
                   pathname,
-                  node
+                  node,
                 );
                 const isGroupActive = activeChildHref !== null;
                 const isExpanded = isGroupExpanded(node.key);
@@ -339,7 +345,7 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
                         "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                         isGroupActive
                           ? "bg-mkmedia-blue/8 text-mkmedia-blue dark:bg-mkmedia-blue/20 dark:text-mkmedia-yellow"
-                          : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                          : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800",
                       )}
                       aria-expanded={isExpanded}
                       aria-controls={`mobile-admin-nav-group-${node.key}`}
@@ -349,7 +355,7 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
                       <ChevronDown
                         className={cn(
                           "ml-auto h-4 w-4 transition-transform",
-                          isExpanded ? "rotate-180" : ""
+                          isExpanded ? "rotate-180" : "",
                         )}
                       />
                     </button>
@@ -371,7 +377,7 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
                                 "flex items-center rounded-lg px-2 py-2 text-sm transition-colors",
                                 isChildActive
                                   ? "bg-mkmedia-blue/8 text-mkmedia-blue dark:bg-mkmedia-blue/20 dark:text-mkmedia-yellow"
-                                  : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                                  : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800",
                               )}
                               aria-current={isChildActive ? "page" : undefined}
                             >
@@ -397,7 +403,7 @@ export function AdminHeader({ user, systemRole }: AdminHeaderProps) {
                   Notificaciones
                 </span>
                 {unreadCount > 0 ? (
-                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-mkmedia-yellow px-1.5 py-0.5 text-[10px] font-semibold text-neutral-900">
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-md bg-mkmedia-yellow px-1.5 py-0.5 text-[10px] font-semibold text-neutral-900">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 ) : null}

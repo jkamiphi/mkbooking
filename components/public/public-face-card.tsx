@@ -95,7 +95,7 @@ export function PublicFaceCard({
             onToggleSelect();
           }}
           className={cn(
-            "absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full border-2 shadow-md transition-all duration-200",
+            "absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-md border-2 shadow-md transition-all duration-200",
             isSelected
               ? "scale-110 border-mkmedia-blue bg-mkmedia-blue text-white"
               : "border-white/90 bg-white/90 text-neutral-500 backdrop-blur-sm hover:border-mkmedia-blue hover:bg-mkmedia-blue hover:text-white",
@@ -121,12 +121,14 @@ export function PublicFaceCard({
         )}
       >
         <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-1.5">
-          {face.isDigital ? <span className={brandPrimaryBadgeClass}>Digital</span> : null}
+          {face.isDigital ? (
+            <span className={brandPrimaryBadgeClass}>Digital</span>
+          ) : null}
           {face.isIlluminated ? (
             <span className={brandSecondaryBadgeClass}>Iluminado</span>
           ) : null}
           {isHighlighted ? (
-            <span className="rounded-full border border-mkmedia-blue/30 bg-mkmedia-blue/15 px-2 py-0.5 text-[10px] font-semibold text-mkmedia-blue">
+            <span className="rounded-md border border-mkmedia-blue/30 bg-mkmedia-blue/15 px-2 py-0.5 text-[10px] font-semibold text-mkmedia-blue">
               {highlightedLabel}
             </span>
           ) : null}
@@ -134,7 +136,9 @@ export function PublicFaceCard({
 
         {isSelected ? (
           <div className="absolute inset-x-0 bottom-0 z-20 bg-linear-to-t from-mkmedia-blue/80 to-transparent px-3 pb-2 pt-6">
-            <span className="text-[10px] font-semibold text-white">En tu selección</span>
+            <span className="text-[10px] font-semibold text-white">
+              En tu selección
+            </span>
           </div>
         ) : null}
 
@@ -155,7 +159,7 @@ export function PublicFaceCard({
             />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center bg-linear-to-br from-mkmedia-yellow/20 to-mkmedia-blue/20 p-4">
-              <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold text-neutral-700">
+              <span className="rounded-md bg-white/80 px-2 py-1 text-[10px] font-semibold text-neutral-700">
                 {face.structureType}
               </span>
             </div>
@@ -170,9 +174,11 @@ export function PublicFaceCard({
         )}
       >
         <div className="flex items-start justify-between gap-2">
-          <h3 className="line-clamp-1 text-sm font-semibold text-neutral-900">{face.title}</h3>
+          <h3 className="line-clamp-1 text-sm font-semibold text-neutral-900">
+            {face.title}
+          </h3>
           {face.dimensionsLabel ? (
-            <span className="shrink-0 whitespace-nowrap rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-2 py-0.5 text-[10px] font-medium text-mkmedia-blue">
+            <span className="shrink-0 whitespace-nowrap rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-2 py-0.5 text-[10px] font-medium text-mkmedia-blue">
               {face.dimensionsLabel}
             </span>
           ) : null}
@@ -180,7 +186,7 @@ export function PublicFaceCard({
 
         <p className="text-xs text-neutral-600">{face.location}</p>
 
-        {(face.trafficLabel || face.areaLabel) ? (
+        {face.trafficLabel || face.areaLabel ? (
           <div className="flex items-center justify-between text-xs text-neutral-500">
             <p>{face.trafficLabel ? `Tráfico: ${face.trafficLabel}` : ""}</p>
             {face.areaLabel ? <p>{face.areaLabel}</p> : null}
@@ -196,7 +202,10 @@ export function PublicFaceCard({
               <p className="text-[10px] text-neutral-500">por día</p>
             </div>
           ) : (
-            <Link href="/login" className="text-xs font-semibold text-mkmedia-blue hover:underline">
+            <Link
+              href="/login"
+              className="text-xs font-semibold text-mkmedia-blue hover:underline"
+            >
               Inicia sesión para ver precio
             </Link>
           )}
@@ -204,7 +213,7 @@ export function PublicFaceCard({
           {showPrices ? (
             <span
               className={cn(
-                "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-semibold",
+                "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-[10px] font-semibold",
                 brandPrimaryButtonClass,
               )}
             >

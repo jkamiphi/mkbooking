@@ -54,7 +54,7 @@ export function CatalogFacesGrid({
           return (
             <article
               key={face.id}
-              className="group relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white shadow-sm transition hover:-translate-y-1 hover:border-neutral-300 hover:shadow-lg"
+              className="group relative overflow-hidden rounded-md border border-neutral-200/90 bg-white shadow-sm transition hover:-translate-y-1 hover:border-neutral-300 hover:shadow-lg"
               style={{
                 animation: "rise 0.6s ease forwards",
                 animationDelay: `${index * 60}ms`,
@@ -69,23 +69,23 @@ export function CatalogFacesGrid({
               <div className="relative">
                 <div className="absolute left-4 top-4 z-20 flex flex-wrap gap-2">
                   {face.asset.digital ? (
-                    <span className="rounded-full bg-[#0359A8]/90 px-3 py-1 text-xs font-semibold text-white">
+                    <span className="rounded-md bg-[#0359A8]/90 px-3 py-1 text-xs font-semibold text-white">
                       Digital
                     </span>
                   ) : null}
                   {face.asset.illuminated ? (
-                    <span className="rounded-full bg-[#fcb814]/90 px-3 py-1 text-xs font-semibold text-neutral-900">
+                    <span className="rounded-md bg-[#fcb814]/90 px-3 py-1 text-xs font-semibold text-neutral-900">
                       Iluminado
                     </span>
                   ) : null}
                   {face.catalogFace?.highlight ? (
-                    <span className="rounded-full bg-[#e6efff] px-3 py-1 text-xs font-semibold text-[#0359A8]">
+                    <span className="rounded-md bg-[#e6efff] px-3 py-1 text-xs font-semibold text-[#0359A8]">
                       {face.catalogFace.highlight}
                     </span>
                   ) : null}
                 </div>
 
-                <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-50">
+                <div className="relative aspect-[4/3] overflow-hidden rounded-t-md bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-50">
                   {imageUrl ? (
                     <Image
                       src={imageUrl}
@@ -118,7 +118,7 @@ export function CatalogFacesGrid({
                     </>
                   ) : (
                     <div className="flex h-full w-full flex-col items-start justify-end gap-3 bg-[linear-gradient(140deg,_#fef3c7,_#fde68a_40%,_#fca5a5)] p-6 text-neutral-900">
-                      <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold">
+                      <span className="rounded-md bg-white/70 px-3 py-1 text-xs font-semibold">
                         {face.asset.structureType.name}
                       </span>
                       <p className="text-lg font-semibold">{title}</p>
@@ -133,7 +133,7 @@ export function CatalogFacesGrid({
                     {title}
                   </h3>
                   {dimensions ? (
-                    <span className="shrink-0 whitespace-nowrap rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-medium text-neutral-600">
+                    <span className="shrink-0 whitespace-nowrap rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-medium text-neutral-600">
                       {dimensions.label}
                     </span>
                   ) : null}
@@ -156,14 +156,14 @@ export function CatalogFacesGrid({
                         </p>
                         <p className="text-xs text-neutral-500">por día</p>
                       </div>
-                      <span className="rounded-full border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600">
+                      <span className="rounded-md border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600">
                         Reserva 24h
                       </span>
                     </div>
 
                     <Link
                       href={detailHref}
-                      className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-[#0359A8]/20 transition hover:bg-[#024a8c]"
+                      className="mt-1 inline-flex items-center gap-2 rounded-md bg-[#0359A8] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-[#0359A8]/20 transition hover:bg-[#024a8c]"
                     >
                       Ver detalle
                       <ChevronRight className="h-3 w-3" />
@@ -172,7 +172,7 @@ export function CatalogFacesGrid({
                 ) : (
                   <Link
                     href="/login"
-                    className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
+                    className="inline-flex items-center gap-2 rounded-md border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
                   >
                     Inicia sesión para ver precios
                     <ChevronRight className="h-3 w-3" />

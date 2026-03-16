@@ -69,11 +69,7 @@ export function DashboardContent() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat) => (
-          <Link
-            key={stat.name}
-            href={stat.href}
-            className="rounded-xl"
-          >
+          <Link key={stat.name} href={stat.href} className="rounded-xl">
             <Card className="h-full transition-colors hover:border-primary/50">
               <CardContent className="flex items-center justify-between pt-6">
                 <div>
@@ -84,7 +80,7 @@ export function DashboardContent() {
                     {stat.value}
                   </p>
                 </div>
-                <div className={`p-3 rounded-full ${stat.color}`}>
+                <div className={`p-3 rounded-md ${stat.color}`}>
                   <stat.icon className="h-6 w-6" />
                 </div>
               </CardContent>

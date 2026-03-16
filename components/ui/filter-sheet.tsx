@@ -65,10 +65,7 @@ export function FilterSheetToolbar({
     <div className={cn("space-y-3", className)}>
       <div className="flex flex-wrap items-center gap-2">{children}</div>
       {summaryChips.length > 0 ? (
-        <FilterSummaryChips
-          chips={summaryChips}
-          onClearAll={onClearAll}
-        />
+        <FilterSummaryChips chips={summaryChips} onClearAll={onClearAll} />
       ) : null}
     </div>
   );
@@ -96,7 +93,7 @@ export const FilterSheetTriggerButton = React.forwardRef<
       variant={variant}
       size={size}
       className={cn(
-        "h-9 rounded-full border-mkmedia-blue/20 bg-white px-4 text-mkmedia-blue shadow-none hover:border-mkmedia-blue/35 hover:bg-mkmedia-blue/8",
+        "h-9 rounded-md border-mkmedia-blue/20 bg-white px-4 text-mkmedia-blue shadow-none hover:border-mkmedia-blue/35 hover:bg-mkmedia-blue/8",
         className,
       )}
       {...props}
@@ -104,7 +101,7 @@ export const FilterSheetTriggerButton = React.forwardRef<
       <SlidersHorizontal className="h-4 w-4" />
       {label}
       {activeCount > 0 ? (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-mkmedia-blue px-1.5 text-[10px] font-bold text-white">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-mkmedia-blue px-1.5 text-[10px] font-bold text-white">
           {activeCount}
         </span>
       ) : null}
@@ -124,7 +121,7 @@ export function FilterSummaryChips({
           key={chip.key}
           type="button"
           onClick={chip.onRemove}
-          className="inline-flex min-h-8 items-center gap-2 rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1.5 text-xs font-semibold text-mkmedia-blue transition hover:bg-mkmedia-blue/15"
+          className="inline-flex min-h-8 items-center gap-2 rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1.5 text-xs font-semibold text-mkmedia-blue transition hover:bg-mkmedia-blue/15"
         >
           <span>{chip.label}</span>
           <X className="h-3.5 w-3.5" />
@@ -137,7 +134,7 @@ export function FilterSummaryChips({
           variant="ghost"
           size="sm"
           onClick={onClearAll}
-          className="h-8 rounded-full px-3 text-xs text-neutral-500 hover:text-neutral-700"
+          className="h-8 rounded-md px-3 text-xs text-neutral-500 hover:text-neutral-700"
         >
           Limpiar todo
         </Button>
@@ -176,7 +173,12 @@ export function FilterSheetPanel({
         ) : null}
       </SheetHeader>
 
-      <div className={cn("flex-1 space-y-5 overflow-y-auto px-5 py-5", bodyClassName)}>
+      <div
+        className={cn(
+          "flex-1 space-y-5 overflow-y-auto px-5 py-5",
+          bodyClassName,
+        )}
+      >
         {children}
       </div>
 

@@ -221,8 +221,8 @@ function ContextTone({
     <span
       className={
         variant === "accent"
-          ? "rounded-full bg-mkmedia-blue/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-mkmedia-blue"
-          : "rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-600"
+          ? "rounded-md bg-mkmedia-blue/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-mkmedia-blue"
+          : "rounded-md bg-neutral-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-600"
       }
     >
       {children}
@@ -291,8 +291,8 @@ function WorkspaceCard({
           variant={isActive ? "outline" : "default"}
           className={
             isActive
-              ? "rounded-full border-mkmedia-blue/20 bg-white text-mkmedia-blue hover:bg-white"
-              : "rounded-full bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+              ? "rounded-md border-mkmedia-blue/20 bg-white text-mkmedia-blue hover:bg-white"
+              : "rounded-md bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
           }
           onClick={() => onSelect(context.contextKey)}
           disabled={isSaving || isActive}
@@ -640,14 +640,14 @@ export function ProfileContent() {
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Button
                     asChild
-                    className="rounded-full bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+                    className="rounded-md bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
                   >
                     <Link href="/onboarding">Crear mi primer espacio</Link>
                   </Button>
                   <Button
                     asChild
                     variant="outline"
-                    className="rounded-full bg-white"
+                    className="rounded-md bg-white"
                   >
                     <Link href="/">Explorar catalogo</Link>
                   </Button>
@@ -678,7 +678,7 @@ export function ProfileContent() {
                   variant="outline"
                   size="sm"
                   onClick={handlePersonalEditStart}
-                  className="rounded-full"
+                  className="rounded-md"
                 >
                   <PencilLine className="h-4 w-4" />
                   Editar
@@ -740,7 +740,7 @@ export function ProfileContent() {
                     type="button"
                     onClick={handlePersonalSave}
                     disabled={updateProfile.isPending}
-                    className="rounded-full bg-[#0359A8] text-white hover:bg-[#024a8f]"
+                    className="rounded-md bg-[#0359A8] text-white hover:bg-[#024a8f]"
                   >
                     <Save className="h-4 w-4" />
                     {updateProfile.isPending
@@ -752,7 +752,7 @@ export function ProfileContent() {
                     variant="outline"
                     onClick={handlePersonalEditCancel}
                     disabled={updateProfile.isPending}
-                    className="rounded-full"
+                    className="rounded-md"
                   >
                     <X className="h-4 w-4" />
                     Cancelar
@@ -793,7 +793,7 @@ export function ProfileContent() {
                 !hasNotificationChanges ||
                 updateNotificationPreferences.isPending
               }
-              className="rounded-full bg-neutral-900 text-white hover:bg-neutral-800"
+              className="rounded-md bg-neutral-900 text-white hover:bg-neutral-800"
             >
               <Save className="h-4 w-4" />
               {updateNotificationPreferences.isPending

@@ -14,15 +14,15 @@ export function HomeBackgroundEffects() {
       `}</style>
 
       <div
-        className="pointer-events-none absolute -top-32 right-0 h-80 w-80 rounded-full bg-[#fcb814]/30 blur-3xl"
+        className="pointer-events-none absolute -top-32 right-0 h-80 w-80 rounded-md bg-[#fcb814]/30 blur-3xl"
         style={{ animation: "drift 18s ease-in-out infinite" }}
       />
       <div
-        className="pointer-events-none absolute -left-24 top-24 h-64 w-64 rounded-full bg-[#0359A8]/20 blur-3xl"
+        className="pointer-events-none absolute -left-24 top-24 h-64 w-64 rounded-md bg-[#0359A8]/20 blur-3xl"
         style={{ animation: "drift 14s ease-in-out infinite" }}
       />
       <div
-        className="pointer-events-none absolute left-1/2 top-16 h-40 w-40 -translate-x-1/2 rounded-full bg-[#0359A8]/15 blur-2xl"
+        className="pointer-events-none absolute left-1/2 top-16 h-40 w-40 -translate-x-1/2 rounded-md bg-[#0359A8]/15 blur-2xl"
         style={{ animation: "drift 20s ease-in-out infinite" }}
       />
     </>

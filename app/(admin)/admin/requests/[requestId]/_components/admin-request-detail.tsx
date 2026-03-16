@@ -4,11 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import {
-  APIProvider,
-  AdvancedMarker,
-  Map,
-} from "@vis.gl/react-google-maps";
+import { APIProvider, AdvancedMarker, Map } from "@vis.gl/react-google-maps";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -90,23 +86,27 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
   const utils = trpc.useUtils();
 
   const [statusDraft, setStatusDraft] = useState<string | undefined>(undefined);
-  const [assignedFaceIds, setAssignedFaceIds] = useState<string[] | undefined>(undefined);
+  const [assignedFaceIds, setAssignedFaceIds] = useState<string[] | undefined>(
+    undefined,
+  );
   const [searchText, setSearchText] = useState("");
   const [zoneFilter, setZoneFilter] = useState<string | undefined>(undefined);
-  const [structureTypeFilter, setStructureTypeFilter] = useState<string | undefined>(
-    undefined
-  );
+  const [structureTypeFilter, setStructureTypeFilter] = useState<
+    string | undefined
+  >(undefined);
   const [includeOutsideCriteria, setIncludeOutsideCriteria] = useState(true);
   const [focusedFaceId, setFocusedFaceId] = useState<string | null>(null);
 
   const { data: request, isLoading } = trpc.catalog.requests.get.useQuery(
     { requestId },
-    { refetchOnWindowFocus: false }
+    { refetchOnWindowFocus: false },
   );
 
   const effectiveStatusDraft = statusDraft ?? request?.status ?? "IN_REVIEW";
   const effectiveAssignedFaceIds =
-    assignedFaceIds ?? request?.assignments.map((assignment) => assignment.faceId) ?? [];
+    assignedFaceIds ??
+    request?.assignments.map((assignment) => assignment.faceId) ??
+    [];
   const effectiveZoneFilter = zoneFilter ?? request?.zoneId ?? "";
   const effectiveStructureTypeFilter =
     structureTypeFilter ?? request?.structureTypeId ?? "";
@@ -116,10 +116,11 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
     refetchOnWindowFocus: false,
   });
 
-  const { data: structureTypes } = trpc.inventory.structureTypes.publicList.useQuery(undefined, {
-    enabled: Boolean(request),
-    refetchOnWindowFocus: false,
-  });
+  const { data: structureTypes } =
+    trpc.inventory.structureTypes.publicList.useQuery(undefined, {
+      enabled: Boolean(request),
+      refetchOnWindowFocus: false,
+    });
 
   const suggestionsInput = useMemo(
     () => ({
@@ -137,7 +138,7 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
       searchText,
       effectiveZoneFilter,
       effectiveStructureTypeFilter,
-    ]
+    ],
   );
 
   const { data: suggestions, isLoading: isSuggestionsLoading } =
@@ -152,7 +153,9 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
       toast.success("Estado actualizado exitosamente");
     },
     onError: (error) => {
-      toast.error("No se pudo actualizar el estado", { description: error.message });
+      toast.error("No se pudo actualizar el estado", {
+        description: error.message,
+      });
     },
   });
 
@@ -175,7 +178,9 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
       }
     },
     onError: (error) => {
-      toast.error("No se pudieron guardar las asignaciones", { description: error.message });
+      toast.error("No se pudieron guardar las asignaciones", {
+        description: error.message,
+      });
     },
   });
 
@@ -186,12 +191,12 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
       const warningMessages: string[] = [];
       if (result.warnings.partialAssignment) {
         warningMessages.push(
-          `Asignación parcial: ${result.warnings.assignedCount}/${result.warnings.requestedCount}`
+          `Asignación parcial: ${result.warnings.assignedCount}/${result.warnings.requestedCount}`,
         );
       }
       if (result.warnings.outsideCriteriaCount > 0) {
         warningMessages.push(
-          `${result.warnings.outsideCriteriaCount} cara(s) fuera de criterio`
+          `${result.warnings.outsideCriteriaCount} cara(s) fuera de criterio`,
         );
       }
 
@@ -205,7 +210,9 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
       router.push(`/admin/orders/${result.order.id}`);
     },
     onError: (error) => {
-      toast.error("Error al generar cotización", { description: error.message });
+      toast.error("Error al generar cotización", {
+        description: error.message,
+      });
     },
   });
 
@@ -218,7 +225,9 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
       });
     },
     onError: (error) => {
-      toast.error("No se pudo confirmar la solicitud", { description: error.message });
+      toast.error("No se pudo confirmar la solicitud", {
+        description: error.message,
+      });
     },
   });
 
@@ -259,7 +268,7 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
     return (
       <AdminPageShell>
         <div className="flex h-64 items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-[#0359A8]" />
+          <div className="h-6 w-6 animate-spin rounded-md border-2 border-neutral-300 border-t-[#0359A8]" />
         </div>
       </AdminPageShell>
     );
@@ -270,7 +279,9 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
       <AdminPageShell>
         <div className="flex h-[400px] flex-col items-center justify-center text-center">
           <PackageSearch className="mb-4 h-10 w-10 text-neutral-300" />
-          <h3 className="text-lg font-semibold text-neutral-900">Solicitud no encontrada</h3>
+          <h3 className="text-lg font-semibold text-neutral-900">
+            Solicitud no encontrada
+          </h3>
           <p className="mt-2 max-w-md text-sm text-neutral-500">
             La solicitud {requestId} no existe o no tienes permisos para verla.
           </p>
@@ -292,20 +303,25 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
       : null;
 
   const markerFaces = suggestionList.filter(
-    (face) => typeof face.latitude === "number" && typeof face.longitude === "number"
+    (face) =>
+      typeof face.latitude === "number" && typeof face.longitude === "number",
   );
 
   const mapCenter = markerFaces.length
-    ? { lat: markerFaces[0].latitude as number, lng: markerFaces[0].longitude as number }
+    ? {
+        lat: markerFaces[0].latitude as number,
+        lng: markerFaces[0].longitude as number,
+      }
     : DEFAULT_MAP_CENTER;
 
   const outsideSelectedCount = suggestionList.filter(
-    (face) => effectiveAssignedFaceIds.includes(face.id) && !face.matchesCriteria
+    (face) =>
+      effectiveAssignedFaceIds.includes(face.id) && !face.matchesCriteria,
   ).length;
 
   const servicesSubtotal = request.services.reduce(
     (sum, serviceItem) => sum + Number(serviceItem.subtotal),
-    0
+    0,
   );
 
   const canGenerateQuotation =
@@ -327,9 +343,13 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <AdminPageHeader
           title={`Solicitud ${request.id.slice(0, 8).toUpperCase()}`}
-          description={`Creada el ${format(new Date(request.createdAt), "dd 'de' MMMM, yyyy", {
-            locale: es,
-          })}`}
+          description={`Creada el ${format(
+            new Date(request.createdAt),
+            "dd 'de' MMMM, yyyy",
+            {
+              locale: es,
+            },
+          )}`}
         />
         <div className="-mt-4 mb-4 md:mt-0 md:ml-4">
           <Badge variant={statusBadgeVariant(request.status)}>
@@ -386,7 +406,9 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                     <MessageSquareText className="h-3.5 w-3.5" />
                     Notas del usuario
                   </div>
-                  <p className="whitespace-pre-wrap text-sm text-neutral-700">{request.notes}</p>
+                  <p className="whitespace-pre-wrap text-sm text-neutral-700">
+                    {request.notes}
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -399,11 +421,16 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
               </h3>
 
               {request.services.length === 0 ? (
-                <p className="text-sm text-neutral-500">Sin servicios adicionales.</p>
+                <p className="text-sm text-neutral-500">
+                  Sin servicios adicionales.
+                </p>
               ) : (
                 <div className="space-y-2">
                   {request.services.map((serviceItem) => (
-                    <div key={serviceItem.id} className="rounded-xl border border-neutral-200 p-3">
+                    <div
+                      key={serviceItem.id}
+                      className="rounded-xl border border-neutral-200 p-3"
+                    >
                       <p className="text-sm font-medium text-neutral-900">
                         {serviceItem.service?.name || "Servicio adicional"}
                       </p>
@@ -411,13 +438,13 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                         {serviceItem.quantity} x{" "}
                         {formatCurrency(
                           Number(serviceItem.unitPrice),
-                          serviceItem.service?.currency || "USD"
+                          serviceItem.service?.currency || "USD",
                         )}
                       </p>
                       <p className="mt-1 text-sm font-semibold text-neutral-900">
                         {formatCurrency(
                           Number(serviceItem.subtotal),
-                          serviceItem.service?.currency || "USD"
+                          serviceItem.service?.currency || "USD",
                         )}
                       </p>
                     </div>
@@ -461,7 +488,8 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                       })
                     }
                     disabled={
-                      updateStatus.isPending || effectiveStatusDraft === request.status
+                      updateStatus.isPending ||
+                      effectiveStatusDraft === request.status
                     }
                   >
                     Actualizar
@@ -474,7 +502,8 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="mt-0.5 h-3.5 w-3.5" />
                         <span>
-                          Se cotizará con asignación parcial ({assignedCount}/{requestedCount}).
+                          Se cotizará con asignación parcial ({assignedCount}/
+                          {requestedCount}).
                         </span>
                       </div>
                     </div>
@@ -491,20 +520,22 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                     </Button>
                   )}
 
-                  {request.status === "QUOTATION_GENERATED" && request.order && (
-                    <Button asChild className="mt-2 w-full" variant="outline">
-                      <Link href={`/admin/orders/${request.order.id}`}>
-                        Revisar Cotización Generada
-                      </Link>
-                    </Button>
-                  )}
+                  {request.status === "QUOTATION_GENERATED" &&
+                    request.order && (
+                      <Button asChild className="mt-2 w-full" variant="outline">
+                        <Link href={`/admin/orders/${request.order.id}`}>
+                          Revisar Cotización Generada
+                        </Link>
+                      </Button>
+                    )}
 
                   <Button
                     variant="secondary"
                     className="mt-2 w-full"
                     onClick={() => confirmRequest.mutate({ requestId })}
                     disabled={
-                      confirmRequest.isPending || effectiveAssignedFaceIds.length === 0
+                      confirmRequest.isPending ||
+                      effectiveAssignedFaceIds.length === 0
                     }
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
@@ -529,7 +560,8 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                   </p>
                   {outsideSelectedCount > 0 && (
                     <p className="mt-1 text-xs text-amber-700">
-                      {outsideSelectedCount} cara(s) asignadas fuera de criterio.
+                      {outsideSelectedCount} cara(s) asignadas fuera de
+                      criterio.
                     </p>
                   )}
                 </div>
@@ -570,7 +602,9 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
 
                 <SelectNative
                   value={effectiveStructureTypeFilter}
-                  onChange={(event) => setStructureTypeFilter(event.target.value)}
+                  onChange={(event) =>
+                    setStructureTypeFilter(event.target.value)
+                  }
                 >
                   <option value="">Todos los tipos</option>
                   {(structureTypes ?? []).map((type) => (
@@ -585,7 +619,9 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                 <input
                   type="checkbox"
                   checked={includeOutsideCriteria}
-                  onChange={(event) => setIncludeOutsideCriteria(event.target.checked)}
+                  onChange={(event) =>
+                    setIncludeOutsideCriteria(event.target.checked)
+                  }
                   className="h-4 w-4 rounded border-neutral-300 text-[#0359A8]"
                 />
                 Incluir sugerencias fuera de criterio
@@ -593,7 +629,7 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
 
               {isSuggestionsLoading ? (
                 <div className="flex h-40 items-center justify-center">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-[#0359A8]" />
+                  <div className="h-6 w-6 animate-spin rounded-md border-2 border-neutral-300 border-t-[#0359A8]" />
                 </div>
               ) : (
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -613,8 +649,10 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                             className="h-full w-full"
                           >
                             {markerFaces.map((face) => {
-                              const isAssigned = effectiveAssignedFaceIds.includes(face.id);
-                              const isFocused = effectiveFocusedFaceId === face.id;
+                              const isAssigned =
+                                effectiveAssignedFaceIds.includes(face.id);
+                              const isFocused =
+                                effectiveFocusedFaceId === face.id;
                               const markerColor = isAssigned
                                 ? "bg-emerald-600"
                                 : face.matchesCriteria
@@ -634,7 +672,7 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                                   }}
                                 >
                                   <div
-                                    className={`h-4 w-4 rounded-full border-2 border-white ${markerColor} ${isFocused ? "ring-4 ring-neutral-300" : ""}`}
+                                    className={`h-4 w-4 rounded-md border-2 border-white ${markerColor} ${isFocused ? "ring-4 ring-neutral-300" : ""}`}
                                   />
                                 </AdvancedMarker>
                               );
@@ -644,31 +682,37 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                       </div>
                     ) : (
                       <div className="flex h-[420px] items-center justify-center bg-neutral-100 p-4 text-center text-sm text-neutral-500">
-                        Configura `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` para habilitar el mapa.
+                        Configura `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` para
+                        habilitar el mapa.
                       </div>
                     )}
                   </div>
 
                   <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
                     {suggestionList.map((face) => {
-                      const isChecked = effectiveAssignedFaceIds.includes(face.id);
+                      const isChecked = effectiveAssignedFaceIds.includes(
+                        face.id,
+                      );
                       const isFocused = effectiveFocusedFaceId === face.id;
 
                       return (
                         <div
                           key={face.id}
                           onClick={() => setFocusedFaceId(face.id)}
-                          className={`cursor-pointer rounded-xl border p-3 transition ${isFocused
-                            ? "border-[#0359A8] bg-[#0359A8]/5"
-                            : isChecked
-                              ? "border-emerald-300 bg-emerald-50"
-                              : "border-neutral-200 bg-white hover:border-neutral-300"
-                            }`}
+                          className={`cursor-pointer rounded-xl border p-3 transition ${
+                            isFocused
+                              ? "border-[#0359A8] bg-[#0359A8]/5"
+                              : isChecked
+                                ? "border-emerald-300 bg-emerald-50"
+                                : "border-neutral-200 bg-white hover:border-neutral-300"
+                          }`}
                         >
                           <div className="flex items-start gap-3">
                             <Checkbox
                               checked={isChecked}
-                              onCheckedChange={(value) => toggleFace(face.id, Boolean(value))}
+                              onCheckedChange={(value) =>
+                                toggleFace(face.id, Boolean(value))
+                              }
                             />
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold text-neutral-900">
@@ -682,13 +726,22 @@ export function AdminRequestDetail({ requestId }: { requestId: string }) {
                                 {face.zone}, {face.province}
                               </p>
                               <div className="mt-2 flex flex-wrap gap-2">
-                                <Badge variant="secondary">{face.structureType}</Badge>
+                                <Badge variant="secondary">
+                                  {face.structureType}
+                                </Badge>
                                 {!face.matchesCriteria && (
-                                  <Badge variant="warning">Fuera de criterio</Badge>
+                                  <Badge variant="warning">
+                                    Fuera de criterio
+                                  </Badge>
                                 )}
-                                {isChecked && <Badge variant="success">Asignada</Badge>}
-                                {(face.latitude === null || face.longitude === null) && (
-                                  <Badge variant="secondary">Sin coordenadas</Badge>
+                                {isChecked && (
+                                  <Badge variant="success">Asignada</Badge>
+                                )}
+                                {(face.latitude === null ||
+                                  face.longitude === null) && (
+                                  <Badge variant="secondary">
+                                    Sin coordenadas
+                                  </Badge>
                                 )}
                               </div>
                             </div>

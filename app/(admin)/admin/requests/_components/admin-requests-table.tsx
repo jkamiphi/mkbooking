@@ -35,22 +35,22 @@ const statusOptions = [
 type RequestStatus = (typeof statusOptions)[number];
 
 function statusLabel(status: string) {
-    if (status === "NEW") return "Nueva";
-    if (status === "IN_REVIEW") return "En revisión";
-    if (status === "QUOTATION_GENERATED") return "Cotización Generada";
-    if (status === "PROPOSAL_SENT") return "Propuesta enviada";
-    if (status === "CONFIRMED") return "Confirmada";
-    if (status === "REJECTED") return "Rechazada";
-    return status;
+  if (status === "NEW") return "Nueva";
+  if (status === "IN_REVIEW") return "En revisión";
+  if (status === "QUOTATION_GENERATED") return "Cotización Generada";
+  if (status === "PROPOSAL_SENT") return "Propuesta enviada";
+  if (status === "CONFIRMED") return "Confirmada";
+  if (status === "REJECTED") return "Rechazada";
+  return status;
 }
 
 function statusBadgeVariant(status: string) {
-    if (status === "NEW") return "info" as const;
-    if (status === "IN_REVIEW") return "warning" as const;
-    if (status === "QUOTATION_GENERATED") return "warning" as const;
-    if (status === "PROPOSAL_SENT") return "secondary" as const;
-    if (status === "CONFIRMED") return "success" as const;
-    return "destructive" as const;
+  if (status === "NEW") return "info" as const;
+  if (status === "IN_REVIEW") return "warning" as const;
+  if (status === "QUOTATION_GENERATED") return "warning" as const;
+  if (status === "PROPOSAL_SENT") return "secondary" as const;
+  if (status === "CONFIRMED") return "success" as const;
+  return "destructive" as const;
 }
 
 function requestSummary(request: {
@@ -58,12 +58,14 @@ function requestSummary(request: {
   structureType?: { name: string } | null;
   zone?: { name: string; province: { name: string } } | null;
 }) {
-    const parts = [
-        `${request.quantity} cara${request.quantity === 1 ? "" : "s"}`,
-        request.structureType?.name || "Cualquier tipo",
-        request.zone ? `${request.zone.name}, ${request.zone.province.name}` : "Cualquier zona",
-    ];
-    return parts.join(" · ");
+  const parts = [
+    `${request.quantity} cara${request.quantity === 1 ? "" : "s"}`,
+    request.structureType?.name || "Cualquier tipo",
+    request.zone
+      ? `${request.zone.name}, ${request.zone.province.name}`
+      : "Cualquier zona",
+  ];
+  return parts.join(" · ");
 }
 
 export function AdminRequestsTable() {
@@ -90,16 +92,13 @@ export function AdminRequestsTable() {
 
   const summaryChips = useMemo(
     () =>
-      toSummaryChips(
-        { status: appliedStatus },
-        [
-          {
-            key: "status",
-            isActive: (state) => Boolean(state.status),
-            getLabel: (state) => `Estado: ${statusLabel(state.status)}`,
-          },
-        ],
-      ).map((chip) => ({
+      toSummaryChips({ status: appliedStatus }, [
+        {
+          key: "status",
+          isActive: (state) => Boolean(state.status),
+          getLabel: (state) => `Estado: ${statusLabel(state.status)}`,
+        },
+      ]).map((chip) => ({
         ...chip,
         onRemove: () => {
           router.push(pathname);
@@ -112,7 +111,9 @@ export function AdminRequestsTable() {
     const params = serializeFilterState({
       status: nextStatus || undefined,
     });
-    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    const nextUrl = params.toString()
+      ? `${pathname}?${params.toString()}`
+      : pathname;
     router.push(nextUrl);
   }
 
@@ -131,7 +132,9 @@ export function AdminRequestsTable() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <p className="pt-2 text-sm text-neutral-500">
-          {data ? `${data.requests.length} solicitudes encontradas` : "Cargando solicitudes..."}
+          {data
+            ? `${data.requests.length} solicitudes encontradas`
+            : "Cargando solicitudes..."}
         </p>
 
         <Sheet open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
@@ -151,7 +154,10 @@ export function AdminRequestsTable() {
             onApply={applyFilters}
             onClear={clearFilters}
           >
-            <FilterSheetSection title="Estado" description="Refina por etapa comercial actual.">
+            <FilterSheetSection
+              title="Estado"
+              description="Refina por etapa comercial actual."
+            >
               <div className="space-y-2">
                 <button
                   type="button"
@@ -187,7 +193,7 @@ export function AdminRequestsTable() {
       <Card>
         {isLoading ? (
           <div className="flex h-64 items-center justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-[#0359A8]" />
+            <div className="h-6 w-6 animate-spin rounded-md border-2 border-neutral-300 border-t-[#0359A8]" />
           </div>
         ) : !data || data.requests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -225,7 +231,8 @@ export function AdminRequestsTable() {
                     </td>
                     <td className="px-5 py-4">
                       <span className="block font-medium text-neutral-900">
-                        {request.createdBy?.user?.name || "Usuario no registrado"}
+                        {request.createdBy?.user?.name ||
+                          "Usuario no registrado"}
                       </span>
                       <span className="block text-xs text-neutral-500">
                         {request.createdBy?.user?.email || request.contactEmail}
@@ -242,7 +249,11 @@ export function AdminRequestsTable() {
                       </span>
                     </td>
                     <td className="px-5 py-4 text-neutral-600">
-                      {format(new Date(request.createdAt), "dd MMM, yyyy HH:mm", { locale: es })}
+                      {format(
+                        new Date(request.createdAt),
+                        "dd MMM, yyyy HH:mm",
+                        { locale: es },
+                      )}
                     </td>
                     <td className="px-5 py-4">
                       <Badge variant={statusBadgeVariant(request.status)}>

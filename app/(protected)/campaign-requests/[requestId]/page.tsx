@@ -100,24 +100,27 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
                 <div key={step.key} className="flex flex-1 items-center">
                   <div className="flex flex-col items-center gap-1.5">
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${isDone
-                        ? "bg-[#0359A8] text-white"
-                        : "bg-neutral-100 text-neutral-400"
-                        } ${isCurrent ? "ring-2 ring-[#0359A8]/20 ring-offset-2" : ""}`}
+                      className={`flex h-8 w-8 items-center justify-center rounded-md text-xs font-bold transition ${
+                        isDone
+                          ? "bg-[#0359A8] text-white"
+                          : "bg-neutral-100 text-neutral-400"
+                      } ${isCurrent ? "ring-2 ring-[#0359A8]/20 ring-offset-2" : ""}`}
                     >
                       {i + 1}
                     </div>
                     <span
-                      className={`text-[11px] font-medium ${isDone ? "text-[#0359A8]" : "text-neutral-400"
-                        }`}
+                      className={`text-[11px] font-medium ${
+                        isDone ? "text-[#0359A8]" : "text-neutral-400"
+                      }`}
                     >
                       {step.label}
                     </span>
                   </div>
                   {i < STATUS_STEPS.length - 1 && (
                     <div
-                      className={`mx-2 h-px flex-1 ${i < currentStep ? "bg-[#0359A8]" : "bg-neutral-200"
-                        }`}
+                      className={`mx-2 h-px flex-1 ${
+                        i < currentStep ? "bg-[#0359A8]" : "bg-neutral-200"
+                      }`}
                     />
                   )}
                 </div>
@@ -211,7 +214,8 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
                     Orden generada
                   </p>
                   <p className="mt-0.5 text-xs text-neutral-500">
-                    Se generó la Orden #{request.order.code} para esta solicitud.
+                    Se generó la Orden #{request.order.code} para esta
+                    solicitud.
                   </p>
                   <Link
                     href={`/orders/${request.order.id}`}
@@ -230,7 +234,8 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
                     Conversión a orden
                   </p>
                   <p className="text-xs text-neutral-500">
-                    Próximamente podrás confirmar y ver esta solicitud como orden.
+                    Próximamente podrás confirmar y ver esta solicitud como
+                    orden.
                   </p>
                 </div>
               </div>
@@ -261,8 +266,8 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-neutral-900">
-                        {assignment.face?.asset?.structureType?.name || "Cara"} ·{" "}
-                        {assignment.face?.asset?.zone?.name || ""}
+                        {assignment.face?.asset?.structureType?.name || "Cara"}{" "}
+                        · {assignment.face?.asset?.zone?.name || ""}
                       </p>
                       <p className="truncate text-xs text-neutral-500">
                         {assignment.face?.asset?.zone?.province?.name || ""}
@@ -298,12 +303,12 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
                       {serviceItem.quantity} x{" "}
                       {formatCurrency(
                         Number(serviceItem.unitPrice),
-                        serviceItem.service?.currency || "USD"
+                        serviceItem.service?.currency || "USD",
                       )}{" "}
                       ={" "}
                       {formatCurrency(
                         Number(serviceItem.subtotal),
-                        serviceItem.service?.currency || "USD"
+                        serviceItem.service?.currency || "USD",
                       )}
                     </p>
                   </div>
@@ -313,10 +318,11 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
                   <span className="font-semibold text-neutral-900">
                     {formatCurrency(
                       request.services.reduce(
-                        (sum, serviceItem) => sum + Number(serviceItem.subtotal),
-                        0
+                        (sum, serviceItem) =>
+                          sum + Number(serviceItem.subtotal),
+                        0,
                       ),
-                      request.services[0]?.service?.currency || "USD"
+                      request.services[0]?.service?.currency || "USD",
                     )}
                   </span>
                 </div>

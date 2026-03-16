@@ -28,7 +28,12 @@ const statusLabels: Record<(typeof statusOptions)[number], string> = {
   MAINTENANCE: "MANTENIMIENTO",
   RETIRED: "RETIRADO",
 };
-const landTenureOptions = ["SERVIDUMBRE", "PRIVADO", "ESTATAL", "OTRO"] as const;
+const landTenureOptions = [
+  "SERVIDUMBRE",
+  "PRIVADO",
+  "ESTATAL",
+  "OTRO",
+] as const;
 const landTenureLabels: Record<(typeof landTenureOptions)[number], string> = {
   SERVIDUMBRE: "Servidumbre",
   PRIVADO: "Privado",
@@ -177,7 +182,7 @@ function AssetLocationMap({
                 });
               }}
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0359A8] text-white shadow-lg">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#0359A8] text-white shadow-lg">
                 <MapPin className="h-4 w-4" />
               </div>
             </AdvancedMarker>
@@ -204,7 +209,8 @@ function mapAssetToForm(asset: AssetGetOutput): AssetFormValues {
     longitude: longitude === null ? "" : formatCoordinate(longitude),
     landTenure: asset.landTenure ?? "",
     vehicleTrafficMonthly:
-      asset.vehicleTrafficMonthly === null || asset.vehicleTrafficMonthly === undefined
+      asset.vehicleTrafficMonthly === null ||
+      asset.vehicleTrafficMonthly === undefined
         ? ""
         : String(asset.vehicleTrafficMonthly),
     pedestrianTrafficMonthly:
@@ -297,10 +303,9 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
       router.push("/admin/inventory/assets");
     },
     onError: (mutationError) => {
-      const message =
-        mutationError.message.includes("Unique constraint")
-          ? "Ya existe un activo con este código."
-          : mutationError.message;
+      const message = mutationError.message.includes("Unique constraint")
+        ? "Ya existe un activo con este código."
+        : mutationError.message;
       setError(message);
       toast.error(message);
     },
@@ -339,7 +344,7 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0,
-      }
+      },
     );
   }
 
@@ -400,7 +405,8 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
 
             const latInput = form.latitude.trim();
             const lngInput = form.longitude.trim();
-            const hasAnyCoordinates = latInput.length > 0 || lngInput.length > 0;
+            const hasAnyCoordinates =
+              latInput.length > 0 || lngInput.length > 0;
 
             const lat = parseCoordinate(form.latitude);
             const lng = parseCoordinate(form.longitude);
@@ -419,29 +425,35 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
             }
 
             const vehicleTrafficMonthly = parseOptionalIntegerInput(
-              form.vehicleTrafficMonthly
+              form.vehicleTrafficMonthly,
             );
             if (
               vehicleTrafficMonthly === null ||
               (vehicleTrafficMonthly !== undefined && vehicleTrafficMonthly < 0)
             ) {
-              setError("El aforo vehicular mensual debe ser un número entero válido.");
+              setError(
+                "El aforo vehicular mensual debe ser un número entero válido.",
+              );
               return;
             }
 
             const pedestrianTrafficMonthly = parseOptionalIntegerInput(
-              form.pedestrianTrafficMonthly
+              form.pedestrianTrafficMonthly,
             );
             if (
               pedestrianTrafficMonthly === null ||
               (pedestrianTrafficMonthly !== undefined &&
                 pedestrianTrafficMonthly < 0)
             ) {
-              setError("El aforo de personas mensual debe ser un número entero válido.");
+              setError(
+                "El aforo de personas mensual debe ser un número entero válido.",
+              );
               return;
             }
 
-            const landRentMonthly = parseOptionalNumberInput(form.landRentMonthly);
+            const landRentMonthly = parseOptionalNumberInput(
+              form.landRentMonthly,
+            );
             if (
               landRentMonthly === null ||
               (landRentMonthly !== undefined && landRentMonthly < 0)
@@ -451,7 +463,7 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
             }
 
             const electricityCostMonthly = parseOptionalNumberInput(
-              form.electricityCostMonthly
+              form.electricityCostMonthly,
             );
             if (
               electricityCostMonthly === null ||
@@ -462,7 +474,9 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
               return;
             }
 
-            const assetTaxMonthly = parseOptionalNumberInput(form.assetTaxMonthly);
+            const assetTaxMonthly = parseOptionalNumberInput(
+              form.assetTaxMonthly,
+            );
             if (
               assetTaxMonthly === null ||
               (assetTaxMonthly !== undefined && assetTaxMonthly < 0)
@@ -483,7 +497,8 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
               latitude: lat,
               longitude: lng,
               landTenure:
-                (form.landTenure as (typeof landTenureOptions)[number]) || undefined,
+                (form.landTenure as (typeof landTenureOptions)[number]) ||
+                undefined,
               vehicleTrafficMonthly,
               pedestrianTrafficMonthly,
               landRentMonthly,
@@ -498,7 +513,9 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
               installedDate: form.installedDate
                 ? new Date(form.installedDate)
                 : undefined,
-              retiredDate: form.retiredDate ? new Date(form.retiredDate) : undefined,
+              retiredDate: form.retiredDate
+                ? new Date(form.retiredDate)
+                : undefined,
               images: images.map((image) => ({
                 id: image.id,
                 image: image.image,
@@ -523,7 +540,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
               <SelectNative
                 value={form.structureTypeId}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, structureTypeId: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    structureTypeId: event.target.value,
+                  }))
                 }
               >
                 <option value="">Seleccionar</option>
@@ -555,7 +575,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
               <SelectNative
                 value={form.roadTypeId}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, roadTypeId: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    roadTypeId: event.target.value,
+                  }))
                 }
               >
                 <option value="">Seleccionar</option>
@@ -576,11 +599,16 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
               />
             </div>
             <div className="md:col-span-2">
-              <Label className="mb-1.5 block">Punto de Referencia (opcional)</Label>
+              <Label className="mb-1.5 block">
+                Punto de Referencia (opcional)
+              </Label>
               <Input
                 value={form.landmark}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, landmark: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    landmark: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -589,7 +617,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
               <SelectNative
                 value={form.landTenure}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, landTenure: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    landTenure: event.target.value,
+                  }))
                 }
               >
                 <option value="">Seleccionar</option>
@@ -605,7 +636,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
               <Input
                 value={form.municipality}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, municipality: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    municipality: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -647,7 +681,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 step="0.01"
                 value={form.landRentMonthly}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, landRentMonthly: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    landRentMonthly: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -674,7 +711,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 step="0.01"
                 value={form.assetTaxMonthly}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, assetTaxMonthly: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    assetTaxMonthly: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -687,7 +727,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 max="90"
                 value={form.latitude}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, latitude: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    latitude: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -700,7 +743,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 max="180"
                 value={form.longitude}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, longitude: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    longitude: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -710,7 +756,8 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 <div>
                   <Label className="block">Ubicación en mapa</Label>
                   <p className="text-xs text-muted-foreground">
-                    Haz clic en el mapa o arrastra el marcador para ajustar coordenadas.
+                    Haz clic en el mapa o arrastra el marcador para ajustar
+                    coordenadas.
                   </p>
                 </div>
                 <Button
@@ -753,7 +800,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 <Checkbox
                   checked={form.illuminated}
                   onCheckedChange={(checked) =>
-                    setDraft((prev) => ({ ...prev, illuminated: Boolean(checked) }))
+                    setDraft((prev) => ({
+                      ...prev,
+                      illuminated: Boolean(checked),
+                    }))
                   }
                 />
                 Iluminado
@@ -780,7 +830,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 <Checkbox
                   checked={form.hasPrintService}
                   onCheckedChange={(checked) =>
-                    setDraft((prev) => ({ ...prev, hasPrintService: Boolean(checked) }))
+                    setDraft((prev) => ({
+                      ...prev,
+                      hasPrintService: Boolean(checked),
+                    }))
                   }
                 />
                 Servicio de Impresión
@@ -792,7 +845,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 type="date"
                 value={form.installedDate}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, installedDate: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    installedDate: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -802,7 +858,10 @@ export function EditAssetForm({ assetId }: { assetId: string }) {
                 type="date"
                 value={form.retiredDate}
                 onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, retiredDate: event.target.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    retiredDate: event.target.value,
+                  }))
                 }
               />
             </div>

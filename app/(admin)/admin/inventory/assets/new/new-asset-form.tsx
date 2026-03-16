@@ -25,7 +25,12 @@ const statusLabels: Record<(typeof statusOptions)[number], string> = {
   MAINTENANCE: "MANTENIMIENTO",
   RETIRED: "RETIRADO",
 };
-const landTenureOptions = ["SERVIDUMBRE", "PRIVADO", "ESTATAL", "OTRO"] as const;
+const landTenureOptions = [
+  "SERVIDUMBRE",
+  "PRIVADO",
+  "ESTATAL",
+  "OTRO",
+] as const;
 const landTenureLabels: Record<(typeof landTenureOptions)[number], string> = {
   SERVIDUMBRE: "Servidumbre",
   PRIVADO: "Privado",
@@ -122,7 +127,7 @@ function AssetLocationMap({
                 });
               }}
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0359A8] text-white shadow-lg">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#0359A8] text-white shadow-lg">
                 <MapPin className="h-4 w-4" />
               </div>
             </AdvancedMarker>
@@ -211,7 +216,7 @@ export function NewAssetForm() {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0,
-      }
+      },
     );
   }
 
@@ -221,8 +226,12 @@ export function NewAssetForm() {
       router.push("/admin/inventory/assets");
     },
     onError: (err) => {
-      if (err.message.includes("Unique constraint failed on the fields: (`code`)")) {
-        setError("Ya existe un activo con este código. Por favor usa un código diferente.");
+      if (
+        err.message.includes("Unique constraint failed on the fields: (`code`)")
+      ) {
+        setError(
+          "Ya existe un activo con este código. Por favor usa un código diferente.",
+        );
       } else if (err.message.includes("Unique constraint")) {
         setError("Ya existe un registro con este valor.");
       } else {
@@ -249,7 +258,8 @@ export function NewAssetForm() {
 
             const latInput = form.latitude.trim();
             const lngInput = form.longitude.trim();
-            const hasAnyCoordinates = latInput.length > 0 || lngInput.length > 0;
+            const hasAnyCoordinates =
+              latInput.length > 0 || lngInput.length > 0;
 
             const lat = parseCoordinate(form.latitude);
             const lng = parseCoordinate(form.longitude);
@@ -269,29 +279,35 @@ export function NewAssetForm() {
             }
 
             const vehicleTrafficMonthly = parseOptionalIntegerInput(
-              form.vehicleTrafficMonthly
+              form.vehicleTrafficMonthly,
             );
             if (
               vehicleTrafficMonthly === null ||
               (vehicleTrafficMonthly !== undefined && vehicleTrafficMonthly < 0)
             ) {
-              setError("El aforo vehicular mensual debe ser un número entero válido.");
+              setError(
+                "El aforo vehicular mensual debe ser un número entero válido.",
+              );
               return;
             }
 
             const pedestrianTrafficMonthly = parseOptionalIntegerInput(
-              form.pedestrianTrafficMonthly
+              form.pedestrianTrafficMonthly,
             );
             if (
               pedestrianTrafficMonthly === null ||
               (pedestrianTrafficMonthly !== undefined &&
                 pedestrianTrafficMonthly < 0)
             ) {
-              setError("El aforo de personas mensual debe ser un número entero válido.");
+              setError(
+                "El aforo de personas mensual debe ser un número entero válido.",
+              );
               return;
             }
 
-            const landRentMonthly = parseOptionalNumberInput(form.landRentMonthly);
+            const landRentMonthly = parseOptionalNumberInput(
+              form.landRentMonthly,
+            );
             if (
               landRentMonthly === null ||
               (landRentMonthly !== undefined && landRentMonthly < 0)
@@ -301,7 +317,7 @@ export function NewAssetForm() {
             }
 
             const electricityCostMonthly = parseOptionalNumberInput(
-              form.electricityCostMonthly
+              form.electricityCostMonthly,
             );
             if (
               electricityCostMonthly === null ||
@@ -312,7 +328,9 @@ export function NewAssetForm() {
               return;
             }
 
-            const assetTaxMonthly = parseOptionalNumberInput(form.assetTaxMonthly);
+            const assetTaxMonthly = parseOptionalNumberInput(
+              form.assetTaxMonthly,
+            );
             if (
               assetTaxMonthly === null ||
               (assetTaxMonthly !== undefined && assetTaxMonthly < 0)
@@ -332,7 +350,8 @@ export function NewAssetForm() {
               latitude: lat,
               longitude: lng,
               landTenure:
-                (form.landTenure as (typeof landTenureOptions)[number]) || undefined,
+                (form.landTenure as (typeof landTenureOptions)[number]) ||
+                undefined,
               vehicleTrafficMonthly,
               pedestrianTrafficMonthly,
               landRentMonthly,
@@ -347,7 +366,9 @@ export function NewAssetForm() {
               installedDate: form.installedDate
                 ? new Date(form.installedDate)
                 : undefined,
-              retiredDate: form.retiredDate ? new Date(form.retiredDate) : undefined,
+              retiredDate: form.retiredDate
+                ? new Date(form.retiredDate)
+                : undefined,
               images: images.map((image) => ({
                 id: image.id,
                 image: image.image,
@@ -407,7 +428,10 @@ export function NewAssetForm() {
               <SelectNative
                 value={form.roadTypeId}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, roadTypeId: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    roadTypeId: event.target.value,
+                  }))
                 }
               >
                 <option value="">Seleccionar</option>
@@ -428,7 +452,9 @@ export function NewAssetForm() {
               />
             </div>
             <div className="md:col-span-2">
-              <Label className="mb-1.5 block">Punto de Referencia (opcional)</Label>
+              <Label className="mb-1.5 block">
+                Punto de Referencia (opcional)
+              </Label>
               <Input
                 value={form.landmark}
                 onChange={(event) =>
@@ -441,7 +467,10 @@ export function NewAssetForm() {
               <SelectNative
                 value={form.landTenure}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, landTenure: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    landTenure: event.target.value,
+                  }))
                 }
               >
                 <option value="">Seleccionar</option>
@@ -457,7 +486,10 @@ export function NewAssetForm() {
               <Input
                 value={form.municipality}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, municipality: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    municipality: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -499,7 +531,10 @@ export function NewAssetForm() {
                 step="0.01"
                 value={form.landRentMonthly}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, landRentMonthly: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    landRentMonthly: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -526,7 +561,10 @@ export function NewAssetForm() {
                 step="0.01"
                 value={form.assetTaxMonthly}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, assetTaxMonthly: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    assetTaxMonthly: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -554,7 +592,10 @@ export function NewAssetForm() {
                 placeholder="ej. -79.519900"
                 value={form.longitude}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, longitude: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    longitude: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -564,7 +605,8 @@ export function NewAssetForm() {
                 <div>
                   <Label className="block">Ubicación en mapa</Label>
                   <p className="text-xs text-muted-foreground">
-                    Haz clic en el mapa o arrastra el marcador para ajustar coordenadas.
+                    Haz clic en el mapa o arrastra el marcador para ajustar
+                    coordenadas.
                   </p>
                 </div>
                 <Button

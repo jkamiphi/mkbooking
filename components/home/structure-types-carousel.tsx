@@ -20,7 +20,11 @@ const structureTypeHints: Record<string, string> = {
   Parada: "Flujo peatonal",
 };
 
-function buildSearchUrl(options: { searchTerm?: string; type?: string; zone?: string }) {
+function buildSearchUrl(options: {
+  searchTerm?: string;
+  type?: string;
+  zone?: string;
+}) {
   const params = new URLSearchParams();
   if (options.type) params.set("type", options.type);
   if (options.zone) params.set("zone", options.zone);
@@ -55,7 +59,7 @@ export function StructureTypesCarousel({
             <Link
               key={type.id}
               href={url}
-              className="group relative flex-shrink-0 overflow-hidden rounded-2xl transition hover:shadow-lg"
+              className="group relative flex-shrink-0 overflow-hidden rounded-md transition hover:shadow-lg"
               style={{ width: 160 }}
             >
               {typeImageUrl ? (
@@ -83,7 +87,7 @@ export function StructureTypesCarousel({
                 </div>
               ) : (
                 <div className="aspect-[4/3] w-full bg-gradient-to-br from-[#fcb814]/30 to-[#0359A8]/30 flex flex-col items-center justify-center p-4">
-                  <span className="h-3 w-3 rounded-full bg-[#fcb814] mb-2" />
+                  <span className="h-3 w-3 rounded-md bg-[#fcb814] mb-2" />
                   <span className="text-sm font-semibold text-neutral-800 text-center">
                     {type.name}
                   </span>

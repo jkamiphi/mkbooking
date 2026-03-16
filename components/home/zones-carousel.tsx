@@ -20,7 +20,11 @@ const zoneBadges: Record<string, string> = {
   "Vía Roosevelt": "Conectividad",
 };
 
-function buildSearchUrl(options: { searchTerm?: string; type?: string; zone?: string }) {
+function buildSearchUrl(options: {
+  searchTerm?: string;
+  type?: string;
+  zone?: string;
+}) {
   const params = new URLSearchParams();
   if (options.type) params.set("type", options.type);
   if (options.zone) params.set("zone", options.zone);
@@ -50,7 +54,7 @@ export function ZonesCarousel({ zones }: ZonesCarouselProps) {
             <Link
               key={zone.id}
               href={url}
-              className="group relative flex-shrink-0 overflow-hidden rounded-2xl border border-neutral-200/70 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+              className="group relative flex-shrink-0 overflow-hidden rounded-md border border-neutral-200/70 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
               style={{ width: 160 }}
             >
               <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-100">
@@ -65,7 +69,7 @@ export function ZonesCarousel({ zones }: ZonesCarouselProps) {
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0359A8]/30 to-[#fcb814]/30 p-4">
-                    <div className="rounded-full bg-white/70 p-2">
+                    <div className="rounded-md bg-white/70 p-2">
                       <MapPin className="h-5 w-5 text-[#0359A8]" />
                     </div>
                   </div>
@@ -80,7 +84,7 @@ export function ZonesCarousel({ zones }: ZonesCarouselProps) {
                   {zone.province.name}
                 </span>
                 {zoneBadges[zone.name] ? (
-                  <span className="inline-flex rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-600">
+                  <span className="inline-flex rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-600">
                     {zoneBadges[zone.name]}
                   </span>
                 ) : null}

@@ -303,7 +303,7 @@ export default async function FaceDetailPage({
       <main className="mx-auto w-full max-w-7xl px-5 pb-16 pt-8">
         <section className="mb-6 rounded-3xl border border-mkmedia-blue/15 bg-white/90 p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
+            <div className="inline-flex items-center gap-2 rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
               <Sparkles className="h-3.5 w-3.5" />
               Espacio destacado
             </div>
@@ -312,7 +312,7 @@ export default async function FaceDetailPage({
               <button
                 type="button"
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold",
+                  "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold",
                   brandSoftButtonClass,
                 )}
               >
@@ -322,7 +322,7 @@ export default async function FaceDetailPage({
               <button
                 type="button"
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold",
+                  "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold",
                   brandSoftButtonClass,
                 )}
               >
@@ -337,7 +337,7 @@ export default async function FaceDetailPage({
           </h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-neutral-600">
-            <span className="inline-flex items-center gap-1 rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-2.5 py-1 text-mkmedia-blue">
+            <span className="inline-flex items-center gap-1 rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-2.5 py-1 text-mkmedia-blue">
               <BadgeCheck className="h-3.5 w-3.5" />
               {catalogFace.isPublished ? "Publicado" : "No publicado"}
             </span>
@@ -363,7 +363,7 @@ export default async function FaceDetailPage({
                 />
               ) : (
                 <div className="flex h-full items-end bg-gradient-to-br from-neutral-300 to-neutral-200 p-5">
-                  <span className="rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-neutral-700">
+                  <span className="rounded-md bg-white/85 px-3 py-1 text-xs font-semibold text-neutral-700">
                     Sin imagen principal
                   </span>
                 </div>
@@ -592,7 +592,7 @@ export default async function FaceDetailPage({
                   target="_blank"
                   rel="noreferrer"
                   className={cn(
-                    "mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold",
+                    "mt-4 inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold",
                     brandSoftButtonClass,
                   )}
                 >
@@ -617,7 +617,7 @@ export default async function FaceDetailPage({
                     face.restrictionTags.map((restriction) => (
                       <span
                         key={restriction.id}
-                        className="rounded-full border border-mkmedia-blue/20 bg-white px-2.5 py-1 text-xs text-neutral-700"
+                        className="rounded-md border border-mkmedia-blue/20 bg-white px-2.5 py-1 text-xs text-neutral-700"
                       >
                         {restriction.tag.label}
                       </span>
@@ -752,7 +752,7 @@ export default async function FaceDetailPage({
                   <p className="text-sm text-neutral-500">por día</p>
 
                   {promo && promoLabel ? (
-                    <p className="mt-2 inline-flex rounded-full bg-mkmedia-yellow/30 px-3 py-1 text-xs font-semibold text-neutral-800">
+                    <p className="mt-2 inline-flex rounded-md bg-mkmedia-yellow/30 px-3 py-1 text-xs font-semibold text-neutral-800">
                       Promo activa: {promo.name} · {promoLabel}
                     </p>
                   ) : null}

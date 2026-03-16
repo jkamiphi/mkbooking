@@ -58,7 +58,7 @@ export function PublicMarketplaceShell({
             <Link
               href={backHref}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold",
+                "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold",
                 brandSoftButtonClass,
               )}
             >
@@ -66,7 +66,11 @@ export function PublicMarketplaceShell({
               <span className="hidden sm:inline">{backLabel}</span>
             </Link>
 
-            <Link href="/" className="flex items-center gap-2" aria-label="Ir al inicio">
+            <Link
+              href="/"
+              className="flex items-center gap-2"
+              aria-label="Ir al inicio"
+            >
               <Image
                 src="/images/logo/b-mkm-blue.png"
                 alt="Logo MK MEDIA"
@@ -75,14 +79,14 @@ export function PublicMarketplaceShell({
               />
             </Link>
 
-            <span className="hidden rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-mkmedia-blue md:inline-flex [font-family:var(--font-mkmedia)]">
+            <span className="hidden rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-mkmedia-blue md:inline-flex [font-family:var(--font-mkmedia)]">
               MK MEDIA
             </span>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
             {contextLabel ? (
-              <div className="hidden items-center gap-2 rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1.5 md:inline-flex">
+              <div className="hidden items-center gap-2 rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-3 py-1.5 md:inline-flex">
                 <MapPin className="h-3.5 w-3.5 text-mkmedia-blue" />
                 <span className="max-w-[220px] truncate text-sm font-semibold text-neutral-900">
                   {contextLabel}
@@ -95,7 +99,9 @@ export function PublicMarketplaceShell({
               </div>
             ) : null}
 
-            {headerActions ? <div className="flex items-center">{headerActions}</div> : null}
+            {headerActions ? (
+              <div className="flex items-center">{headerActions}</div>
+            ) : null}
 
             {user ? (
               <UserHeaderActions
@@ -108,7 +114,7 @@ export function PublicMarketplaceShell({
               <Link
                 href="/login"
                 className={cn(
-                  "rounded-full px-3 py-2 text-xs font-semibold sm:px-4 sm:text-sm",
+                  "rounded-md px-3 py-2 text-xs font-semibold sm:px-4 sm:text-sm",
                   brandPrimaryButtonClass,
                 )}
               >
@@ -130,7 +136,9 @@ export function PublicMarketplaceShell({
         </div>
       ) : null}
 
-      <div className={cn("flex flex-1 flex-col", contentClassName)}>{children}</div>
+      <div className={cn("flex flex-1 flex-col", contentClassName)}>
+        {children}
+      </div>
       <HomeFooter
         showPrices={showPrices}
         fullWidth

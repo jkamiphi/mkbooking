@@ -117,7 +117,7 @@ export function SearchResultsView({
               <Link
                 href={campaignRequestUrl}
                 className={cn(
-                  "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold",
+                  "whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold",
                   brandSoftButtonClass,
                 )}
               >
@@ -126,7 +126,7 @@ export function SearchResultsView({
             ) : (
               <Link
                 href="/login"
-                className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50"
+                className="whitespace-nowrap rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50"
               >
                 Inicia sesión para solicitar
               </Link>
@@ -179,7 +179,7 @@ export function SearchResultsView({
                   viewMode === "grid" ? "col-span-full" : "w-full",
                 )}
               >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-mkmedia-blue/15">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-mkmedia-blue/15">
                   <MapPin className="h-6 w-6 text-mkmedia-blue" />
                 </div>
                 <p className="text-sm font-semibold text-neutral-800">

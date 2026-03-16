@@ -99,10 +99,14 @@ export function NewCampaignRequestForm({
   const router = useRouter();
   const { clearSelection } = useFaceSelection();
 
-  const [faces, setFaces] = useState<SelectedFaceData[]>(initialSelectedFaces ?? []);
+  const [faces, setFaces] = useState<SelectedFaceData[]>(
+    initialSelectedFaces ?? [],
+  );
   const hasFaces = faces.length > 0;
 
-  const [structureTypeId, setStructureTypeId] = useState(defaultStructureTypeId ?? "");
+  const [structureTypeId, setStructureTypeId] = useState(
+    defaultStructureTypeId ?? "",
+  );
   const [zoneId, setZoneId] = useState(defaultZoneId ?? "");
   const [quantity, setQuantity] = useState(String(defaultQuantity));
   const [fromDate, setFromDate] = useState(defaultFromDate ?? "");
@@ -137,11 +141,13 @@ export function NewCampaignRequestForm({
   const { data: availableServices, isLoading: isServicesLoading } =
     trpc.catalog.services.publicList.useQuery();
 
-  const pricedFaces = faces.filter((f) => f.priceDaily !== null && f.priceDaily > 0);
+  const pricedFaces = faces.filter(
+    (f) => f.priceDaily !== null && f.priceDaily > 0,
+  );
   const rentalCurrency = pricedFaces[0]?.currency ?? "USD";
   const rentalDailyTotal = pricedFaces.reduce(
     (sum, face) => sum + (face.priceDaily ?? 0),
-    0
+    0,
   );
   const estimatedDays = (() => {
     if (!parsedFromDate || !parsedToDate) {
@@ -151,7 +157,9 @@ export function NewCampaignRequestForm({
     return calculateDateDifferenceInDays(parsedFromDate, parsedToDate) + 1;
   })();
   const rentalEstimatedSubtotal =
-    estimatedDays !== null ? rentalDailyTotal * estimatedDays : rentalDailyTotal;
+    estimatedDays !== null
+      ? rentalDailyTotal * estimatedDays
+      : rentalDailyTotal;
 
   const selectedServiceRows = (availableServices ?? [])
     .filter((service) => Boolean(selectedServices[service.id]))
@@ -171,7 +179,7 @@ export function NewCampaignRequestForm({
     });
   const servicesSubtotal = selectedServiceRows.reduce(
     (sum, service) => sum + service.subtotal,
-    0
+    0,
   );
   const combinedSubtotal = rentalEstimatedSubtotal + servicesSubtotal;
   const combinedTax = combinedSubtotal * 0.07;
@@ -242,7 +250,7 @@ export function NewCampaignRequestForm({
 
         if (result.unavailable.length > 0) {
           const unavailableIds = new Set(
-            result.unavailable.map((u) => u.faceId)
+            result.unavailable.map((u) => u.faceId),
           );
           setFaces((prev) => {
             const updated = prev.filter((f) => !unavailableIds.has(f.id));
@@ -327,15 +335,21 @@ export function NewCampaignRequestForm({
             </button>
           </div>
           <p className="mt-1 text-sm text-neutral-500">
-            Estas caras específicas serán incluidas en tu solicitud de cotización.
+            Estas caras específicas serán incluidas en tu solicitud de
+            cotización.
           </p>
 
           {/* Price estimation */}
           {(() => {
-            const pricedFaces = faces.filter((f) => f.priceDaily !== null && f.priceDaily > 0);
+            const pricedFaces = faces.filter(
+              (f) => f.priceDaily !== null && f.priceDaily > 0,
+            );
             if (pricedFaces.length === 0) return null;
 
-            const dailyTotal = pricedFaces.reduce((sum, f) => sum + (f.priceDaily ?? 0), 0);
+            const dailyTotal = pricedFaces.reduce(
+              (sum, f) => sum + (f.priceDaily ?? 0),
+              0,
+            );
             const currency = pricedFaces[0]?.currency ?? "USD";
 
             const periodDays = estimatedDays;
@@ -378,7 +392,8 @@ export function NewCampaignRequestForm({
                 {pricedFaces.length < faces.length && (
                   <p className="mt-2 text-xs text-neutral-500">
                     * {faces.length - pricedFaces.length}{" "}
-                    {faces.length - pricedFaces.length === 1 ? "cara" : "caras"} sin precio configurado.
+                    {faces.length - pricedFaces.length === 1 ? "cara" : "caras"}{" "}
+                    sin precio configurado.
                   </p>
                 )}
               </div>
@@ -420,7 +435,7 @@ export function NewCampaignRequestForm({
                 <button
                   type="button"
                   onClick={() => removeFaceFromForm(face.id)}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-neutral-400 transition hover:bg-red-50 hover:text-red-500"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-400 transition hover:bg-red-50 hover:text-red-500"
                   aria-label={`Quitar ${face.title}`}
                 >
                   <X className="h-3.5 w-3.5" />
@@ -431,9 +446,10 @@ export function NewCampaignRequestForm({
         </section>
       )}
 
-
       <section className={sectionClassName}>
-        <h2 className="text-lg font-semibold text-neutral-900">Configuración de campaña</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">
+          Configuración de campaña
+        </h2>
         <p className="mt-1 text-sm text-neutral-500">
           {hasFaces
             ? "Los detalles de tipo, zona y cantidad se derivarán de las caras seleccionadas."
@@ -444,7 +460,10 @@ export function NewCampaignRequestForm({
           {!hasFaces && (
             <>
               <div className="space-y-1.5">
-                <Label htmlFor="request-structure-type" className="text-neutral-700">
+                <Label
+                  htmlFor="request-structure-type"
+                  className="text-neutral-700"
+                >
                   Tipo de estructura
                 </Label>
                 <SelectNative
@@ -494,7 +513,9 @@ export function NewCampaignRequestForm({
                   onChange={(event) => setQuantity(event.target.value)}
                   className={controlClassName}
                 />
-                <p className="text-xs text-neutral-500">Mínimo 1, máximo 500.</p>
+                <p className="text-xs text-neutral-500">
+                  Mínimo 1, máximo 500.
+                </p>
               </div>
             </>
           )}
@@ -503,7 +524,10 @@ export function NewCampaignRequestForm({
             <div className="space-y-1.5 sm:col-span-2">
               <Label className="text-neutral-700">Cantidad de caras</Label>
               <p className="text-sm font-semibold text-neutral-900">
-                {faces.length} {faces.length === 1 ? "cara seleccionada" : "caras seleccionadas"}
+                {faces.length}{" "}
+                {faces.length === 1
+                  ? "cara seleccionada"
+                  : "caras seleccionadas"}
               </p>
             </div>
           )}
@@ -560,7 +584,9 @@ export function NewCampaignRequestForm({
         </p>
 
         {isServicesLoading ? (
-          <div className="mt-4 text-sm text-neutral-500">Cargando servicios...</div>
+          <div className="mt-4 text-sm text-neutral-500">
+            Cargando servicios...
+          </div>
         ) : !availableServices || availableServices.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">
             No hay servicios adicionales activos por ahora.
@@ -572,17 +598,20 @@ export function NewCampaignRequestForm({
               const isSelected = Boolean(serviceState);
               const quantity = Number(serviceState?.quantity || "1");
               const normalizedQuantity =
-                Number.isFinite(quantity) && quantity > 0 ? Math.floor(quantity) : 1;
+                Number.isFinite(quantity) && quantity > 0
+                  ? Math.floor(quantity)
+                  : 1;
               const unitPrice = Number(service.basePrice);
               const subtotal = normalizedQuantity * unitPrice;
 
               return (
                 <div
                   key={service.id}
-                  className={`rounded-2xl border p-4 transition ${isSelected
-                    ? "border-[#0359A8]/40 bg-[#0359A8]/5"
-                    : "border-neutral-200 bg-white"
-                    }`}
+                  className={`rounded-2xl border p-4 transition ${
+                    isSelected
+                      ? "border-[#0359A8]/40 bg-[#0359A8]/5"
+                      : "border-neutral-200 bg-white"
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <label className="flex items-start gap-3">
@@ -613,7 +642,9 @@ export function NewCampaignRequestForm({
                   {isSelected && (
                     <div className="mt-3 grid gap-3 sm:grid-cols-3">
                       <div className="space-y-1">
-                        <Label className="text-xs text-neutral-600">Cantidad</Label>
+                        <Label className="text-xs text-neutral-600">
+                          Cantidad
+                        </Label>
                         <Input
                           type="number"
                           min={1}
@@ -670,7 +701,9 @@ export function NewCampaignRequestForm({
           <div className="mt-2 space-y-1.5 text-sm">
             <div className="flex items-center justify-between text-neutral-600">
               <span>Subtotal renta de caras (estimado)</span>
-              <span>{formatCurrency(rentalEstimatedSubtotal, rentalCurrency)}</span>
+              <span>
+                {formatCurrency(rentalEstimatedSubtotal, rentalCurrency)}
+              </span>
             </div>
             <div className="flex items-center justify-between text-neutral-600">
               <span>Subtotal servicios</span>
@@ -750,16 +783,18 @@ export function NewCampaignRequestForm({
             variant="outline"
             onClick={() => router.push(returnTo)}
             disabled={isValidating || createRequestMutation.isPending}
-            className="h-10 rounded-full border-neutral-200 bg-white px-5 text-neutral-700 shadow-none hover:bg-neutral-50"
+            className="h-10 rounded-md border-neutral-200 bg-white px-5 text-neutral-700 shadow-none hover:bg-neutral-50"
           >
             Cancelar
           </Button>
           <Button
             type="submit"
             disabled={
-              isValidating || createRequestMutation.isPending || !hasValidDateRange
+              isValidating ||
+              createRequestMutation.isPending ||
+              !hasValidDateRange
             }
-            className="h-10 rounded-full bg-[#0359A8] px-5 text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8f]"
+            className="h-10 rounded-md bg-[#0359A8] px-5 text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8f]"
           >
             <ListFilter className="h-4 w-4" />
             {isValidating

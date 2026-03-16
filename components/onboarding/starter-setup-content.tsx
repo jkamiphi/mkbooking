@@ -104,7 +104,7 @@ export function StarterSetupContent() {
     <div className="grid gap-6">
       <Card className="overflow-hidden rounded-md border-mkmedia-blue/15 bg-white/92 shadow-[0_32px_120px_-54px_rgba(3,89,168,0.28)] backdrop-blur">
         <CardHeader className="space-y-4 border-b border-mkmedia-blue/10 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))] pb-6">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
+          <div className="inline-flex w-fit items-center gap-2 rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/8 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-mkmedia-blue [font-family:var(--font-mkmedia)]">
             <Sparkles className="h-3.5 w-3.5" />
             Setup inicial
           </div>
@@ -169,7 +169,7 @@ export function StarterSetupContent() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="rounded-full border-neutral-300 bg-white"
+                      className="rounded-md border-neutral-300 bg-white"
                       onClick={() => {
                         router.push("/profile");
                         router.refresh();
@@ -231,7 +231,7 @@ export function StarterSetupContent() {
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   type="submit"
-                  className="h-11 rounded-full bg-mkmedia-blue px-6 text-white shadow-lg shadow-mkmedia-blue/25 hover:bg-mkmedia-blue/90"
+                  className="h-11 rounded-md bg-mkmedia-blue px-6 text-white shadow-lg shadow-mkmedia-blue/25 hover:bg-mkmedia-blue/90"
                   disabled={
                     createStarterOrganization.isPending ||
                     workspaceName.trim().length === 0
@@ -244,7 +244,7 @@ export function StarterSetupContent() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 rounded-full border-neutral-300 bg-white"
+                  className="h-11 rounded-md border-neutral-300 bg-white"
                   onClick={() => {
                     router.push("/profile");
                     router.refresh();

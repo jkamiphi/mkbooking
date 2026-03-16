@@ -98,9 +98,7 @@ export default async function OrderDetailPage({
   const { orderId } = await params;
   const tabParam = getParamValue((await searchParams).tab);
   const defaultTab =
-    tabParam === "tracking" ||
-    tabParam === "design" ||
-    tabParam === "case-file"
+    tabParam === "tracking" || tabParam === "design" || tabParam === "case-file"
       ? tabParam
       : "detail";
   const caller = await createServerTRPCCaller();
@@ -266,7 +264,9 @@ export default async function OrderDetailPage({
         El flujo de diseño se habilita cuando la orden está confirmada.
       </section>
     );
-  const trackingContent = <OrderTraceabilityPanel traceability={traceability} />;
+  const trackingContent = (
+    <OrderTraceabilityPanel traceability={traceability} />
+  );
   const caseFileContent = (
     <OrderCaseFilePanel traceability={traceability} publicView />
   );
@@ -349,7 +349,7 @@ export default async function OrderDetailPage({
 
             {order.status === "CLIENT_APPROVED" && (
               <div className="mt-6 pt-6 border-t border-neutral-100 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 mb-3">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-emerald-50 mb-3">
                   <CheckCircle2 className="h-6 w-6 text-emerald-500" />
                 </div>
                 <h4 className="font-medium text-neutral-900">Aprobada</h4>
@@ -362,7 +362,7 @@ export default async function OrderDetailPage({
 
             {order.status === "CONFIRMED" && (
               <div className="mt-6 pt-6 border-t border-neutral-100 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 mb-3">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-emerald-50 mb-3">
                   <Package className="h-6 w-6 text-emerald-500" />
                 </div>
                 <h4 className="font-medium text-neutral-900">

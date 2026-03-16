@@ -91,7 +91,7 @@ function NotificationBadge({ count }: { count: number }) {
   }
 
   return (
-    <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-mkmedia-yellow px-1.5 py-0.5 text-[10px] font-semibold text-neutral-900">
+    <span className="inline-flex min-w-5 items-center justify-center rounded-md bg-mkmedia-yellow px-1.5 py-0.5 text-[10px] font-semibold text-neutral-900">
       {count > 99 ? "99+" : count}
     </span>
   );
@@ -189,7 +189,7 @@ function SidebarPanel({
             >
               <Bell className="h-4 w-4" />
               {unreadCount > 0 ? (
-                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-mkmedia-yellow" />
+                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-md bg-mkmedia-yellow" />
               ) : null}
             </Link>
             <button

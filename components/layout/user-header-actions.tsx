@@ -76,13 +76,13 @@ export function UserHeaderActions({ user }: UserHeaderActionsProps) {
       <Button
         asChild
         variant="ghost"
-        size="icon-sm"
-        className="relative rounded-full border border-neutral-200 bg-white/85 text-neutral-600 shadow-sm hover:bg-white hover:text-neutral-900"
+        size="icon-lg"
+        className="relative rounded-md border border-neutral-200 bg-white/85 text-neutral-600 shadow-sm hover:bg-white hover:text-neutral-900"
       >
         <Link href="/notifications" aria-label="Abrir notificaciones">
           <Bell className="h-4 w-4" />
           {unreadCount > 0 ? (
-            <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[#fcb814] px-1 text-[10px] font-semibold text-neutral-900">
+            <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-md bg-[#fcb814] px-1 text-[10px] font-semibold text-neutral-900">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           ) : null}
@@ -94,7 +94,7 @@ export function UserHeaderActions({ user }: UserHeaderActionsProps) {
           <Button
             type="button"
             variant="ghost"
-            className="h-10 rounded-full border border-neutral-200 bg-white/85 px-1.5 pr-2 shadow-sm hover:bg-white"
+            className="h-10 rounded-md border border-neutral-200 bg-white/85 px-1.5 pr-2 shadow-sm hover:bg-white"
             aria-label="Abrir menú de usuario"
           >
             <Avatar className="h-7 w-7 border border-neutral-200">
@@ -114,9 +114,7 @@ export function UserHeaderActions({ user }: UserHeaderActionsProps) {
             <p className="text-sm font-semibold text-neutral-900">
               {user.name?.trim() || "Mi cuenta"}
             </p>
-            <p className="text-xs font-normal text-neutral-500">
-              {user.email}
-            </p>
+            <p className="text-xs font-normal text-neutral-500">{user.email}</p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
