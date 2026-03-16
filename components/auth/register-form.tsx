@@ -72,7 +72,7 @@ export function RegisterForm() {
     <div className="mx-auto w-full max-w-2xl">
       <AuthBrand className="mb-5" />
 
-      <Card className="overflow-hidden rounded-md border border-neutral-200/80 bg-white/95 shadow-[0_28px_88px_-52px_rgba(3,89,168,0.45)]">
+      <Card className="overflow-hidden rounded-xs border border-neutral-200/80 bg-white/95 shadow-[0_28px_88px_-52px_rgba(3,89,168,0.45)]">
         <CardHeader className="space-y-3 border-b border-neutral-200/80 bg-[linear-gradient(180deg,rgba(3,89,168,0.05),rgba(255,255,255,0.9)_75%)] pb-4">
           <CardTitle className="text-3xl text-neutral-950">
             Empieza con tu acceso
@@ -83,9 +83,9 @@ export function RegisterForm() {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-5 pt-6">
+        <CardContent className="space-y-5">
           {error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-xs border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               {error}
             </div>
           ) : null}
@@ -99,7 +99,7 @@ export function RegisterForm() {
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Tu nombre o nombre del responsable"
                 required
-                className="h-11 rounded-xl border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
+                className="h-11 rounded-xs border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
               />
             </div>
 
@@ -112,7 +112,7 @@ export function RegisterForm() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="correo@ejemplo.com"
                 required
-                className="h-11 rounded-xl border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
+                className="h-11 rounded-xs border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
               />
             </div>
 
@@ -126,7 +126,7 @@ export function RegisterForm() {
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Minimo 8 caracteres"
                   required
-                  className="h-11 rounded-xl border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
+                  className="h-11 rounded-xs border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
                 />
               </div>
               <div className="space-y-1.5">
@@ -140,14 +140,14 @@ export function RegisterForm() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="Repite tu contraseña"
                   required
-                  className="h-11 rounded-xl border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
+                  className="h-11 rounded-xs border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
                 />
               </div>
             </div>
 
             <Button
               type="submit"
-              className="h-11 w-full rounded-xl bg-mkmedia-blue text-white shadow-[0_12px_30px_-16px_rgba(3,89,168,0.75)] hover:bg-mkmedia-blue/90"
+              className="h-11 w-full rounded-xs bg-mkmedia-blue text-white shadow-[0_12px_30px_-16px_rgba(3,89,168,0.75)] hover:bg-mkmedia-blue/90"
               disabled={loading}
             >
               {loading ? "Creando cuenta..." : "Crear cuenta"}

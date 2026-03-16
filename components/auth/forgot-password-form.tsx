@@ -54,7 +54,7 @@ export function ForgotPasswordForm() {
     <div className="mx-auto w-full max-w-md">
       <AuthBrand className="mb-5" />
 
-      <Card className="overflow-hidden rounded-md border border-neutral-200/80 bg-white/95 shadow-[0_28px_88px_-52px_rgba(3,89,168,0.45)]">
+      <Card className="overflow-hidden rounded-xs border border-neutral-200/80 bg-white/95 shadow-[0_28px_88px_-52px_rgba(3,89,168,0.45)]">
         <CardHeader className="space-y-3 border-b border-neutral-200/80 bg-[linear-gradient(180deg,rgba(3,89,168,0.05),rgba(255,255,255,0.9)_75%)] pb-4">
           <CardTitle className="text-3xl text-neutral-950">
             Recuperar contraseña
@@ -66,14 +66,14 @@ export function ForgotPasswordForm() {
 
         <CardContent className="space-y-5">
           {submitted ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+            <div className="rounded-xs border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
               Si ese correo existe en el sistema, recibirás un enlace para
               restablecer tu contraseña.
             </div>
           ) : null}
 
           {error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-xs border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               {error}
             </div>
           ) : null}
@@ -88,13 +88,13 @@ export function ForgotPasswordForm() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="correo@ejemplo.com"
                 required
-                className="h-11 rounded-xl border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
+                className="h-11 rounded-xs border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
               />
             </div>
 
             <Button
               type="submit"
-              className="h-11 w-full rounded-xl bg-mkmedia-blue text-white shadow-[0_12px_30px_-16px_rgba(3,89,168,0.75)] hover:bg-mkmedia-blue/90"
+              className="h-11 w-full rounded-xs bg-mkmedia-blue text-white shadow-[0_12px_30px_-16px_rgba(3,89,168,0.75)] hover:bg-mkmedia-blue/90"
               disabled={loading}
             >
               {loading ? "Enviando..." : "Enviar enlace de recuperación"}

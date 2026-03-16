@@ -58,10 +58,10 @@ export function LoginForm() {
     <div className="mx-auto w-full max-w-md">
       <AuthBrand className="mb-5" />
 
-      <Card className="overflow-hidden rounded-md border border-neutral-200/80 bg-white/95 shadow-[0_28px_88px_-52px_rgba(3,89,168,0.45)]">
+      <Card className="overflow-hidden rounded-xs border border-neutral-200/80 bg-white/95 shadow-[0_28px_88px_-52px_rgba(3,89,168,0.45)]">
         <CardHeader className="space-y-3 border-b border-neutral-200/80 bg-[linear-gradient(180deg,rgba(3,89,168,0.05),rgba(255,255,255,0.9)_75%)] pb-4">
           <CardTitle className="text-3xl text-neutral-950">
-            Iniciar sesion
+            Iniciar sesión
           </CardTitle>
           <CardDescription>
             Accede a tu cuenta para gestionar campañas, reservas y solicitudes
@@ -86,7 +86,7 @@ export function LoginForm() {
                 onChange={(event) => setEmail(event.target.value)}
                 required
                 placeholder="correo@ejemplo.com"
-                className="h-11 rounded-xl border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
+                className="h-11 rounded-xs border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
               />
             </div>
 
@@ -107,13 +107,13 @@ export function LoginForm() {
                 onChange={(event) => setPassword(event.target.value)}
                 required
                 placeholder="••••••••"
-                className="h-11 rounded-xl border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
+                className="h-11 rounded-xs border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
               />
             </div>
 
             <Button
               type="submit"
-              className="h-11 w-full rounded-xl bg-mkmedia-blue text-white shadow-[0_12px_30px_-16px_rgba(3,89,168,0.75)] hover:bg-mkmedia-blue/90"
+              className="h-11 w-full rounded-xs bg-mkmedia-blue text-white shadow-[0_12px_30px_-16px_rgba(3,89,168,0.75)] hover:bg-mkmedia-blue/90"
               disabled={loading}
             >
               {loading ? "Iniciando sesion..." : "Iniciar sesion"}
