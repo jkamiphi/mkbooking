@@ -130,11 +130,11 @@ export function NewCampaignRequestForm({
   });
 
   const sectionClassName =
-    "rounded-3xl border border-neutral-200 bg-white/90 p-6 shadow-lg backdrop-blur-xl";
+    "rounded-md border border-neutral-200 bg-white/90 p-6 shadow-lg backdrop-blur-xl";
   const controlClassName =
-    "h-11 rounded-2xl border-neutral-200 bg-white px-4 shadow-none transition focus-visible:border-[#0359A8] focus-visible:ring-2 focus-visible:ring-[#0359A8]/20";
+    "h-11 rounded-xs border-neutral-200 bg-white px-4 shadow-none transition focus-visible:border-[#0359A8] focus-visible:ring-2 focus-visible:ring-[#0359A8]/20";
   const textareaClassName =
-    "min-h-24 rounded-2xl border-neutral-200 bg-white px-4 py-3 shadow-none transition focus-visible:border-[#0359A8] focus-visible:ring-2 focus-visible:ring-[#0359A8]/20";
+    "min-h-24 rounded-xs border-neutral-200 bg-white px-4 py-3 shadow-none transition focus-visible:border-[#0359A8] focus-visible:ring-2 focus-visible:ring-[#0359A8]/20";
 
   const trpcUtils = trpc.useUtils();
   const [isValidating, setIsValidating] = useState(false);
@@ -367,7 +367,7 @@ export function NewCampaignRequestForm({
             };
 
             return (
-              <div className="mt-4 rounded-2xl border border-[#0359A8]/20 bg-[#0359A8]/5 p-4">
+              <div className="mt-4 rounded-xs border border-[#0359A8]/20 bg-[#0359A8]/5 p-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-[#0359A8]/70">
                   Estimación
                 </p>
@@ -404,7 +404,7 @@ export function NewCampaignRequestForm({
             {faces.map((face) => (
               <div
                 key={face.id}
-                className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 transition hover:border-neutral-300"
+                className="flex items-center gap-3 rounded-xs border border-neutral-200 bg-white p-3 transition hover:border-neutral-300"
               >
                 <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
                   {face.imageUrl ? (
@@ -588,7 +588,7 @@ export function NewCampaignRequestForm({
             Cargando servicios...
           </div>
         ) : !availableServices || availableServices.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">
+          <div className="mt-4 rounded-xs border border-dashed border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">
             No hay servicios adicionales activos por ahora.
           </div>
         ) : (
@@ -607,7 +607,7 @@ export function NewCampaignRequestForm({
               return (
                 <div
                   key={service.id}
-                  className={`rounded-2xl border p-4 transition ${
+                  className={`rounded-xs border p-4 transition ${
                     isSelected
                       ? "border-[#0359A8]/40 bg-[#0359A8]/5"
                       : "border-neutral-200 bg-white"
@@ -680,7 +680,7 @@ export function NewCampaignRequestForm({
                           className={controlClassName}
                         />
                       </div>
-                      <div className="rounded-xl bg-white px-3 py-2 text-sm text-neutral-700 sm:col-span-3">
+                      <div className="rounded-xs bg-white px-3 py-2 text-sm text-neutral-700 sm:col-span-3">
                         Subtotal servicio:{" "}
                         <span className="font-semibold text-neutral-900">
                           {formatCurrency(subtotal, service.currency)}
@@ -694,7 +694,7 @@ export function NewCampaignRequestForm({
           </div>
         )}
 
-        <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+        <div className="mt-4 rounded-xs border border-neutral-200 bg-neutral-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
             Resumen estimado
           </p>
@@ -783,7 +783,7 @@ export function NewCampaignRequestForm({
             variant="outline"
             onClick={() => router.push(returnTo)}
             disabled={isValidating || createRequestMutation.isPending}
-            className="h-10 rounded-md border-neutral-200 bg-white px-5 text-neutral-700 shadow-none hover:bg-neutral-50"
+            className="h-10 rounded-xs border-neutral-200 bg-white px-5 text-neutral-700 shadow-none hover:bg-neutral-50"
           >
             Cancelar
           </Button>
@@ -794,7 +794,7 @@ export function NewCampaignRequestForm({
               createRequestMutation.isPending ||
               !hasValidDateRange
             }
-            className="h-10 rounded-md bg-[#0359A8] px-5 text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8f]"
+            className="h-10 rounded-xs bg-[#0359A8] px-5 text-white shadow-lg shadow-[#0359A8]/30 hover:bg-[#024a8f]"
           >
             <ListFilter className="h-4 w-4" />
             {isValidating

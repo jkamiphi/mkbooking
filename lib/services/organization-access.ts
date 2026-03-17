@@ -3,6 +3,7 @@ import {
   OrganizationRelationshipStatus,
   OrganizationRole,
   OrganizationType,
+  UserAccountType,
 } from "@prisma/client";
 
 export const ORGANIZATION_CONTEXT_COOKIE_NAME = "mk_active_org_ctx";
@@ -11,8 +12,10 @@ export type OrganizationAccessType = "DIRECT" | "DELEGATED";
 export type OrganizationContextDisplayCategory =
   | "OWN_BRAND"
   | "OWN_AGENCY"
-  | "DELEGATED_BRAND"
+  | "CLIENT_BRAND"
   | "DIRECT_ACCESS";
+
+export type OrganizationOperatingEntityType = "DIRECT_CLIENT" | "AGENCY";
 
 export interface OrganizationContextPermissions {
   canCreateRequests: boolean;
@@ -36,7 +39,18 @@ export interface AccessibleOrganizationContext {
   displayCategory: OrganizationContextDisplayCategory;
   displayLabel: string;
   displayMeta: string;
+  operatingEntityType: OrganizationOperatingEntityType;
+  operatingAgencyOrganizationId: string | null;
+  operatingAgencyOrganizationName: string | null;
+  targetBrandOrganizationId: string | null;
+  operatingSummary: string;
   isOwnedWorkspace: boolean;
+}
+
+export interface OrganizationOperationScope {
+  organizationId: string;
+  actingAgencyOrganizationId: string | null;
+  requiresActingAgencyMatch: boolean;
 }
 
 export type OrganizationPermissionKey = keyof OrganizationContextPermissions;
@@ -206,11 +220,25 @@ function buildDelegatedPermissions(
 function resolveContextDisplayMetadata(input: {
   accessType: OrganizationAccessType;
   organizationType: OrganizationType;
+  organizationName: string;
   role: OrganizationRole;
-  viaOrganizationName: string | null;
+  operatingAgencyOrganizationName: string | null;
 }) {
   const isOwnedWorkspace =
     input.accessType === "DIRECT" && input.role === OrganizationRole.OWNER;
+  const isBrandContext = input.organizationType === OrganizationType.ADVERTISER;
+  const hasOperatingAgency = Boolean(input.operatingAgencyOrganizationName);
+
+  if (isBrandContext && hasOperatingAgency) {
+    const agencyName = input.operatingAgencyOrganizationName as string;
+    return {
+      displayCategory: "CLIENT_BRAND" as const,
+      displayMeta: `Operas como ${agencyName}`,
+      operatingEntityType: "AGENCY" as const,
+      operatingSummary: `${agencyName} operando para ${input.organizationName}`,
+      isOwnedWorkspace: false,
+    };
+  }
 
   if (
     input.accessType === "DIRECT" &&
@@ -220,6 +248,8 @@ function resolveContextDisplayMetadata(input: {
     return {
       displayCategory: "OWN_BRAND" as const,
       displayMeta: "Propio",
+      operatingEntityType: "DIRECT_CLIENT" as const,
+      operatingSummary: input.organizationName,
       isOwnedWorkspace,
     };
   }
@@ -232,16 +262,18 @@ function resolveContextDisplayMetadata(input: {
     return {
       displayCategory: "OWN_AGENCY" as const,
       displayMeta: "Agencia propia",
+      operatingEntityType: "AGENCY" as const,
+      operatingSummary: input.organizationName,
       isOwnedWorkspace,
     };
   }
 
   if (input.accessType === "DELEGATED") {
     return {
-      displayCategory: "DELEGATED_BRAND" as const,
-      displayMeta: input.viaOrganizationName
-        ? `Via ${input.viaOrganizationName}`
-        : "Acceso delegado",
+      displayCategory: "CLIENT_BRAND" as const,
+      displayMeta: "Acceso delegado",
+      operatingEntityType: "AGENCY" as const,
+      operatingSummary: input.organizationName,
       isOwnedWorkspace: false,
     };
   }
@@ -249,6 +281,11 @@ function resolveContextDisplayMetadata(input: {
   return {
     displayCategory: "DIRECT_ACCESS" as const,
     displayMeta: "Acceso directo compartido",
+    operatingEntityType:
+      input.organizationType === OrganizationType.AGENCY
+        ? ("AGENCY" as const)
+        : ("DIRECT_CLIENT" as const),
+    operatingSummary: input.organizationName,
     isOwnedWorkspace,
   };
 }
@@ -282,6 +319,7 @@ export async function listAccessibleOrganizationContextsForUser(userId: string) 
   const profile = await db.userProfile.findUnique({
     where: { userId },
     select: {
+      accountType: true,
       organizationRoles: {
         where: {
           isActive: true,
@@ -309,35 +347,57 @@ export async function listAccessibleOrganizationContextsForUser(userId: string) 
     return [];
   }
 
-  const directContexts = profile.organizationRoles.map((membership) => ({
-    ...resolveContextDisplayMetadata({
-      accessType: "DIRECT",
-      organizationType: membership.organization.organizationType,
-      role: membership.role,
-      viaOrganizationName: null,
-    }),
-    contextKey: createOrganizationContextKey({
-      accessType: "DIRECT",
-      organizationId: membership.organizationId,
-      viaOrganizationId: null,
-    }),
-    organizationId: membership.organization.id,
-    organizationName: membership.organization.name,
-    organizationType: membership.organization.organizationType,
-    logoUrl: membership.organization.logoUrl,
-    accessType: "DIRECT" as const,
-    viaOrganizationId: null,
-    viaOrganizationName: null,
-    viaOrganizationType: null,
-    role: membership.role,
-    permissions: directPermissionMatrix[membership.role],
-    displayLabel: membership.organization.name,
-  }));
-
   const agencyMemberships = profile.organizationRoles.filter(
     (membership) =>
       membership.organization.organizationType === OrganizationType.AGENCY,
   );
+  const sortedAgencyMemberships = [...agencyMemberships].sort((first, second) =>
+    first.organization.name.localeCompare(second.organization.name, "es", {
+      sensitivity: "base",
+    }),
+  );
+  const preferredAgencyMembership = sortedAgencyMemberships[0] ?? null;
+
+  const directContexts = profile.organizationRoles.map((membership) => {
+    const isAgencyAccount = profile.accountType === UserAccountType.AGENCY;
+    const isBrandContext =
+      membership.organization.organizationType === OrganizationType.ADVERTISER;
+    const derivedOperatingAgency =
+      isAgencyAccount && isBrandContext && preferredAgencyMembership
+        ? preferredAgencyMembership.organization
+        : null;
+
+    const metadata = resolveContextDisplayMetadata({
+      accessType: "DIRECT",
+      organizationType: membership.organization.organizationType,
+      organizationName: membership.organization.name,
+      role: membership.role,
+      operatingAgencyOrganizationName: derivedOperatingAgency?.name ?? null,
+    });
+
+    return {
+      ...metadata,
+      contextKey: createOrganizationContextKey({
+        accessType: "DIRECT",
+        organizationId: membership.organizationId,
+        viaOrganizationId: null,
+      }),
+      organizationId: membership.organization.id,
+      organizationName: membership.organization.name,
+      organizationType: membership.organization.organizationType,
+      logoUrl: membership.organization.logoUrl,
+      accessType: "DIRECT" as const,
+      viaOrganizationId: null,
+      viaOrganizationName: null,
+      viaOrganizationType: null,
+      role: membership.role,
+      permissions: directPermissionMatrix[membership.role],
+      displayLabel: membership.organization.name,
+      operatingAgencyOrganizationId: derivedOperatingAgency?.id ?? null,
+      operatingAgencyOrganizationName: derivedOperatingAgency?.name ?? null,
+      targetBrandOrganizationId: isBrandContext ? membership.organization.id : null,
+    };
+  });
 
   if (agencyMemberships.length === 0) {
     return sortOrganizationContexts(directContexts);
@@ -398,8 +458,9 @@ export async function listAccessibleOrganizationContextsForUser(userId: string) 
       ...resolveContextDisplayMetadata({
         accessType: "DELEGATED",
         organizationType: relationship.targetOrganization.organizationType,
+        organizationName: relationship.targetOrganization.name,
         role: agencyMembership.role,
-        viaOrganizationName: agencyMembership.sourceOrganizationName,
+        operatingAgencyOrganizationName: agencyMembership.sourceOrganizationName,
       }),
       contextKey: createOrganizationContextKey({
         accessType: "DELEGATED",
@@ -420,6 +481,13 @@ export async function listAccessibleOrganizationContextsForUser(userId: string) 
         relationship,
       ),
       displayLabel: relationship.targetOrganization.name,
+      operatingAgencyOrganizationId: relationship.sourceOrganizationId,
+      operatingAgencyOrganizationName: agencyMembership.sourceOrganizationName,
+      targetBrandOrganizationId:
+        relationship.targetOrganization.organizationType ===
+        OrganizationType.ADVERTISER
+          ? relationship.targetOrganization.id
+          : null,
     });
   }
 
@@ -430,6 +498,11 @@ export async function resolveActiveOrganizationContextForUser(
   userId: string,
   requestedContextKey?: string | null,
 ) {
+  const profile = await db.userProfile.findUnique({
+    where: { userId },
+    select: { accountType: true },
+  });
+  const accountType = profile?.accountType ?? UserAccountType.DIRECT_CLIENT;
   const contexts = await listAccessibleOrganizationContextsForUser(userId);
   const hasAccessibleContexts = contexts.length > 0;
   const hasDirectOrganizations = contexts.some(
@@ -443,6 +516,7 @@ export async function resolveActiveOrganizationContextForUser(
       hasDirectOrganizations,
       needsStarterSetup: true,
       canSkipStarterSetup: false,
+      accountType,
     };
   }
 
@@ -457,6 +531,29 @@ export async function resolveActiveOrganizationContextForUser(
     hasDirectOrganizations,
     needsStarterSetup: false,
     canSkipStarterSetup: true,
+    accountType,
+  };
+}
+
+export function resolveOrganizationOperationScope(
+  context: AccessibleOrganizationContext | null | undefined,
+): OrganizationOperationScope | null {
+  if (!context) {
+    return null;
+  }
+
+  if (context.targetBrandOrganizationId) {
+    return {
+      organizationId: context.targetBrandOrganizationId,
+      actingAgencyOrganizationId: context.operatingAgencyOrganizationId,
+      requiresActingAgencyMatch: Boolean(context.operatingAgencyOrganizationId),
+    };
+  }
+
+  return {
+    organizationId: context.organizationId,
+    actingAgencyOrganizationId: null,
+    requiresActingAgencyMatch: false,
   };
 }
 

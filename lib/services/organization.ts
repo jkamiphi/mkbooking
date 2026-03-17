@@ -5,8 +5,10 @@ import {
   OrganizationType,
   OrganizationRole,
   Prisma,
+  UserAccountType,
 } from "@prisma/client";
 import { z } from "zod";
+import { resolveActiveOrganizationContextForUser } from "@/lib/services/organization-access";
 
 // ============================================================================
 // Schemas
@@ -300,18 +302,145 @@ export async function registerAgency(
 export async function createStarterOrganization(
   input: CreateStarterOrganizationInput,
   userProfileId: string,
+  options?: { userId?: string; activeContextKey?: string | null },
 ) {
   const displayName = input.name.trim();
+  if (!displayName) {
+    throw new Error("Escribe un nombre para continuar.");
+  }
 
-  return createOrganizationWithOwner(
-    {
-      name: displayName,
-      legalName: displayName,
-      organizationType: input.organizationType,
-      legalEntityType: LegalEntityType.LEGAL_ENTITY,
+  const profile = await db.userProfile.findUnique({
+    where: { id: userProfileId },
+    select: {
+      id: true,
+      userId: true,
+      accountType: true,
+      organizationRoles: {
+        where: {
+          isActive: true,
+          organization: { isActive: true },
+        },
+        select: {
+          organizationId: true,
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              organizationType: true,
+            },
+          },
+        },
+      },
     },
-    userProfileId,
+  });
+
+  if (!profile) {
+    throw new Error("Perfil de usuario no encontrado.");
+  }
+
+  const directAgencyMemberships = profile.organizationRoles.filter(
+    (membership) => membership.organization.organizationType === OrganizationType.AGENCY,
   );
+  const hasDirectOrganizations = profile.organizationRoles.length > 0;
+
+  if (profile.accountType === UserAccountType.DIRECT_CLIENT) {
+    if (hasDirectOrganizations) {
+      throw new Error(
+        "Las cuentas de cliente directo no pueden crear más negocios desde este flujo.",
+      );
+    }
+
+    return createOrganizationWithOwner(
+      {
+        name: displayName,
+        legalName: displayName,
+        organizationType: OrganizationType.ADVERTISER,
+        legalEntityType: LegalEntityType.LEGAL_ENTITY,
+      },
+      userProfileId,
+    );
+  }
+
+  if (directAgencyMemberships.length === 0) {
+    if (input.organizationType !== OrganizationType.AGENCY) {
+      throw new Error("Primero debes crear tu agencia principal.");
+    }
+
+    return createOrganizationWithOwner(
+      {
+        name: displayName,
+        legalName: displayName,
+        organizationType: OrganizationType.AGENCY,
+        legalEntityType: LegalEntityType.LEGAL_ENTITY,
+      },
+      userProfileId,
+    );
+  }
+
+  if (input.organizationType !== OrganizationType.ADVERTISER) {
+    throw new Error(
+      "Las cuentas de agencia solo pueden crear marcas cliente desde este flujo.",
+    );
+  }
+
+  const resolvedUserId = options?.userId ?? profile.userId;
+  const { activeContext } = await resolveActiveOrganizationContextForUser(
+    resolvedUserId,
+    options?.activeContextKey,
+  );
+  const explicitAgencyId =
+    activeContext?.operatingAgencyOrganizationId ??
+    (activeContext?.organizationType === OrganizationType.AGENCY &&
+    activeContext?.accessType === "DIRECT"
+      ? activeContext.organizationId
+      : null);
+  const operatingAgencyId =
+    (explicitAgencyId &&
+    directAgencyMemberships.some(
+      (membership) => membership.organizationId === explicitAgencyId,
+    )
+      ? explicitAgencyId
+      : null) ?? directAgencyMemberships[0].organizationId;
+
+  return db.$transaction(async (tx) => {
+    const clientBrand = await tx.organization.create({
+      data: {
+        name: displayName,
+        legalName: displayName,
+        organizationType: OrganizationType.ADVERTISER,
+        legalEntityType: LegalEntityType.LEGAL_ENTITY,
+        createdById: userProfileId,
+      },
+    });
+
+    await tx.organizationRelationship.upsert({
+      where: {
+        sourceOrganizationId_targetOrganizationId_relationshipType: {
+          sourceOrganizationId: operatingAgencyId,
+          targetOrganizationId: clientBrand.id,
+          relationshipType: "AGENCY_CLIENT",
+        },
+      },
+      create: {
+        sourceOrganizationId: operatingAgencyId,
+        targetOrganizationId: clientBrand.id,
+        relationshipType: "AGENCY_CLIENT",
+        status: OrganizationRelationshipStatus.ACTIVE,
+        createdById: userProfileId,
+        updatedBy: userProfileId,
+        canCreateRequests: true,
+        canCreateOrders: true,
+        canViewBilling: false,
+        canManageContacts: false,
+      },
+      update: {
+        status: OrganizationRelationshipStatus.ACTIVE,
+        updatedBy: userProfileId,
+      },
+    });
+
+    return clientBrand;
+  });
 }
 
 export async function updateOrganization(

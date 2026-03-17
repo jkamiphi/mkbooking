@@ -87,7 +87,10 @@ export const organizationRouter = router({
         });
       }
 
-      return createStarterOrganization(input, profile.id);
+      return createStarterOrganization(input, profile.id, {
+        userId: ctx.user.id,
+        activeContextKey: ctx.activeOrganizationContextKey,
+      });
     }),
 
   // Create a new organization

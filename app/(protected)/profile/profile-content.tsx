@@ -201,34 +201,89 @@ type ProfileOrganizationContext = {
   displayCategory:
     | "OWN_BRAND"
     | "OWN_AGENCY"
-    | "DELEGATED_BRAND"
+    | "CLIENT_BRAND"
     | "DIRECT_ACCESS";
   displayMeta: string;
+  operatingEntityType: "DIRECT_CLIENT" | "AGENCY";
+  operatingAgencyOrganizationName: string | null;
+  targetBrandOrganizationId: string | null;
+  operatingSummary: string;
 };
 
-const CONTEXT_SECTION_CONFIG = [
-  {
-    key: "OWN_BRAND",
-    title: "Mis marcas",
-    description: "Espacios propios como anunciante.",
-  },
-  {
-    key: "OWN_AGENCY",
-    title: "Mis agencias",
-    description: "Agencias propias que administras directamente.",
-  },
-  {
-    key: "DELEGATED_BRAND",
-    title: "Accesos por agencia",
-    description: "Marcas cliente a las que llegas via una agencia.",
-  },
-  {
-    key: "DIRECT_ACCESS",
-    title: "Accesos compartidos",
-    description:
-      "Organizaciones directas que no son tuyas pero comparten acceso.",
-  },
-] as const;
+type ProfileAccountType = "DIRECT_CLIENT" | "AGENCY";
+
+function buildContextSections(
+  accountType: ProfileAccountType,
+  contexts: ProfileOrganizationContext[],
+) {
+  if (accountType === "AGENCY") {
+    return [
+      {
+        key: "OWN_AGENCY",
+        title: "Mi agencia",
+        description: "Contextos directos donde operas como agencia.",
+        contexts: contexts.filter(
+          (context) =>
+            context.displayCategory === "OWN_AGENCY" &&
+            context.accessType === "DIRECT",
+        ),
+      },
+      {
+        key: "CLIENT_BRAND",
+        title: "Marcas cliente",
+        description: "Marcas operadas por tu agencia.",
+        contexts: contexts.filter((context) =>
+          Boolean(context.targetBrandOrganizationId),
+        ),
+      },
+      {
+        key: "DIRECT_ACCESS",
+        title: "Otros accesos",
+        description: "Accesos que no forman parte del flujo agencia-cliente.",
+        contexts: contexts.filter(
+          (context) =>
+            context.displayCategory === "DIRECT_ACCESS" &&
+            !Boolean(context.targetBrandOrganizationId),
+        ),
+      },
+    ].filter((section) => section.contexts.length > 0);
+  }
+
+  return [
+    {
+      key: "OWN_BRAND",
+      title: "Mi marca",
+      description: "Espacios propios como anunciante.",
+      contexts: contexts.filter(
+        (context) => context.displayCategory === "OWN_BRAND",
+      ),
+    },
+    {
+      key: "OWN_AGENCY",
+      title: "Accesos a agencia",
+      description: "Agencias en las que colaboras por invitación.",
+      contexts: contexts.filter(
+        (context) => context.displayCategory === "OWN_AGENCY",
+      ),
+    },
+    {
+      key: "CLIENT_BRAND",
+      title: "Marcas por agencia",
+      description: "Marcas a las que accedes operando desde una agencia.",
+      contexts: contexts.filter(
+        (context) => context.displayCategory === "CLIENT_BRAND",
+      ),
+    },
+    {
+      key: "DIRECT_ACCESS",
+      title: "Accesos compartidos",
+      description: "Organizaciones directas compartidas contigo.",
+      contexts: contexts.filter(
+        (context) => context.displayCategory === "DIRECT_ACCESS",
+      ),
+    },
+  ].filter((section) => section.contexts.length > 0);
+}
 
 function ContextTone({
   children,
@@ -281,8 +336,8 @@ function WorkspaceCard({
     <div
       className={
         isActive
-          ? "rounded-md border border-mkmedia-blue/20 bg-mkmedia-blue/6 px-4 py-4"
-          : "rounded-md border border-neutral-200/80 bg-neutral-50/80 px-4 py-4"
+          ? "rounded-xs border border-mkmedia-blue/20 bg-mkmedia-blue/6 px-4 py-4"
+          : "rounded-xs border border-neutral-200/80 bg-neutral-50/80 px-4 py-4"
       }
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -298,7 +353,13 @@ function WorkspaceCard({
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
             <span>{context.role}</span>
-            {context.accessType === "DELEGATED" ? (
+            {context.operatingEntityType === "AGENCY" &&
+            context.targetBrandOrganizationId ? (
+              <span className="inline-flex items-center gap-1">
+                <Link2 className="h-3 w-3" />
+                {context.operatingSummary}
+              </span>
+            ) : context.accessType === "DELEGATED" ? (
               <span className="inline-flex items-center gap-1">
                 <Link2 className="h-3 w-3" />
                 Via {context.viaOrganizationName}
@@ -416,6 +477,8 @@ export function ProfileContent() {
   const effectiveNotificationDraft =
     notificationDraft ??
     buildNotificationDraft(currentProfile.notificationPreferences);
+  const accountType = (currentProfile.accountType ??
+    "DIRECT_CLIENT") as ProfileAccountType;
 
   const hasNotificationChanges = NOTIFICATION_ROWS.some((row) => {
     const serverPreference = currentProfile.notificationPreferences.find(
@@ -430,12 +493,10 @@ export function ProfileContent() {
     );
   });
 
-  const groupedContexts = CONTEXT_SECTION_CONFIG.map((section) => ({
-    ...section,
-    contexts: currentProfile.organizationContexts.filter(
-      (context) => context.displayCategory === section.key,
-    ),
-  })).filter((section) => section.contexts.length > 0);
+  const groupedContexts = buildContextSections(
+    accountType,
+    currentProfile.organizationContexts as ProfileOrganizationContext[],
+  );
 
   function handlePersonalDraftChange(
     field: keyof typeof personalDraft,
@@ -555,14 +616,14 @@ export function ProfileContent() {
   return (
     <div className="space-y-5">
       {successMessage ? (
-        <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+        <div className="flex items-center gap-2 rounded-xs border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
           <Check className="h-4 w-4" />
           {successMessage}
         </div>
       ) : null}
 
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList className="h-auto w-full justify-start gap-2 rounded-md border border-neutral-200/80 bg-white p-1">
+        <TabsList className="h-auto w-full justify-start gap-2 p-1">
           <TabsTrigger
             value="summary"
             className="rounded-xs border border-transparent px-3 py-2 data-[state=active]:border-neutral-200 data-[state=active]:bg-neutral-50"
@@ -585,8 +646,8 @@ export function ProfileContent() {
 
         <TabsContent value="summary" className="space-y-5">
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.45fr)]">
-            <Card className="overflow-hidden rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
-              <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))] pb-4">
+            <Card className="overflow-hidden rounded-xs border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
+              <CardHeader className="border-b border-neutral-200/70 bg-white pb-4">
                 <div className="flex items-center gap-3">
                   <span className="flex h-11 w-11 items-center justify-center rounded-md bg-mkmedia-blue text-white shadow-sm shadow-mkmedia-blue/25">
                     <UserRound className="h-5 w-5" />
@@ -617,7 +678,7 @@ export function ProfileContent() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(15,23,42,0.2)]">
+            <Card className="rounded-xs border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(15,23,42,0.2)]">
               <CardHeader className="border-b border-neutral-200/70 pb-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -735,8 +796,8 @@ export function ProfileContent() {
         </TabsContent>
 
         <TabsContent value="business" className="space-y-5">
-          <Card className="overflow-hidden rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
-            <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))] pb-4">
+          <Card className="overflow-hidden rounded-xs border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
+            <CardHeader className="border-b border-neutral-200/70 bg-white pb-4">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-md bg-mkmedia-blue text-white shadow-sm shadow-mkmedia-blue/25">
                   <Building2 className="h-5 w-5" />
@@ -751,10 +812,10 @@ export function ProfileContent() {
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               {currentProfile.activeOrganizationContext ? (
-                <div className="rounded-md border border-mkmedia-blue/15 bg-mkmedia-blue/6 px-5 py-4">
+                <div className="rounded-xs border border-mkmedia-blue/15 bg-mkmedia-blue/6 px-5 py-4">
                   <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-900">
                     <Check className="h-4 w-4 text-mkmedia-blue" />
-                    Organización activa
+                    Contexto operativo
                   </div>
                   <p className="mt-3 text-base font-semibold text-neutral-950">
                     {currentProfile.activeOrganizationContext.organizationName}
@@ -770,14 +831,15 @@ export function ProfileContent() {
                       {currentProfile.activeOrganizationContext.displayMeta}
                     </ContextTone>
                   </div>
-                  {currentProfile.activeOrganizationContext.accessType ===
-                  "DELEGATED" ? (
+                  {currentProfile.activeOrganizationContext
+                    .operatingEntityType === "AGENCY" &&
+                  currentProfile.activeOrganizationContext
+                    .targetBrandOrganizationId ? (
                     <p className="mt-2 inline-flex items-center gap-1 text-xs text-neutral-600">
                       <Link2 className="h-3 w-3" />
-                      Via{" "}
                       {
                         currentProfile.activeOrganizationContext
-                          .viaOrganizationName
+                          .operatingSummary
                       }
                     </p>
                   ) : null}
@@ -828,7 +890,7 @@ export function ProfileContent() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50/80 px-5 py-5">
+                <div className="rounded-xs border border-dashed border-neutral-300 bg-neutral-50/80 px-5 py-5">
                   <p className="text-sm font-semibold text-neutral-950">
                     Todavía no tienes marcas ni accesos visibles
                   </p>

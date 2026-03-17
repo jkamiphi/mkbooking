@@ -256,6 +256,7 @@ export const catalogRouter = router({
           {
             userId: ctx.user.id,
             userEmail: ctx.user.email,
+            activeContextKey: ctx.activeOrganizationContextKey,
           }
         );
       }),
@@ -265,6 +266,7 @@ export const catalogRouter = router({
         const request = await getCampaignRequestByIdForUser(input.requestId, {
           userId: ctx.user.id,
           userEmail: ctx.user.email,
+          activeContextKey: ctx.activeOrganizationContextKey,
         });
 
         if (!request) {

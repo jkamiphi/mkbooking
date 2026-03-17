@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, startTransition, useState } from "react";
+import { Fragment, startTransition, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BriefcaseBusiness,
@@ -42,61 +42,120 @@ type OrganizationContextSelectorProps = {
   className?: string;
 };
 
+type AccountType = "DIRECT_CLIENT" | "AGENCY";
+
 type ContextLike = {
   contextKey: string;
   organizationName: string;
-  displayCategory:
-    | "OWN_BRAND"
-    | "OWN_AGENCY"
-    | "DELEGATED_BRAND"
-    | "DIRECT_ACCESS";
+  organizationType: "ADVERTISER" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
+  displayCategory: "OWN_BRAND" | "OWN_AGENCY" | "CLIENT_BRAND" | "DIRECT_ACCESS";
   displayMeta: string;
   accessType: "DIRECT" | "DELEGATED";
   viaOrganizationName: string | null;
+  operatingEntityType: "DIRECT_CLIENT" | "AGENCY";
+  operatingAgencyOrganizationId: string | null;
+  operatingAgencyOrganizationName: string | null;
+  targetBrandOrganizationId: string | null;
+  operatingSummary: string;
 };
 
-const CONTEXT_GROUPS = [
-  {
-    key: "OWN_BRAND",
-    title: "Mis marcas",
-  },
-  {
-    key: "OWN_AGENCY",
-    title: "Mis agencias",
-  },
-  {
-    key: "DELEGATED_BRAND",
-    title: "Accesos por agencia",
-  },
-  {
-    key: "DIRECT_ACCESS",
-    title: "Otros accesos",
-  },
-] as const;
+type ContextGroup = {
+  key: string;
+  title: string;
+  contexts: ContextLike[];
+};
 
-function groupContexts(contexts: ContextLike[]) {
-  return CONTEXT_GROUPS.map((group) => ({
-    ...group,
-    contexts: contexts.filter(
-      (context) => context.displayCategory === group.key,
-    ),
-  })).filter((group) => group.contexts.length > 0);
+function buildContextGroups(
+  contexts: ContextLike[],
+  accountType: AccountType,
+): ContextGroup[] {
+  if (accountType === "AGENCY") {
+    const ownAgencies = contexts.filter(
+      (context) =>
+        context.displayCategory === "OWN_AGENCY" && context.accessType === "DIRECT",
+    );
+    const clientBrands = contexts.filter(
+      (context) => Boolean(context.targetBrandOrganizationId),
+    );
+    const extraAccess = contexts.filter(
+      (context) =>
+        context.displayCategory === "DIRECT_ACCESS" &&
+        !Boolean(context.targetBrandOrganizationId),
+    );
+
+    return [
+      { key: "OWN_AGENCY", title: "Mi agencia", contexts: ownAgencies },
+      { key: "CLIENT_BRAND", title: "Marcas cliente", contexts: clientBrands },
+      { key: "DIRECT_ACCESS", title: "Otros accesos", contexts: extraAccess },
+    ].filter((group) => group.contexts.length > 0);
+  }
+
+  const ownBrands = contexts.filter(
+    (context) => context.displayCategory === "OWN_BRAND",
+  );
+  const sharedAgencyAccess = contexts.filter(
+    (context) => context.displayCategory === "OWN_AGENCY",
+  );
+  const delegatedBrands = contexts.filter(
+    (context) =>
+      context.displayCategory === "CLIENT_BRAND" && Boolean(context.targetBrandOrganizationId),
+  );
+  const extraAccess = contexts.filter(
+    (context) => context.displayCategory === "DIRECT_ACCESS",
+  );
+
+  return [
+    { key: "OWN_BRAND", title: "Mi marca", contexts: ownBrands },
+    {
+      key: "OWN_AGENCY",
+      title: "Accesos a agencia",
+      contexts: sharedAgencyAccess,
+    },
+    {
+      key: "CLIENT_BRAND",
+      title: "Marcas por agencia",
+      contexts: delegatedBrands,
+    },
+    { key: "DIRECT_ACCESS", title: "Otros accesos", contexts: extraAccess },
+  ].filter((group) => group.contexts.length > 0);
 }
 
 function getTriggerTitle(context: ContextLike) {
-  if (context.displayCategory === "OWN_AGENCY") {
+  if (context.operatingEntityType === "AGENCY" && context.targetBrandOrganizationId) {
+    return "Agencia operando marca";
+  }
+
+  if (context.organizationType === "AGENCY") {
     return "Agencia activa";
   }
 
-  if (context.displayCategory === "DELEGATED_BRAND") {
-    return "Marca delegada";
-  }
-
-  if (context.displayCategory === "DIRECT_ACCESS") {
-    return "Acceso compartido";
-  }
-
   return "Marca activa";
+}
+
+function getContextMetaLine(context: ContextLike) {
+  if (context.operatingEntityType === "AGENCY" && context.targetBrandOrganizationId) {
+    const agencyName =
+      context.operatingAgencyOrganizationName ||
+      context.viaOrganizationName ||
+      "tu agencia";
+    return `Operas como ${agencyName}`;
+  }
+
+  return context.displayMeta;
+}
+
+function getCreateDialogCopy(accountType: AccountType) {
+  if (accountType === "AGENCY") {
+    return {
+      title: "Crear marca cliente",
+      description:
+        "Esta marca quedará operada desde tu agencia activa mediante acceso delegado.",
+      actionLabel: "Crear marca cliente",
+      placeholder: "Ej. Marca Atlas",
+    };
+  }
+
+  return null;
 }
 
 export function OrganizationContextSelector({
@@ -107,11 +166,12 @@ export function OrganizationContextSelector({
   const utils = trpc.useUtils();
   const [isSaving, setIsSaving] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newOrganizationType, setNewOrganizationType] = useState<
-    "ADVERTISER" | "AGENCY"
-  >("ADVERTISER");
   const [newOrganizationName, setNewOrganizationName] = useState("");
   const { data, isLoading } = trpc.organization.myContexts.useQuery();
+
+  const accountType = (data?.accountType ?? "DIRECT_CLIENT") as AccountType;
+  const createDialogCopy = getCreateDialogCopy(accountType);
+
   const createStarterOrganization =
     trpc.organization.createStarterOrganization.useMutation({
       onSuccess: async () => {
@@ -123,24 +183,38 @@ export function OrganizationContextSelector({
         ]);
         setIsCreateDialogOpen(false);
         setNewOrganizationName("");
-        toast.success("Negocio creado y disponible en tus accesos.");
+        toast.success("Marca cliente creada y vinculada a tu agencia.");
         startTransition(() => {
           router.refresh();
         });
       },
       onError: (error) => {
-        toast.error("No se pudo crear el negocio", {
+        toast.error("No se pudo crear la marca cliente", {
           description: error.message,
         });
       },
     });
 
-  const contexts = data?.contexts ?? [];
+  const contexts = useMemo(() => data?.contexts ?? [], [data?.contexts]);
   const activeContext = data?.activeContext ?? contexts[0] ?? null;
-  const groupedContexts = groupContexts(contexts);
+  const groupedContexts = useMemo(
+    () => buildContextGroups(contexts, accountType),
+    [contexts, accountType],
+  );
 
-  function openCreateDialog(nextType: "ADVERTISER" | "AGENCY") {
-    setNewOrganizationType(nextType);
+  const canCreateClientBrand =
+    accountType === "AGENCY" &&
+    contexts.some(
+      (context) =>
+        context.organizationType === "AGENCY" && context.accessType === "DIRECT",
+    );
+
+  function openCreateDialog() {
+    if (!canCreateClientBrand) {
+      toast.error("Selecciona una agencia activa para crear marcas cliente.");
+      return;
+    }
+
     setNewOrganizationName("");
     setIsCreateDialogOpen(true);
   }
@@ -148,13 +222,13 @@ export function OrganizationContextSelector({
   function handleCreateOrganization() {
     const name = newOrganizationName.trim();
     if (!name) {
-      toast.error("Escribe un nombre para el negocio.");
+      toast.error("Escribe un nombre para la marca cliente.");
       return;
     }
 
     createStarterOrganization.mutate({
       name,
-      organizationType: newOrganizationType,
+      organizationType: "ADVERTISER",
     });
   }
 
@@ -195,7 +269,7 @@ export function OrganizationContextSelector({
         router.refresh();
       });
     } catch (error) {
-      toast.error("No se pudo cambiar la marca o acceso", {
+      toast.error("No se pudo cambiar el contexto", {
         description:
           error instanceof Error
             ? error.message
@@ -233,7 +307,7 @@ export function OrganizationContextSelector({
       >
         <DropdownMenuLabel className="flex items-center gap-2 text-neutral-900">
           <CheckCircle2 className="h-4 w-4 text-mkmedia-blue" />
-          Marcas y accesos
+          {accountType === "AGENCY" ? "Agencias y marcas cliente" : "Marcas y accesos"}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup
@@ -260,7 +334,7 @@ export function OrganizationContextSelector({
                       {context.organizationName}
                     </p>
                     <p className="truncate text-xs text-neutral-500">
-                      {context.displayMeta}
+                      {getContextMetaLine(context)}
                     </p>
                   </div>
                 </DropdownMenuRadioItem>
@@ -268,83 +342,39 @@ export function OrganizationContextSelector({
             </Fragment>
           ))}
         </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onSelect={() => openCreateDialog("ADVERTISER")}
-          className="cursor-pointer rounded-xs"
-        >
-          <Plus className="h-4 w-4 text-mkmedia-blue" />
-          Crear marca
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onSelect={() => openCreateDialog("AGENCY")}
-          className="cursor-pointer rounded-xs"
-        >
-          <Plus className="h-4 w-4 text-mkmedia-blue" />
-          Crear agencia
-        </DropdownMenuItem>
+        {canCreateClientBrand && createDialogCopy ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={openCreateDialog}
+              className="cursor-pointer rounded-xs"
+            >
+              <Plus className="h-4 w-4 text-mkmedia-blue" />
+              Crear marca cliente
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     );
   }
 
-  const createOrganizationDialog = (
+  const createOrganizationDialog = createDialogCopy ? (
     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
       <DialogContent className="rounded-md">
         <DialogHeader>
-          <DialogTitle>Crear nuevo negocio</DialogTitle>
-          <DialogDescription>
-            Crea una marca o agencia nueva para operar con otro contexto.
-          </DialogDescription>
+          <DialogTitle>{createDialogCopy.title}</DialogTitle>
+          <DialogDescription>{createDialogCopy.description}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Tipo</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant={
-                  newOrganizationType === "ADVERTISER" ? "default" : "outline"
-                }
-                className={
-                  newOrganizationType === "ADVERTISER"
-                    ? "rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
-                    : "rounded-xs"
-                }
-                onClick={() => setNewOrganizationType("ADVERTISER")}
-              >
-                Marca
-              </Button>
-              <Button
-                type="button"
-                variant={
-                  newOrganizationType === "AGENCY" ? "default" : "outline"
-                }
-                className={
-                  newOrganizationType === "AGENCY"
-                    ? "rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
-                    : "rounded-xs"
-                }
-                onClick={() => setNewOrganizationType("AGENCY")}
-              >
-                Agencia
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="new-organization-name">Nombre visible</Label>
-            <Input
-              id="new-organization-name"
-              value={newOrganizationName}
-              onChange={(event) => setNewOrganizationName(event.target.value)}
-              placeholder={
-                newOrganizationType === "AGENCY"
-                  ? "Ej. MK Media Agency"
-                  : "Ej. Marca Atlas"
-              }
-              className="rounded-xs border-neutral-300"
-              disabled={createStarterOrganization.isPending}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="new-organization-name">Nombre visible</Label>
+          <Input
+            id="new-organization-name"
+            value={newOrganizationName}
+            onChange={(event) => setNewOrganizationName(event.target.value)}
+            placeholder={createDialogCopy.placeholder}
+            className="rounded-xs border-neutral-300"
+            disabled={createStarterOrganization.isPending}
+          />
         </div>
         <DialogFooter>
           <Button
@@ -367,12 +397,12 @@ export function OrganizationContextSelector({
           >
             {createStarterOrganization.isPending
               ? "Creando..."
-              : "Crear negocio"}
+              : createDialogCopy.actionLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  ) : null;
 
   if (variant === "sidebar") {
     const sidebarBody = (
@@ -383,13 +413,13 @@ export function OrganizationContextSelector({
           </span>
           <div className="min-w-0 flex-1 text-left">
             <p className="[font-family:var(--font-mkmedia)] text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
-              Marcas y accesos
+              {accountType === "AGENCY" ? "Agencia operativa" : "Marca activa"}
             </p>
             <p className="mt-1 truncate text-sm font-semibold text-neutral-950">
               {activeContext.organizationName}
             </p>
             <p className="mt-1 text-xs text-neutral-500">
-              {activeContext.displayMeta}
+              {getContextMetaLine(activeContext)}
             </p>
           </div>
           <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-neutral-400" />
@@ -398,12 +428,11 @@ export function OrganizationContextSelector({
           <BriefcaseBusiness className="h-3.5 w-3.5 text-mkmedia-blue" />
           <span className="truncate">{getTriggerTitle(activeContext)}</span>
         </div>
-        {activeContext.accessType === "DELEGATED" ? (
+        {activeContext.operatingEntityType === "AGENCY" &&
+        activeContext.targetBrandOrganizationId ? (
           <div className="mt-2 flex items-center gap-2 rounded-md bg-mkmedia-yellow/15 px-3 py-2 text-xs text-neutral-700 ring-1 ring-mkmedia-yellow/35">
             <Link2 className="h-3.5 w-3.5 text-neutral-700" />
-            <span className="truncate">
-              Operas via {activeContext.viaOrganizationName}
-            </span>
+            <span className="truncate">{activeContext.operatingSummary}</span>
           </div>
         ) : null}
       </>
@@ -452,7 +481,7 @@ export function OrganizationContextSelector({
             {activeContext.organizationName}
           </span>
           <span className="block truncate text-xs text-neutral-500">
-            {activeContext.displayMeta}
+            {getContextMetaLine(activeContext)}
           </span>
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 text-neutral-400" />
@@ -490,7 +519,7 @@ export function OrganizationContextSelector({
         {activeContext.organizationName}
       </span>
       <span className="hidden text-xs text-neutral-500 sm:inline">
-        {activeContext.displayMeta}
+        {getContextMetaLine(activeContext)}
       </span>
       <ChevronDown className="h-4 w-4 text-neutral-400" />
     </Button>

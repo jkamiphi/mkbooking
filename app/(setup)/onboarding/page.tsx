@@ -6,7 +6,7 @@ import { StarterSetupContent } from "@/components/onboarding/starter-setup-conte
 
 export const metadata = {
   title: "Setup inicial - MK Booking",
-  description: "Crea una marca o agencia minima, o entra con accesos compartidos.",
+  description: "Configura tu primer espacio operativo segun tu tipo de cuenta.",
 };
 
 export default async function OnboardingPage() {

@@ -57,7 +57,7 @@ export default async function CampaignRequestsPage() {
         </div>
         <Link
           href="/campaign-requests/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#0359A8] px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#0359A8]/20 transition hover:bg-[#024a8f]"
+          className="inline-flex items-center gap-2 rounded-xs bg-[#0359A8] px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#0359A8]/20 transition hover:bg-[#024a8f]"
         >
           <Plus className="h-4 w-4" />
           Nueva solicitud
@@ -66,7 +66,7 @@ export default async function CampaignRequestsPage() {
 
       {data.requests.length === 0 ? (
         /* Empty state */
-        <div className="flex flex-col items-center rounded-2xl border border-dashed border-neutral-300 bg-white py-16 text-center">
+        <div className="flex flex-col items-center rounded-md border border-dashed border-neutral-300 bg-white py-16 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-100">
             <ClipboardList className="h-7 w-7 text-neutral-400" />
           </div>
@@ -74,18 +74,19 @@ export default async function CampaignRequestsPage() {
             Sin solicitudes activas
           </h2>
           <p className="mt-1 max-w-sm text-sm text-neutral-500">
-            Explora el catálogo, selecciona las caras que te interesan y crea tu primera solicitud de campaña.
+            Explora el catálogo, selecciona las caras que te interesan y crea tu
+            primera solicitud de campaña.
           </p>
           <div className="mt-5 flex gap-2">
             <Link
               href="/s/all"
-              className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+              className="inline-flex items-center gap-2 rounded-xs border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
             >
               Ver catálogo
             </Link>
             <Link
               href="/campaign-requests/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#0359A8] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#0359A8]/20 transition hover:bg-[#024a8f]"
+              className="inline-flex items-center gap-2 rounded-xs bg-[#0359A8] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#0359A8]/20 transition hover:bg-[#024a8f]"
             >
               <Plus className="h-4 w-4" />
               Crear solicitud
@@ -103,7 +104,7 @@ export default async function CampaignRequestsPage() {
               <Link
                 key={request.id}
                 href={`/campaign-requests/${request.id}`}
-                className={`group flex items-center gap-4 rounded-2xl border border-neutral-200/80 border-l-[3px] bg-white p-5 transition hover:border-neutral-300 hover:shadow-sm ${edgeColor}`}
+                className={`group flex items-center gap-4 rounded-md border border-neutral-200/80 border-l-[3px] bg-white p-5 transition hover:border-neutral-300 hover:shadow-sm ${edgeColor}`}
               >
                 <div className="min-w-0 flex-1">
                   {/* Top row: ID + status */}
@@ -121,7 +122,8 @@ export default async function CampaignRequestsPage() {
                   <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
                     <span className="inline-flex items-center gap-1.5 text-neutral-700">
                       <Hash className="h-3.5 w-3.5 text-neutral-400" />
-                      {request.quantity} {request.quantity === 1 ? "cara" : "caras"}
+                      {request.quantity}{" "}
+                      {request.quantity === 1 ? "cara" : "caras"}
                     </span>
                     <span className="inline-flex items-center gap-1.5 text-neutral-700">
                       <Shapes className="h-3.5 w-3.5 text-neutral-400" />
@@ -135,7 +137,8 @@ export default async function CampaignRequestsPage() {
                     </span>
                     <span className="inline-flex items-center gap-1.5 text-neutral-700">
                       <CalendarDays className="h-3.5 w-3.5 text-neutral-400" />
-                      {formatDate(request.fromDate)} – {formatDate(request.toDate)}
+                      {formatDate(request.fromDate)} –{" "}
+                      {formatDate(request.toDate)}
                     </span>
                   </div>
 

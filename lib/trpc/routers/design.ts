@@ -28,7 +28,11 @@ async function resolveSystemRole(userId: string) {
   return profile?.systemRole ?? null;
 }
 
-async function assertOrderAccess(userId: string, orderId: string) {
+async function assertOrderAccess(
+  userId: string,
+  orderId: string,
+  activeContextKey?: string | null,
+) {
   const systemRole = await resolveSystemRole(userId);
   if (
     systemRole &&
@@ -37,7 +41,7 @@ async function assertOrderAccess(userId: string, orderId: string) {
     return;
   }
 
-  const hasAccess = await canUserAccessOrder(userId, orderId);
+  const hasAccess = await canUserAccessOrder(userId, orderId, activeContextKey);
   if (!hasAccess) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -122,7 +126,11 @@ export const designRouter = router({
     clientDecision: protectedProcedure
       .input(clientProofDecisionSchema)
       .mutation(async ({ input, ctx }) => {
-        await assertOrderAccess(ctx.user.id, input.orderId);
+        await assertOrderAccess(
+          ctx.user.id,
+          input.orderId,
+          ctx.activeOrganizationContextKey,
+        );
         if (input.decision === "CHANGES_REQUESTED" && !input.notes?.trim()) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -146,7 +154,11 @@ export const designRouter = router({
   byOrder: protectedProcedure
     .input(getDesignTaskByOrderSchema)
     .query(async ({ input, ctx }) => {
-      await assertOrderAccess(ctx.user.id, input.orderId);
+      await assertOrderAccess(
+        ctx.user.id,
+        input.orderId,
+        ctx.activeOrganizationContextKey,
+      );
 
       const task = await getDesignTaskByOrder(input.orderId);
       if (!task) {

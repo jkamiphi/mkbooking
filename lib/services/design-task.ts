@@ -16,7 +16,11 @@ import {
   NotificationType,
   sendPreparedNotificationEmails,
 } from "@/lib/services/notifications";
-import { listAccessibleOrganizationIdsForUser } from "@/lib/services/organization-access";
+import {
+  listAccessibleOrganizationIdsForUser,
+  resolveActiveOrganizationContextForUser,
+  resolveOrganizationOperationScope,
+} from "@/lib/services/organization-access";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
 
@@ -1090,7 +1094,11 @@ export async function getDesignTaskByOrder(orderId: string) {
   };
 }
 
-export async function canUserAccessOrder(userId: string, orderId: string) {
+export async function canUserAccessOrder(
+  userId: string,
+  orderId: string,
+  activeContextKey?: string | null,
+) {
   const profile = await db.userProfile.findUnique({
     where: { userId },
     select: { id: true },
@@ -1098,6 +1106,26 @@ export async function canUserAccessOrder(userId: string, orderId: string) {
 
   if (!profile) {
     return false;
+  }
+
+  const { activeContext } = await resolveActiveOrganizationContextForUser(
+    userId,
+    activeContextKey,
+  );
+  const scope = resolveOrganizationOperationScope(activeContext);
+
+  if (scope) {
+    const scopedOrder = await db.order.findFirst({
+      where: {
+        id: orderId,
+        organizationId: scope.organizationId,
+        ...(scope.requiresActingAgencyMatch
+          ? { actingAgencyOrganizationId: scope.actingAgencyOrganizationId }
+          : {}),
+      },
+      select: { id: true },
+    });
+    return Boolean(scopedOrder);
   }
 
   const orgIds = await listAccessibleOrganizationIdsForUser(userId);

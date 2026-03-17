@@ -14,8 +14,8 @@ import {
   resolveSalesReviewActor,
 } from "@/lib/services/sales-review";
 import {
-  listAccessibleOrganizationIdsForUser,
   resolveActiveOrganizationContextForUser,
+  resolveOrganizationOperationScope,
 } from "@/lib/services/organization-access";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -217,13 +217,15 @@ export async function createCampaignRequest(
         options.activeContextKey,
       )
     : { activeContext: null };
+  const operationScope = resolveOrganizationOperationScope(activeContext);
   const resolvedDates = normalizeDateRange(input.fromDate, input.toDate);
   const organizationId =
-    input.organizationId || activeContext?.organizationId || null;
+    operationScope?.organizationId ??
+    input.organizationId ??
+    activeContext?.organizationId ??
+    null;
   const actingAgencyOrganizationId =
-    activeContext?.accessType === "DELEGATED"
-      ? activeContext.viaOrganizationId
-      : null;
+    operationScope?.actingAgencyOrganizationId ?? null;
 
   const profileName =
     [profile?.firstName, profile?.lastName]
@@ -418,16 +420,48 @@ export async function listCampaignRequests(
 
 export async function listCampaignRequestsForUser(
   input: z.infer<typeof listCampaignRequestsSchema>,
-  options: { userId: string; userEmail?: string | null }
+  options: {
+    userId: string;
+    userEmail?: string | null;
+    activeContextKey?: string | null;
+  }
 ) {
-  const profile = await resolveUserProfile(options.userId);
-  const ownershipFilters = await buildCampaignRequestOwnershipFilters(
-    profile,
+  const ownershipScope = await resolveCampaignRequestOwnershipScope(
     options.userId,
-    options.userEmail
+    options.activeContextKey,
   );
 
-  if (!ownershipFilters.length) {
+  if (ownershipScope) {
+    const where = {
+      ...(input.status ? { status: input.status } : {}),
+      ...ownershipScope,
+    };
+
+    const [requests, total] = await Promise.all([
+      db.campaignRequest.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }],
+        skip: input.skip,
+        take: input.take,
+        include: requestInclude,
+      }),
+      db.campaignRequest.count({ where }),
+    ]);
+
+    return {
+      requests,
+      total,
+      hasMore: input.skip + requests.length < total,
+    };
+  }
+
+  const profile = await resolveUserProfile(options.userId);
+  const fallbackOwnershipFilters = buildCampaignRequestFallbackFilters(
+    profile,
+    options.userEmail,
+  );
+
+  if (!fallbackOwnershipFilters.length) {
     return {
       requests: [],
       total: 0,
@@ -437,7 +471,7 @@ export async function listCampaignRequestsForUser(
 
   const where = {
     ...(input.status ? { status: input.status } : {}),
-    OR: ownershipFilters,
+    OR: fallbackOwnershipFilters,
   };
 
   const [requests, total] = await Promise.all([
@@ -458,52 +492,81 @@ export async function listCampaignRequestsForUser(
   };
 }
 
-async function buildCampaignRequestOwnershipFilters(
-  profile: Awaited<ReturnType<typeof resolveUserProfile>>,
+async function resolveCampaignRequestOwnershipScope(
   userId: string,
-  userEmail?: string | null
+  activeContextKey?: string | null,
 ) {
-  const activeOrganizationIds = await listAccessibleOrganizationIdsForUser(userId);
+  const { activeContext } = await resolveActiveOrganizationContextForUser(
+    userId,
+    activeContextKey,
+  );
+  const scope = resolveOrganizationOperationScope(activeContext);
 
+  if (!scope) {
+    return null;
+  }
+
+  return {
+    organizationId: scope.organizationId,
+    ...(scope.requiresActingAgencyMatch
+      ? { actingAgencyOrganizationId: scope.actingAgencyOrganizationId }
+      : {}),
+  };
+}
+
+function buildCampaignRequestFallbackFilters(
+  profile: Awaited<ReturnType<typeof resolveUserProfile>>,
+  userEmail?: string | null,
+) {
   return [
     profile?.id ? { createdById: profile.id } : null,
     userEmail
       ? {
-        contactEmail: {
-          equals: userEmail,
-          mode: "insensitive" as const,
-        },
-      }
-      : null,
-    activeOrganizationIds.length
-      ? {
-        organizationId: {
-          in: activeOrganizationIds,
-        },
-      }
+          contactEmail: {
+            equals: userEmail,
+            mode: "insensitive" as const,
+          },
+        }
       : null,
   ].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 }
 
 export async function getCampaignRequestByIdForUser(
   requestId: string,
-  options: { userId: string; userEmail?: string | null }
+  options: {
+    userId: string;
+    userEmail?: string | null;
+    activeContextKey?: string | null;
+  }
 ) {
-  const profile = await resolveUserProfile(options.userId);
-  const ownershipFilters = await buildCampaignRequestOwnershipFilters(
-    profile,
+  const ownershipScope = await resolveCampaignRequestOwnershipScope(
     options.userId,
-    options.userEmail
+    options.activeContextKey,
   );
 
-  if (!ownershipFilters.length) {
+  if (ownershipScope) {
+    return db.campaignRequest.findFirst({
+      where: {
+        id: requestId,
+        ...ownershipScope,
+      },
+      include: requestInclude,
+    });
+  }
+
+  const profile = await resolveUserProfile(options.userId);
+  const fallbackOwnershipFilters = buildCampaignRequestFallbackFilters(
+    profile,
+    options.userEmail,
+  );
+  if (!fallbackOwnershipFilters.length) {
     return null;
   }
 
   return db.campaignRequest.findFirst({
     where: {
       id: requestId,
-      OR: ownershipFilters,
+      OR: fallbackOwnershipFilters,
     },
     include: requestInclude,
   });

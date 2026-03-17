@@ -22,6 +22,10 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [accountType, setAccountType] = useState<"DIRECT_CLIENT" | "AGENCY">(
+    "DIRECT_CLIENT",
+  );
+  const [workspaceName, setWorkspaceName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +43,11 @@ export function RegisterForm() {
       return;
     }
 
+    if (!workspaceName.trim()) {
+      setError("Debes indicar el nombre de tu primer negocio.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -50,6 +59,24 @@ export function RegisterForm() {
 
       if (result.error) {
         setError(result.error.message || "Error al crear la cuenta.");
+        return;
+      }
+
+      const bootstrapResponse = await fetch("/api/auth/bootstrap-workspace", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          accountType,
+          workspaceName: workspaceName.trim(),
+        }),
+      });
+      if (!bootstrapResponse.ok && bootstrapResponse.status !== 409) {
+        const responseBody = (await bootstrapResponse
+          .json()
+          .catch(() => null)) as { message?: string } | null;
+        setError(responseBody?.message || "No se pudo crear tu espacio inicial.");
         return;
       }
 
@@ -78,8 +105,7 @@ export function RegisterForm() {
             Empieza con tu acceso
           </CardTitle>
           <CardDescription className="max-w-xl text-sm leading-6 text-neutral-600">
-            Crea tu cuenta primero. Luego podrás crear una marca, una agencia o
-            usar accesos compartidos desde la misma sesión.
+            Define tu tipo de cuenta y crea tu primer espacio desde el registro.
           </CardDescription>
         </CardHeader>
 
@@ -143,6 +169,56 @@ export function RegisterForm() {
                   className="h-11 rounded-xs border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo de cuenta</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={accountType === "DIRECT_CLIENT" ? "default" : "outline"}
+                  className={
+                    accountType === "DIRECT_CLIENT"
+                      ? "rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+                      : "rounded-xs"
+                  }
+                  onClick={() => setAccountType("DIRECT_CLIENT")}
+                >
+                  Cliente directo
+                </Button>
+                <Button
+                  type="button"
+                  variant={accountType === "AGENCY" ? "default" : "outline"}
+                  className={
+                    accountType === "AGENCY"
+                      ? "rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+                      : "rounded-xs"
+                  }
+                  onClick={() => setAccountType("AGENCY")}
+                >
+                  Agencia
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="register-workspace-name">
+                {accountType === "AGENCY"
+                  ? "Nombre de tu agencia"
+                  : "Nombre de tu marca"}
+              </Label>
+              <Input
+                id="register-workspace-name"
+                value={workspaceName}
+                onChange={(event) => setWorkspaceName(event.target.value)}
+                placeholder={
+                  accountType === "AGENCY"
+                    ? "Ej. Unicornio Azul"
+                    : "Ej. Marca Atlas"
+                }
+                required
+                className="h-11 rounded-xs border-neutral-300 focus-visible:border-mkmedia-blue/45 focus-visible:ring-mkmedia-blue/20"
+              />
             </div>
 
             <Button

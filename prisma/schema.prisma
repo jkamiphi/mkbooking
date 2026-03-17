@@ -92,12 +92,20 @@ enum SystemRole {
   @@map("system_role")
 }
 
+enum UserAccountType {
+  DIRECT_CLIENT
+  AGENCY
+
+  @@map("user_account_type")
+}
+
 model UserProfile {
   id     String @id @default(cuid())
   userId String @unique
 
   // System Role (platform-level access)
   systemRole SystemRole @default(CUSTOMER)
+  accountType UserAccountType @default(DIRECT_CLIENT)
 
   // Personal Information
   firstName String?
