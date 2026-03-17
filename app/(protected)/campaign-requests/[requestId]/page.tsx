@@ -17,6 +17,7 @@ import { CampaignRequestStatusBadge } from "@/components/user/campaign-request-s
 
 type PageProps = {
   params: Promise<{ requestId: string }>;
+  searchParams: Promise<{ view?: string | string[] }>;
 };
 
 function formatDate(value: Date | null) {
@@ -48,11 +49,26 @@ function getStepIndex(status: string) {
   return idx >= 0 ? idx : 0;
 }
 
-export default async function CampaignRequestDetailPage({ params }: PageProps) {
+function getParam(value?: string | string[]) {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
+function resolveViewScope(value?: string): "CONTEXT" | "ALL" {
+  return value === "all" ? "ALL" : "CONTEXT";
+}
+
+export default async function CampaignRequestDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { requestId } = await params;
+  const viewParam = getParam((await searchParams).view);
+  const viewScope = resolveViewScope(viewParam);
+  const viewQuery = viewScope === "ALL" ? "all" : "context";
   const caller = await createServerTRPCCaller();
   const request = await caller.catalog.requests
-    .mineById({ requestId })
+    .mineById({ requestId, viewScope })
     .catch((error: unknown) => {
       if (
         error instanceof TRPCError &&
@@ -71,7 +87,7 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
       {/* Header */}
       <div className="mb-8">
         <Link
-          href="/campaign-requests"
+          href={`/campaign-requests?view=${viewQuery}`}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-neutral-500 transition hover:text-neutral-700"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -218,7 +234,7 @@ export default async function CampaignRequestDetailPage({ params }: PageProps) {
                     solicitud.
                   </p>
                   <Link
-                    href={`/orders/${request.order.id}`}
+                    href={`/orders/${request.order.id}?view=${viewQuery}`}
                     className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#0359A8] transition hover:text-[#024482]"
                   >
                     Ver Orden

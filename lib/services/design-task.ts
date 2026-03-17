@@ -17,9 +17,8 @@ import {
   sendPreparedNotificationEmails,
 } from "@/lib/services/notifications";
 import {
-  listAccessibleOrganizationIdsForUser,
-  resolveActiveOrganizationContextForUser,
-  resolveOrganizationOperationScope,
+  OrganizationReadViewScope,
+  resolveOrganizationReadScopeForUser,
 } from "@/lib/services/organization-access";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof db;
@@ -1098,6 +1097,7 @@ export async function canUserAccessOrder(
   userId: string,
   orderId: string,
   activeContextKey?: string | null,
+  viewScope: OrganizationReadViewScope = "CONTEXT",
 ) {
   const profile = await db.userProfile.findUnique({
     where: { userId },
@@ -1108,32 +1108,28 @@ export async function canUserAccessOrder(
     return false;
   }
 
-  const { activeContext } = await resolveActiveOrganizationContextForUser(
+  const readScope = await resolveOrganizationReadScopeForUser(
     userId,
     activeContextKey,
+    viewScope,
   );
-  const scope = resolveOrganizationOperationScope(activeContext);
+  const orderAccessFilters: Prisma.OrderWhereInput[] =
+    readScope.conditions.map((condition) => {
+      const filter: Prisma.OrderWhereInput = {};
 
-  if (scope) {
-    const scopedOrder = await db.order.findFirst({
-      where: {
-        id: orderId,
-        organizationId: scope.organizationId,
-        ...(scope.requiresActingAgencyMatch
-          ? { actingAgencyOrganizationId: scope.actingAgencyOrganizationId }
-          : {}),
-      },
-      select: { id: true },
+      if (condition.organizationId) {
+        filter.organizationId = condition.organizationId;
+      }
+
+      if (condition.actingAgencyOrganizationId !== undefined) {
+        filter.actingAgencyOrganizationId = condition.actingAgencyOrganizationId;
+      }
+
+      return filter;
     });
-    return Boolean(scopedOrder);
-  }
 
-  const orgIds = await listAccessibleOrganizationIdsForUser(userId);
-  const orderAccessFilters: Prisma.OrderWhereInput[] = [
-    { createdById: profile.id },
-  ];
-  if (orgIds.length > 0) {
-    orderAccessFilters.push({ organizationId: { in: orgIds } });
+  if (orderAccessFilters.length === 0) {
+    orderAccessFilters.push({ createdById: profile.id });
   }
 
   const order = await db.order.findFirst({

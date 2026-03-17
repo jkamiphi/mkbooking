@@ -46,10 +46,31 @@ import {
 } from "@/lib/services/order-traceability";
 import { resolveEffectivePriceRuleMapForFaces } from "@/lib/services/catalog";
 import {
-  listAccessibleOrganizationIdsForUser,
-  resolveActiveOrganizationContextForUser,
-  resolveOrganizationOperationScope,
+  OrganizationReadScopeCondition,
+  OrganizationReadViewScope,
+  resolveOrganizationReadScopeForUser,
 } from "@/lib/services/organization-access";
+
+const orderViewScopeSchema = z.enum(["CONTEXT", "ALL"]);
+
+function buildOrderOwnershipFilters(
+  conditions: OrganizationReadScopeCondition[],
+): Prisma.OrderWhereInput[] {
+  return conditions.map((condition) => {
+    const ownershipFilter: Prisma.OrderWhereInput = {};
+
+    if (condition.organizationId) {
+      ownershipFilter.organizationId = condition.organizationId;
+    }
+
+    if (condition.actingAgencyOrganizationId !== undefined) {
+      ownershipFilter.actingAgencyOrganizationId =
+        condition.actingAgencyOrganizationId;
+    }
+
+    return ownershipFilter;
+  });
+}
 
 function resolveOrderDays(fromDate: Date | null, toDate: Date | null) {
   if (!fromDate || !toDate) return 30;
@@ -105,6 +126,7 @@ async function assertOrderReadAccess(
   userId: string,
   orderId: string,
   activeContextKey?: string | null,
+  viewScope: OrganizationReadViewScope = "CONTEXT",
 ) {
   const systemRole = await resolveSystemRole(userId);
   if (
@@ -116,7 +138,12 @@ async function assertOrderReadAccess(
     return;
   }
 
-  const hasAccess = await canUserAccessOrder(userId, orderId, activeContextKey);
+  const hasAccess = await canUserAccessOrder(
+    userId,
+    orderId,
+    activeContextKey,
+    viewScope,
+  );
   if (!hasAccess) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -347,46 +374,37 @@ export const ordersRouter = router({
     .input(
       z.object({
         status: z.nativeEnum(OrderStatus).optional(),
+        viewScope: orderViewScopeSchema.optional(),
         skip: z.number().default(0),
         take: z.number().default(50),
       }),
     )
     .query(async ({ input, ctx }) => {
-      const { status, skip, take } = input;
+      const { status, skip, take, viewScope } = input;
       const { user } = ctx;
 
-      const { activeContext } = await resolveActiveOrganizationContextForUser(
+      const readScope = await resolveOrganizationReadScopeForUser(
         user.id,
         ctx.activeOrganizationContextKey,
+        viewScope ?? "CONTEXT",
       );
-      const scope = resolveOrganizationOperationScope(activeContext);
-      const userProfile = await db.userProfile.findUnique({
-        where: { userId: user.id },
-        select: { id: true },
-      });
 
       const where: Prisma.OrderWhereInput = {
         ...(status ? { status } : { status: { not: OrderStatus.DRAFT } }),
       };
 
-      if (scope) {
-        where.organizationId = scope.organizationId;
-        if (scope.requiresActingAgencyMatch) {
-          where.actingAgencyOrganizationId = scope.actingAgencyOrganizationId;
-        }
-      } else {
-        const orgIds = await listAccessibleOrganizationIdsForUser(user.id);
-        const orConditions: Prisma.OrderWhereInput[] = [];
-        if (userProfile) orConditions.push({ createdById: userProfile.id });
-        if (orgIds.length > 0) {
-          orConditions.push({ organizationId: { in: orgIds } });
-        }
-
-        if (orConditions.length > 0) {
-          where.OR = orConditions;
-        } else {
+      const ownershipFilters = buildOrderOwnershipFilters(readScope.conditions);
+      if (ownershipFilters.length === 0) {
+        const userProfile = await db.userProfile.findUnique({
+          where: { userId: user.id },
+          select: { id: true },
+        });
+        if (!userProfile) {
           return { orders: [], total: 0 };
         }
+        where.OR = [{ createdById: userProfile.id }];
+      } else {
+        where.OR = ownershipFilters;
       }
 
       const [orders, total] = await Promise.all([
@@ -409,12 +427,18 @@ export const ordersRouter = router({
     }),
 
   get: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(
+      z.object({
+        id: z.string(),
+        viewScope: orderViewScopeSchema.optional(),
+      }),
+    )
     .query(async ({ input, ctx }) => {
       await assertOrderReadAccess(
         ctx.user.id,
         input.id,
         ctx.activeOrganizationContextKey,
+        input.viewScope ?? "CONTEXT",
       );
 
       const order = await db.order.findUnique({
@@ -491,12 +515,18 @@ export const ordersRouter = router({
     }),
 
   getTraceability: protectedProcedure
-    .input(z.object({ orderId: z.string() }))
+    .input(
+      z.object({
+        orderId: z.string(),
+        viewScope: orderViewScopeSchema.optional(),
+      }),
+    )
     .query(async ({ input, ctx }) => {
       await assertOrderReadAccess(
         ctx.user.id,
         input.orderId,
         ctx.activeOrganizationContextKey,
+        input.viewScope ?? "CONTEXT",
       );
 
       const systemRole = await resolveSystemRole(ctx.user.id);

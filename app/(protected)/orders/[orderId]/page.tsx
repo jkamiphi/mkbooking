@@ -19,7 +19,7 @@ import { OrderCaseFilePanel } from "@/components/orders/order-case-file-panel";
 
 type PageProps = {
   params: Promise<{ orderId: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; view?: string | string[] }>;
 };
 
 function formatDate(value: Date | null) {
@@ -96,7 +96,11 @@ export default async function OrderDetailPage({
   searchParams,
 }: PageProps) {
   const { orderId } = await params;
-  const tabParam = getParamValue((await searchParams).tab);
+  const resolvedSearchParams = await searchParams;
+  const tabParam = getParamValue(resolvedSearchParams.tab);
+  const viewParam = getParamValue(resolvedSearchParams.view);
+  const viewScope = viewParam === "all" ? "ALL" : "CONTEXT";
+  const viewQuery = viewScope === "ALL" ? "all" : "context";
   const defaultTab =
     tabParam === "tracking" || tabParam === "design" || tabParam === "case-file"
       ? tabParam
@@ -104,7 +108,7 @@ export default async function OrderDetailPage({
   const caller = await createServerTRPCCaller();
 
   const [order, traceability] = await Promise.all([
-    caller.orders.get({ id: orderId }).catch((error: unknown) => {
+    caller.orders.get({ id: orderId, viewScope }).catch((error: unknown) => {
       if (
         error instanceof TRPCError &&
         (error.code === "NOT_FOUND" || error.code === "FORBIDDEN")
@@ -113,7 +117,9 @@ export default async function OrderDetailPage({
       }
       throw error;
     }),
-    caller.orders.getTraceability({ orderId }).catch((error: unknown) => {
+    caller.orders
+      .getTraceability({ orderId, viewScope })
+      .catch((error: unknown) => {
       if (
         error instanceof TRPCError &&
         (error.code === "NOT_FOUND" || error.code === "FORBIDDEN")
@@ -121,7 +127,7 @@ export default async function OrderDetailPage({
         notFound();
       }
       throw error;
-    }),
+      }),
   ]);
 
   const config = STATUS_CONFIG[order.status] || STATUS_CONFIG["DRAFT"];
@@ -276,7 +282,7 @@ export default async function OrderDetailPage({
       {/* Header */}
       <div className="mb-8">
         <Link
-          href="/orders"
+          href={`/orders?view=${viewQuery}`}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-neutral-500 transition hover:text-neutral-700"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

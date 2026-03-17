@@ -11,6 +11,22 @@ import {
 import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { Badge } from "@/components/ui/badge";
 
+type PageProps = {
+  searchParams: Promise<{ view?: string | string[] }>;
+};
+
+type ActiveContextLike = {
+  organizationName: string;
+  organizationType: "ADVERTISER" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
+  operatingAgencyOrganizationName: string | null;
+  targetBrandOrganizationId: string | null;
+};
+
+function getParam(value?: string | string[]) {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 export const metadata = {
   title: "Mis Órdenes - MK Booking",
   description: "Consulta el estado de tus órdenes y cotizaciones.",
@@ -51,6 +67,34 @@ function buildOperationContextLabel(input: {
   return "Contexto no disponible";
 }
 
+function resolveViewMode(value?: string): "all" | "context" {
+  return value === "context" ? "context" : "all";
+}
+
+function buildAgencyReadScopeLabel(
+  activeContext: ActiveContextLike | null,
+): string | null {
+  if (!activeContext) {
+    return null;
+  }
+
+  const isAgencyAggregate =
+    activeContext.organizationType === "AGENCY" &&
+    !activeContext.targetBrandOrganizationId;
+
+  if (isAgencyAggregate) {
+    return `Mostrando todo lo operado por ${activeContext.organizationName}.`;
+  }
+
+  if (activeContext.targetBrandOrganizationId) {
+    const agencyName =
+      activeContext.operatingAgencyOrganizationName ?? "tu agencia";
+    return `Mostrando ${activeContext.organizationName} operada por ${agencyName}.`;
+  }
+
+  return `Mostrando contexto activo: ${activeContext.organizationName}.`;
+}
+
 const STATUS_CONFIG: Record<
   string,
   {
@@ -82,9 +126,21 @@ const STATUS_CONFIG: Record<
   },
 };
 
-export default async function OrdersPage() {
+export default async function OrdersPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const requestedView = resolveViewMode(getParam(params.view));
   const caller = await createServerTRPCCaller();
-  const data = await caller.orders.mine({ take: 50, skip: 0 });
+  const contextState = await caller.organization.myContexts();
+  const isDirectClient = contextState.accountType === "DIRECT_CLIENT";
+  const resolvedView = isDirectClient ? requestedView : "context";
+  const viewScope = resolvedView === "all" ? "ALL" : "CONTEXT";
+  const data = await caller.orders.mine({ take: 50, skip: 0, viewScope });
+  const agencyReadScopeLabel =
+    contextState.accountType === "AGENCY"
+      ? buildAgencyReadScopeLabel(
+          (contextState.activeContext as ActiveContextLike | null) ?? null,
+        )
+      : null;
 
   return (
     <div>
@@ -99,6 +155,35 @@ export default async function OrdersPage() {
               ? `${data.orders.length} ${data.orders.length === 1 ? "registro" : "registros"} en tu cuenta`
               : "Aún no tienes órdenes"}
           </p>
+          {agencyReadScopeLabel ? (
+            <p className="mt-1 text-xs font-medium text-[#0359A8]">
+              {agencyReadScopeLabel}
+            </p>
+          ) : null}
+          {isDirectClient ? (
+            <div className="mt-3 inline-flex rounded-xs border border-neutral-200 bg-white p-1">
+              <Link
+                href="/orders?view=all"
+                className={`rounded-[2px] px-3 py-1.5 text-xs font-medium transition ${
+                  resolvedView === "all"
+                    ? "bg-[#0359A8] text-white"
+                    : "text-neutral-600 hover:bg-neutral-100"
+                }`}
+              >
+                Ver todo
+              </Link>
+              <Link
+                href="/orders?view=context"
+                className={`rounded-[2px] px-3 py-1.5 text-xs font-medium transition ${
+                  resolvedView === "context"
+                    ? "bg-[#0359A8] text-white"
+                    : "text-neutral-600 hover:bg-neutral-100"
+                }`}
+              >
+                Contexto activo
+              </Link>
+            </div>
+          ) : null}
         </div>
         <Link
           href="/campaign-requests/new"
@@ -184,7 +269,7 @@ export default async function OrdersPage() {
 
                 <div className="hidden sm:block">
                   <Link
-                    href={`/orders/${order.id}`}
+                    href={`/orders/${order.id}?view=${resolvedView}`}
                     className="inline-flex items-center gap-2 rounded-xs border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
                   >
                     Ver detalles

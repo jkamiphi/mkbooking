@@ -62,13 +62,18 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
     ? facesParam.split(",").filter((id) => id.trim().length > 0)
     : [];
 
-  const [profile, structureTypes, zones] = await Promise.all([
+  const [profile, structureTypes, zones, contextState] = await Promise.all([
     caller.userProfile.current(),
     caller.inventory.structureTypes.publicList(),
     caller.inventory.zones.publicList(),
+    caller.organization.myContexts(),
   ]);
+  const activeContext = contextState.activeContext;
+  const isAgencyContextWithoutBrand =
+    contextState.accountType === "AGENCY" &&
+    activeContext?.organizationType === "AGENCY" &&
+    !activeContext.targetBrandOrganizationId;
 
-  // Fetch selected face details if any
   let selectedFacesData: Array<{
     id: string;
     title: string;
@@ -79,6 +84,52 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
     currency: string;
     structureType: string;
   }> = [];
+
+  const returnToParam = getParam(params.returnTo);
+  const returnTo = returnToParam?.startsWith("/") ? returnToParam : "/s/all";
+
+  if (isAgencyContextWithoutBrand) {
+    return (
+      <div>
+        <div className="mb-8">
+          <Link
+            href="/campaign-requests"
+            className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-neutral-500 transition hover:text-neutral-700"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Volver a solicitudes
+          </Link>
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+            Nueva solicitud de campaña
+          </h1>
+        </div>
+        <section className="rounded-md border border-amber-200 bg-amber-50/70 p-5">
+          <h2 className="text-base font-semibold text-amber-900">
+            Selecciona una marca cliente para continuar
+          </h2>
+          <p className="mt-1 text-sm text-amber-800">
+            Estás operando en vista agregada de agencia (
+            {activeContext.organizationName}). Para crear solicitudes debes
+            elegir una marca cliente en el selector de contexto.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href="/campaign-requests"
+              className="inline-flex items-center rounded-xs bg-[#0359A8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#024a8f]"
+            >
+              Ir a solicitudes
+            </Link>
+            <Link
+              href="/profile"
+              className="inline-flex items-center rounded-xs border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+            >
+              Abrir perfil
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   if (faceIds.length > 0) {
     const organizationId = profile?.activeOrganizationContext?.organizationId;
@@ -107,8 +158,6 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
       }));
   }
 
-  const returnToParam = getParam(params.returnTo);
-  const returnTo = returnToParam?.startsWith("/") ? returnToParam : "/s/all";
   const defaultQuantity =
     selectedFacesData.length > 0
       ? selectedFacesData.length

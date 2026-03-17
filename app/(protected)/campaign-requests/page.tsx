@@ -14,6 +14,22 @@ import { createServerTRPCCaller } from "@/lib/trpc/server";
 import { CampaignRequestStatusBadge } from "@/components/user/campaign-request-status";
 import { SelectionEstimateBanner } from "./_components/selection-estimate-banner";
 
+type PageProps = {
+  searchParams: Promise<{ view?: string | string[] }>;
+};
+
+type ActiveContextLike = {
+  organizationName: string;
+  organizationType: "ADVERTISER" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
+  operatingAgencyOrganizationName: string | null;
+  targetBrandOrganizationId: string | null;
+};
+
+function getParam(value?: string | string[]) {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 function formatDate(value: Date | null) {
   if (!value) return "No definida";
   return value.toLocaleDateString("es-PA", {
@@ -42,6 +58,34 @@ function buildOperationContextLabel(input: {
   return "Contexto no disponible";
 }
 
+function resolveViewMode(value?: string): "all" | "context" {
+  return value === "context" ? "context" : "all";
+}
+
+function buildAgencyReadScopeLabel(
+  activeContext: ActiveContextLike | null,
+): string | null {
+  if (!activeContext) {
+    return null;
+  }
+
+  const isAgencyAggregate =
+    activeContext.organizationType === "AGENCY" &&
+    !activeContext.targetBrandOrganizationId;
+
+  if (isAgencyAggregate) {
+    return `Mostrando todo lo operado por ${activeContext.organizationName}.`;
+  }
+
+  if (activeContext.targetBrandOrganizationId) {
+    const agencyName =
+      activeContext.operatingAgencyOrganizationName ?? "tu agencia";
+    return `Mostrando ${activeContext.organizationName} operada por ${agencyName}.`;
+  }
+
+  return `Mostrando contexto activo: ${activeContext.organizationName}.`;
+}
+
 const STATUS_EDGE_COLORS: Record<string, string> = {
   NEW: "border-l-[#0359A8]",
   IN_REVIEW: "border-l-amber-400",
@@ -55,9 +99,25 @@ export const metadata = {
   description: "Da seguimiento al estado de tus solicitudes de campaña.",
 };
 
-export default async function CampaignRequestsPage() {
+export default async function CampaignRequestsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const requestedView = resolveViewMode(getParam(params.view));
   const caller = await createServerTRPCCaller();
-  const data = await caller.catalog.requests.mine({ take: 50, skip: 0 });
+  const contextState = await caller.organization.myContexts();
+  const isDirectClient = contextState.accountType === "DIRECT_CLIENT";
+  const resolvedView = isDirectClient ? requestedView : "context";
+  const viewScope = resolvedView === "all" ? "ALL" : "CONTEXT";
+  const data = await caller.catalog.requests.mine({
+    take: 50,
+    skip: 0,
+    viewScope,
+  });
+  const agencyReadScopeLabel =
+    contextState.accountType === "AGENCY"
+      ? buildAgencyReadScopeLabel(
+          (contextState.activeContext as ActiveContextLike | null) ?? null,
+        )
+      : null;
 
   return (
     <div>
@@ -75,6 +135,35 @@ export default async function CampaignRequestsPage() {
               ? `${data.requests.length} ${data.requests.length === 1 ? "solicitud" : "solicitudes"} registradas`
               : "Aún no tienes solicitudes"}
           </p>
+          {agencyReadScopeLabel ? (
+            <p className="mt-1 text-xs font-medium text-[#0359A8]">
+              {agencyReadScopeLabel}
+            </p>
+          ) : null}
+          {isDirectClient ? (
+            <div className="mt-3 inline-flex rounded-xs border border-neutral-200 bg-white p-1">
+              <Link
+                href="/campaign-requests?view=all"
+                className={`rounded-[2px] px-3 py-1.5 text-xs font-medium transition ${
+                  resolvedView === "all"
+                    ? "bg-[#0359A8] text-white"
+                    : "text-neutral-600 hover:bg-neutral-100"
+                }`}
+              >
+                Ver todo
+              </Link>
+              <Link
+                href="/campaign-requests?view=context"
+                className={`rounded-[2px] px-3 py-1.5 text-xs font-medium transition ${
+                  resolvedView === "context"
+                    ? "bg-[#0359A8] text-white"
+                    : "text-neutral-600 hover:bg-neutral-100"
+                }`}
+              >
+                Contexto activo
+              </Link>
+            </div>
+          ) : null}
         </div>
         <Link
           href="/campaign-requests/new"
@@ -128,7 +217,7 @@ export default async function CampaignRequestsPage() {
             return (
               <Link
                 key={request.id}
-                href={`/campaign-requests/${request.id}`}
+                href={`/campaign-requests/${request.id}?view=${resolvedView}`}
                 className={`group flex items-center gap-4 rounded-md border border-neutral-200/80 border-l-[3px] bg-white p-5 transition hover:border-neutral-300 hover:shadow-sm ${edgeColor}`}
               >
                 <div className="min-w-0 flex-1">

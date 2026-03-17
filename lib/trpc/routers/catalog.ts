@@ -39,6 +39,7 @@ import {
   getCampaignRequestByIdForUser,
   getCampaignRequestById,
   listCampaignRequests,
+  listMineCampaignRequestsSchema,
   listCampaignRequestsForUser,
   listCampaignRequestsSchema,
   suggestCampaignRequestFacesSchema,
@@ -222,6 +223,17 @@ export const catalogRouter = router({
           });
         }
 
+        if (
+          activeContext.organizationType === "AGENCY" &&
+          !activeContext.targetBrandOrganizationId
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Selecciona una marca cliente antes de crear la solicitud. Este contexto de agencia es solo para vista agregada.",
+          });
+        }
+
         return createCampaignRequest(
           {
             ...input,
@@ -249,10 +261,10 @@ export const catalogRouter = router({
         return getCampaignRequestById(input.requestId);
       }),
     mine: protectedProcedure
-      .input(listCampaignRequestsSchema.optional())
+      .input(listMineCampaignRequestsSchema.optional())
       .query(async ({ ctx, input }) => {
         return listCampaignRequestsForUser(
-          input ?? listCampaignRequestsSchema.parse({}),
+          input ?? listMineCampaignRequestsSchema.parse({}),
           {
             userId: ctx.user.id,
             userEmail: ctx.user.email,
@@ -261,12 +273,18 @@ export const catalogRouter = router({
         );
       }),
     mineById: protectedProcedure
-      .input(z.object({ requestId: z.string().min(1) }))
+      .input(
+        z.object({
+          requestId: z.string().min(1),
+          viewScope: z.enum(["CONTEXT", "ALL"]).optional(),
+        }),
+      )
       .query(async ({ ctx, input }) => {
         const request = await getCampaignRequestByIdForUser(input.requestId, {
           userId: ctx.user.id,
           userEmail: ctx.user.email,
           activeContextKey: ctx.activeOrganizationContextKey,
+          viewScope: input.viewScope,
         });
 
         if (!request) {

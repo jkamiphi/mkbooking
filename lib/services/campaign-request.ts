@@ -14,8 +14,11 @@ import {
   resolveSalesReviewActor,
 } from "@/lib/services/sales-review";
 import {
+  OrganizationReadScopeCondition,
+  OrganizationReadViewScope,
   resolveActiveOrganizationContextForUser,
   resolveOrganizationOperationScope,
+  resolveOrganizationReadScopeForUser,
 } from "@/lib/services/organization-access";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -131,6 +134,12 @@ export const listCampaignRequestsSchema = z.object({
   take: z.number().int().min(1).max(100).default(50),
 });
 
+export const campaignRequestViewScopeSchema = z.enum(["CONTEXT", "ALL"]);
+
+export const listMineCampaignRequestsSchema = listCampaignRequestsSchema.extend({
+  viewScope: campaignRequestViewScopeSchema.optional(),
+});
+
 export type CreateCampaignRequestInput = z.infer<typeof createCampaignRequestSchema>;
 
 async function resolveUserProfile(userId?: string) {
@@ -218,6 +227,14 @@ export async function createCampaignRequest(
       )
     : { activeContext: null };
   const operationScope = resolveOrganizationOperationScope(activeContext);
+  const isOwnAgencyContext =
+    activeContext?.organizationType === "AGENCY" &&
+    !activeContext?.targetBrandOrganizationId;
+  if (isOwnAgencyContext) {
+    throw new Error(
+      "Selecciona una marca cliente antes de crear la solicitud. No se puede crear una solicitud contra la agencia.",
+    );
+  }
   const resolvedDates = normalizeDateRange(input.fromDate, input.toDate);
   const organizationId =
     operationScope?.organizationId ??
@@ -419,22 +436,24 @@ export async function listCampaignRequests(
 }
 
 export async function listCampaignRequestsForUser(
-  input: z.infer<typeof listCampaignRequestsSchema>,
+  input: z.infer<typeof listMineCampaignRequestsSchema>,
   options: {
     userId: string;
     userEmail?: string | null;
     activeContextKey?: string | null;
+    viewScope?: OrganizationReadViewScope;
   }
 ) {
   const ownershipScope = await resolveCampaignRequestOwnershipScope(
     options.userId,
     options.activeContextKey,
+    input.viewScope ?? options.viewScope ?? "CONTEXT",
   );
 
-  if (ownershipScope) {
+  if (ownershipScope.length > 0) {
     const where = {
       ...(input.status ? { status: input.status } : {}),
-      ...ownershipScope,
+      OR: ownershipScope,
     };
 
     const [requests, total] = await Promise.all([
@@ -495,23 +514,28 @@ export async function listCampaignRequestsForUser(
 async function resolveCampaignRequestOwnershipScope(
   userId: string,
   activeContextKey?: string | null,
+  viewScope: OrganizationReadViewScope = "CONTEXT",
 ) {
-  const { activeContext } = await resolveActiveOrganizationContextForUser(
+  const readScope = await resolveOrganizationReadScopeForUser(
     userId,
     activeContextKey,
+    viewScope,
   );
-  const scope = resolveOrganizationOperationScope(activeContext);
 
-  if (!scope) {
-    return null;
-  }
+  return readScope.conditions.map((condition) => {
+    const ownershipFilter: OrganizationReadScopeCondition = {};
 
-  return {
-    organizationId: scope.organizationId,
-    ...(scope.requiresActingAgencyMatch
-      ? { actingAgencyOrganizationId: scope.actingAgencyOrganizationId }
-      : {}),
-  };
+    if (condition.organizationId) {
+      ownershipFilter.organizationId = condition.organizationId;
+    }
+
+    if (condition.actingAgencyOrganizationId !== undefined) {
+      ownershipFilter.actingAgencyOrganizationId =
+        condition.actingAgencyOrganizationId;
+    }
+
+    return ownershipFilter;
+  });
 }
 
 function buildCampaignRequestFallbackFilters(
@@ -537,18 +561,20 @@ export async function getCampaignRequestByIdForUser(
     userId: string;
     userEmail?: string | null;
     activeContextKey?: string | null;
+    viewScope?: OrganizationReadViewScope;
   }
 ) {
   const ownershipScope = await resolveCampaignRequestOwnershipScope(
     options.userId,
     options.activeContextKey,
+    options.viewScope ?? "CONTEXT",
   );
 
-  if (ownershipScope) {
+  if (ownershipScope.length > 0) {
     return db.campaignRequest.findFirst({
       where: {
         id: requestId,
-        ...ownershipScope,
+        OR: ownershipScope,
       },
       include: requestInclude,
     });

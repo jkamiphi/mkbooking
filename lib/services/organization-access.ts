@@ -53,6 +53,25 @@ export interface OrganizationOperationScope {
   requiresActingAgencyMatch: boolean;
 }
 
+export type OrganizationReadViewScope = "CONTEXT" | "ALL";
+export type OrganizationReadScopeMode =
+  | "CONTEXT_BRAND"
+  | "AGENCY_AGGREGATE"
+  | "ALL_ACCESS";
+
+export interface OrganizationReadScopeCondition {
+  organizationId?: string;
+  actingAgencyOrganizationId?: string | null;
+}
+
+export interface ResolvedOrganizationReadScope {
+  mode: OrganizationReadScopeMode;
+  accountType: UserAccountType;
+  activeContext: AccessibleOrganizationContext | null;
+  contexts: AccessibleOrganizationContext[];
+  conditions: OrganizationReadScopeCondition[];
+}
+
 export type OrganizationPermissionKey = keyof OrganizationContextPermissions;
 
 type RequestedOrganizationContext = {
@@ -554,6 +573,126 @@ export function resolveOrganizationOperationScope(
     organizationId: context.organizationId,
     actingAgencyOrganizationId: null,
     requiresActingAgencyMatch: false,
+  };
+}
+
+function buildReadScopeConditionForContext(
+  context: AccessibleOrganizationContext,
+): OrganizationReadScopeCondition {
+  if (context.targetBrandOrganizationId) {
+    if (context.operatingAgencyOrganizationId) {
+      return {
+        organizationId: context.targetBrandOrganizationId,
+        actingAgencyOrganizationId: context.operatingAgencyOrganizationId,
+      };
+    }
+
+    return {
+      organizationId: context.targetBrandOrganizationId,
+    };
+  }
+
+  return {
+    organizationId: context.organizationId,
+  };
+}
+
+function dedupeReadScopeConditions(
+  conditions: OrganizationReadScopeCondition[],
+): OrganizationReadScopeCondition[] {
+  const seen = new Set<string>();
+  const deduped: OrganizationReadScopeCondition[] = [];
+
+  for (const condition of conditions) {
+    const key = [
+      condition.organizationId ?? "*",
+      condition.actingAgencyOrganizationId === undefined
+        ? "*"
+        : (condition.actingAgencyOrganizationId ?? "null"),
+    ].join("|");
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    deduped.push(condition);
+  }
+
+  return deduped;
+}
+
+export async function resolveOrganizationReadScopeForUser(
+  userId: string,
+  activeContextKey?: string | null,
+  viewScope: OrganizationReadViewScope = "CONTEXT",
+): Promise<ResolvedOrganizationReadScope> {
+  const {
+    contexts,
+    activeContext,
+    accountType,
+  } = await resolveActiveOrganizationContextForUser(userId, activeContextKey);
+
+  if (!activeContext) {
+    return {
+      mode: "ALL_ACCESS",
+      accountType,
+      activeContext: null,
+      contexts,
+      conditions: [],
+    };
+  }
+
+  if (accountType === UserAccountType.AGENCY) {
+    const isOwnAgencyContext =
+      activeContext.organizationType === OrganizationType.AGENCY &&
+      !activeContext.targetBrandOrganizationId;
+
+    if (isOwnAgencyContext) {
+      return {
+        mode: "AGENCY_AGGREGATE",
+        accountType,
+        activeContext,
+        contexts,
+        conditions: dedupeReadScopeConditions([
+          {
+            actingAgencyOrganizationId: activeContext.organizationId,
+          },
+          {
+            organizationId: activeContext.organizationId,
+            actingAgencyOrganizationId: null,
+          },
+        ]),
+      };
+    }
+
+    return {
+      mode: "CONTEXT_BRAND",
+      accountType,
+      activeContext,
+      contexts,
+      conditions: [buildReadScopeConditionForContext(activeContext)],
+    };
+  }
+
+  if (viewScope === "ALL") {
+    return {
+      mode: "ALL_ACCESS",
+      accountType,
+      activeContext,
+      contexts,
+      conditions: dedupeReadScopeConditions(
+        contexts.map((context) => buildReadScopeConditionForContext(context)),
+      ),
+    };
+  }
+
+  return {
+    mode: "CONTEXT_BRAND",
+    accountType,
+    activeContext,
+    contexts,
+    conditions: [buildReadScopeConditionForContext(activeContext)],
   };
 }
 
