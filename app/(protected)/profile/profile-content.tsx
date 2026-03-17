@@ -30,6 +30,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 const NOTIFICATION_ROWS = [
   {
@@ -138,14 +144,33 @@ function buildNotificationDraft(
   return nextDraft;
 }
 
+function splitRegisteredName(value?: string | null) {
+  const normalized = (value ?? "").trim().replace(/\s+/g, " ");
+  if (!normalized) {
+    return {
+      firstName: "",
+      lastName: "",
+    };
+  }
+
+  const [firstName, ...lastNameParts] = normalized.split(" ");
+  return {
+    firstName: firstName ?? "",
+    lastName: lastNameParts.join(" ").trim(),
+  };
+}
+
 function buildPersonalDraft(profile: {
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;
+  userName?: string | null;
 }) {
+  const fallbackName = splitRegisteredName(profile.userName);
+
   return {
-    firstName: profile.firstName ?? "",
-    lastName: profile.lastName ?? "",
+    firstName: profile.firstName?.trim() || fallbackName.firstName,
+    lastName: profile.lastName?.trim() || fallbackName.lastName,
     phone: profile.phone ?? "",
   };
 }
@@ -291,8 +316,8 @@ function WorkspaceCard({
           variant={isActive ? "outline" : "default"}
           className={
             isActive
-              ? "rounded-md border-mkmedia-blue/20 bg-white text-mkmedia-blue hover:bg-white"
-              : "rounded-md bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+              ? "rounded-xs border-mkmedia-blue/20 bg-white text-mkmedia-blue hover:bg-white"
+              : "rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
           }
           onClick={() => onSelect(context.contextKey)}
           disabled={isSaving || isActive}
@@ -364,7 +389,7 @@ export function ProfileContent() {
         {[1, 2, 3].map((item) => (
           <div
             key={item}
-            className="h-36 animate-pulse rounded-3xl border border-neutral-200/70 bg-white/80"
+            className="h-36 animate-pulse rounded-md border border-neutral-200/70 bg-white/80"
           />
         ))}
       </div>
@@ -373,7 +398,7 @@ export function ProfileContent() {
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
         Error al cargar el perfil: {error.message}
       </div>
     );
@@ -381,13 +406,16 @@ export function ProfileContent() {
 
   if (!profile) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
         Perfil no encontrado.
       </div>
     );
   }
 
   const currentProfile = profile;
+  const fallbackName = splitRegisteredName(currentProfile.user.name);
+  const displayFirstName = currentProfile.firstName?.trim() || fallbackName.firstName;
+  const displayLastName = currentProfile.lastName?.trim() || fallbackName.lastName;
   const effectiveNotificationDraft =
     notificationDraft ??
     buildNotificationDraft(currentProfile.notificationPreferences);
@@ -443,12 +471,22 @@ export function ProfileContent() {
   }
 
   function handlePersonalEditStart() {
-    setPersonalDraft(buildPersonalDraft(currentProfile));
+    setPersonalDraft(
+      buildPersonalDraft({
+        ...currentProfile,
+        userName: currentProfile.user.name,
+      }),
+    );
     setIsEditingPersonal(true);
   }
 
   function handlePersonalEditCancel() {
-    setPersonalDraft(buildPersonalDraft(currentProfile));
+    setPersonalDraft(
+      buildPersonalDraft({
+        ...currentProfile,
+        userName: currentProfile.user.name,
+      }),
+    );
     setIsEditingPersonal(false);
   }
 
@@ -520,362 +558,411 @@ export function ProfileContent() {
   return (
     <div className="space-y-5">
       {successMessage ? (
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+        <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
           <Check className="h-4 w-4" />
           {successMessage}
         </div>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.45fr)]">
-        <Card className="overflow-hidden rounded-3xl border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
-          <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))]">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-sm shadow-[#0359A8]/25">
-                <UserRound className="h-5 w-5" />
-              </span>
-              <div>
-                <CardTitle>Mi cuenta</CardTitle>
-                <CardDescription>
-                  Datos base del usuario y acceso principal.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            <dl className="space-y-0">
-              <FieldRow
-                label="Correo electrónico"
-                value={currentProfile.user.email}
-              />
-              <FieldRow
-                label="Miembro desde"
-                value={formatDate(currentProfile.createdAt)}
-              />
-            </dl>
+      <Tabs defaultValue="summary" className="space-y-4">
+        <TabsList className="h-auto w-full justify-start gap-2 rounded-md border border-neutral-200/80 bg-white p-1">
+          <TabsTrigger
+            value="summary"
+            className="rounded-xs border border-transparent px-3 py-2 data-[state=active]:border-neutral-200 data-[state=active]:bg-neutral-50"
+          >
+            Resumen
+          </TabsTrigger>
+          <TabsTrigger
+            value="business"
+            className="rounded-xs border border-transparent px-3 py-2 data-[state=active]:border-neutral-200 data-[state=active]:bg-neutral-50"
+          >
+            Negocios
+          </TabsTrigger>
+          <TabsTrigger
+            value="notifications"
+            className="rounded-xs border border-transparent px-3 py-2 data-[state=active]:border-neutral-200 data-[state=active]:bg-neutral-50"
+          >
+            Notificaciones
+          </TabsTrigger>
+        </TabsList>
 
-            {currentProfile.activeOrganizationContext ? (
-              <div className="rounded-[1.75rem] border border-mkmedia-blue/15 bg-mkmedia-blue/6 px-5 py-4">
-                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-900">
-                  <Check className="h-4 w-4 text-mkmedia-blue" />
-                  Organizacion activa
+        <TabsContent value="summary" className="space-y-5">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.45fr)]">
+            <Card className="overflow-hidden rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
+              <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))]">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-md bg-mkmedia-blue text-white shadow-sm shadow-mkmedia-blue/25">
+                    <UserRound className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <CardTitle>Mi cuenta</CardTitle>
+                    <CardDescription>
+                      Datos base del usuario y referencia de acceso.
+                    </CardDescription>
+                  </div>
                 </div>
-                <p className="mt-3 text-base font-semibold text-neutral-950">
-                  {currentProfile.activeOrganizationContext.organizationName}
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <ContextTone>
-                    {formatOrganizationTypeLabel(
-                      currentProfile.activeOrganizationContext.organizationType,
-                    )}
-                  </ContextTone>
-                  <ContextTone variant="accent">
-                    {currentProfile.activeOrganizationContext.displayMeta}
-                  </ContextTone>
-                </div>
-                {currentProfile.activeOrganizationContext.accessType ===
-                "DELEGATED" ? (
-                  <p className="mt-2 inline-flex items-center gap-1 text-xs text-neutral-600">
-                    <Link2 className="h-3 w-3" />
-                    Via{" "}
-                    {
-                      currentProfile.activeOrganizationContext
-                        .viaOrganizationName
-                    }
-                  </p>
-                ) : null}
-                <div className="mt-4 flex items-center gap-2 text-xs text-neutral-500">
-                  <BriefcaseBusiness className="h-3.5 w-3.5 text-mkmedia-blue" />
-                  Cambiar esta seleccion afecta solicitudes, ordenes y pricing.
-                </div>
-              </div>
-            ) : null}
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                <dl className="space-y-0">
+                  <FieldRow
+                    label="Correo electrónico"
+                    value={currentProfile.user.email}
+                  />
+                  <FieldRow
+                    label="Nombre de cuenta"
+                    value={currentProfile.user.name}
+                  />
+                  <FieldRow
+                    label="Miembro desde"
+                    value={formatDate(currentProfile.createdAt)}
+                  />
+                </dl>
+              </CardContent>
+            </Card>
 
-            {currentProfile.organizationContexts.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-                  <Building2 className="h-4 w-4 text-mkmedia-blue" />
-                  Marcas y accesos
+            <Card className="rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(15,23,42,0.2)]">
+              <CardHeader className="border-b border-neutral-200/70">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-md bg-neutral-900 text-white">
+                      <Phone className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <CardTitle>Información personal</CardTitle>
+                      <CardDescription>
+                        Nombre, apellido y teléfono de contacto.
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  {!isEditingPersonal ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePersonalEditStart}
+                      className="rounded-xs"
+                    >
+                      <PencilLine className="h-4 w-4" />
+                      Editar
+                    </Button>
+                  ) : null}
                 </div>
-                <div className="space-y-4">
-                  {groupedContexts.map((section) => (
-                    <div key={section.key} className="space-y-3">
-                      <div>
-                        <p className="text-sm font-semibold text-neutral-950">
-                          {section.title}
-                        </p>
-                        <p className="text-xs text-neutral-500">
-                          {section.description}
-                        </p>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {isEditingPersonal ? (
+                  <div className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-neutral-700">
+                          Nombre
+                        </label>
+                        <Input
+                          value={personalDraft.firstName}
+                          onChange={(event) =>
+                            handlePersonalDraftChange(
+                              "firstName",
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Tu nombre"
+                          className="rounded-xs border-neutral-300"
+                        />
                       </div>
-                      <div className="space-y-3">
-                        {section.contexts.map((context) => (
-                          <WorkspaceCard
-                            key={context.contextKey}
-                            context={context}
-                            isActive={
-                              context.contextKey ===
-                              currentProfile.activeOrganizationContext
-                                ?.contextKey
-                            }
-                            isSaving={
-                              switchingContextKey === context.contextKey
-                            }
-                            onSelect={handleContextSwitch}
-                          />
-                        ))}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-neutral-700">
+                          Apellido
+                        </label>
+                        <Input
+                          value={personalDraft.lastName}
+                          onChange={(event) =>
+                            handlePersonalDraftChange(
+                              "lastName",
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Tu apellido"
+                          className="rounded-xs border-neutral-300"
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-[1.75rem] border border-dashed border-neutral-300 bg-neutral-50/80 px-5 py-5">
-                <p className="text-sm font-semibold text-neutral-950">
-                  Todavia no tienes marcas ni accesos visibles
-                </p>
-                <p className="mt-2 text-sm leading-6 text-neutral-600">
-                  Crea tu primer espacio o vuelve al setup inicial. Si una
-                  agencia o empresa te comparte acceso, tambien aparecera aqui.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <Button
-                    asChild
-                    className="rounded-md bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
-                  >
-                    <Link href="/onboarding">Crear mi primer espacio</Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="rounded-md bg-white"
-                  >
-                    <Link href="/">Explorar catalogo</Link>
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
-        <Card className="rounded-3xl border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(15,23,42,0.2)]">
-          <CardHeader className="border-b border-neutral-200/70">
-            <div className="flex items-center justify-between gap-3">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-neutral-700">
+                        Teléfono
+                      </label>
+                      <Input
+                        value={personalDraft.phone}
+                        onChange={(event) =>
+                          handlePersonalDraftChange("phone", event.target.value)
+                        }
+                        placeholder="+507 6000-0000"
+                        className="rounded-xs border-neutral-300"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-2">
+                      <Button
+                        type="button"
+                        onClick={handlePersonalSave}
+                        disabled={updateProfile.isPending}
+                        className="rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+                      >
+                        <Save className="h-4 w-4" />
+                        {updateProfile.isPending
+                          ? "Guardando..."
+                          : "Guardar cambios"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePersonalEditCancel}
+                        disabled={updateProfile.isPending}
+                        className="rounded-xs"
+                      >
+                        <X className="h-4 w-4" />
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <dl className="space-y-0">
+                    <FieldRow label="Nombre" value={displayFirstName} />
+                    <FieldRow label="Apellido" value={displayLastName} />
+                    <FieldRow label="Teléfono" value={currentProfile.phone} />
+                  </dl>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="business" className="space-y-5">
+          <Card className="overflow-hidden rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
+            <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))]">
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-neutral-900 text-white">
-                  <Phone className="h-5 w-5" />
+                <span className="flex h-11 w-11 items-center justify-center rounded-md bg-mkmedia-blue text-white shadow-sm shadow-mkmedia-blue/25">
+                  <Building2 className="h-5 w-5" />
                 </span>
                 <div>
-                  <CardTitle>Información personal</CardTitle>
+                  <CardTitle>Negocios y accesos</CardTitle>
                   <CardDescription>
-                    Nombre, apellido y teléfono de contacto.
+                    Selecciona dónde operas y revisa tus contextos activos.
                   </CardDescription>
                 </div>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              {currentProfile.activeOrganizationContext ? (
+                <div className="rounded-md border border-mkmedia-blue/15 bg-mkmedia-blue/6 px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-900">
+                    <Check className="h-4 w-4 text-mkmedia-blue" />
+                    Organización activa
+                  </div>
+                  <p className="mt-3 text-base font-semibold text-neutral-950">
+                    {currentProfile.activeOrganizationContext.organizationName}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <ContextTone>
+                      {formatOrganizationTypeLabel(
+                        currentProfile.activeOrganizationContext.organizationType,
+                      )}
+                    </ContextTone>
+                    <ContextTone variant="accent">
+                      {currentProfile.activeOrganizationContext.displayMeta}
+                    </ContextTone>
+                  </div>
+                  {currentProfile.activeOrganizationContext.accessType ===
+                  "DELEGATED" ? (
+                    <p className="mt-2 inline-flex items-center gap-1 text-xs text-neutral-600">
+                      <Link2 className="h-3 w-3" />
+                      Via{" "}
+                      {currentProfile.activeOrganizationContext.viaOrganizationName}
+                    </p>
+                  ) : null}
+                  <div className="mt-4 flex items-center gap-2 text-xs text-neutral-500">
+                    <BriefcaseBusiness className="h-3.5 w-3.5 text-mkmedia-blue" />
+                    Cambiar esta selección afecta solicitudes, órdenes y pricing.
+                  </div>
+                </div>
+              ) : null}
 
-              {!isEditingPersonal ? (
+              {currentProfile.organizationContexts.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+                    <Building2 className="h-4 w-4 text-mkmedia-blue" />
+                    Marcas y accesos
+                  </div>
+                  <div className="space-y-4">
+                    {groupedContexts.map((section) => (
+                      <div key={section.key} className="space-y-3">
+                        <div>
+                          <p className="text-sm font-semibold text-neutral-950">
+                            {section.title}
+                          </p>
+                          <p className="text-xs text-neutral-500">
+                            {section.description}
+                          </p>
+                        </div>
+                        <div className="space-y-3">
+                          {section.contexts.map((context) => (
+                            <WorkspaceCard
+                              key={context.contextKey}
+                              context={context}
+                              isActive={
+                                context.contextKey ===
+                                currentProfile.activeOrganizationContext?.contextKey
+                              }
+                              isSaving={
+                                switchingContextKey === context.contextKey
+                              }
+                              onSelect={handleContextSwitch}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50/80 px-5 py-5">
+                  <p className="text-sm font-semibold text-neutral-950">
+                    Todavía no tienes marcas ni accesos visibles
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-neutral-600">
+                    Crea tu primer espacio o vuelve al setup inicial. Si una
+                    agencia o empresa te comparte acceso, también aparecerá aquí.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Button
+                      asChild
+                      className="rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+                    >
+                      <Link href="/onboarding">Crear mi primer espacio</Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="rounded-xs bg-white"
+                    >
+                      <Link href="/">Explorar catálogo</Link>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-5">
+          <Card className="rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.18)]">
+            <CardHeader className="border-b border-neutral-200/70">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-md bg-mkmedia-blue text-white shadow-sm shadow-mkmedia-blue/25">
+                    <Bell className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <CardTitle>Preferencias de notificación</CardTitle>
+                    <CardDescription>
+                      Elige qué hitos quieres recibir por correo y cuáles
+                      mantener en tu bandeja in-app.
+                    </CardDescription>
+                  </div>
+                </div>
+
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePersonalEditStart}
-                  className="rounded-md"
+                  onClick={handleNotificationSave}
+                  disabled={
+                    !hasNotificationChanges ||
+                    updateNotificationPreferences.isPending
+                  }
+                  className="rounded-xs bg-neutral-900 text-white hover:bg-neutral-800"
                 >
-                  <PencilLine className="h-4 w-4" />
-                  Editar
+                  <Save className="h-4 w-4" />
+                  {updateNotificationPreferences.isPending
+                    ? "Guardando..."
+                    : "Guardar preferencias"}
                 </Button>
-              ) : null}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {isEditingPersonal ? (
-              <div className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-neutral-700">
-                      Nombre
-                    </label>
-                    <Input
-                      value={personalDraft.firstName}
-                      onChange={(event) =>
-                        handlePersonalDraftChange(
-                          "firstName",
-                          event.target.value,
-                        )
-                      }
-                      placeholder="Tu nombre"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-neutral-700">
-                      Apellido
-                    </label>
-                    <Input
-                      value={personalDraft.lastName}
-                      onChange={(event) =>
-                        handlePersonalDraftChange(
-                          "lastName",
-                          event.target.value,
-                        )
-                      }
-                      placeholder="Tu apellido"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-neutral-700">
-                    Teléfono
-                  </label>
-                  <Input
-                    value={personalDraft.phone}
-                    onChange={(event) =>
-                      handlePersonalDraftChange("phone", event.target.value)
-                    }
-                    placeholder="+507 6000-0000"
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 pt-2">
-                  <Button
-                    type="button"
-                    onClick={handlePersonalSave}
-                    disabled={updateProfile.isPending}
-                    className="rounded-md bg-[#0359A8] text-white hover:bg-[#024a8f]"
-                  >
-                    <Save className="h-4 w-4" />
-                    {updateProfile.isPending
-                      ? "Guardando..."
-                      : "Guardar cambios"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handlePersonalEditCancel}
-                    disabled={updateProfile.isPending}
-                    className="rounded-md"
-                  >
-                    <X className="h-4 w-4" />
-                    Cancelar
-                  </Button>
-                </div>
               </div>
-            ) : (
-              <dl className="space-y-0">
-                <FieldRow label="Nombre" value={currentProfile.firstName} />
-                <FieldRow label="Apellido" value={currentProfile.lastName} />
-                <FieldRow label="Teléfono" value={currentProfile.phone} />
-              </dl>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="rounded-3xl border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.18)]">
-        <CardHeader className="border-b border-neutral-200/70">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0359A8] text-white shadow-sm shadow-[#0359A8]/25">
-                <Bell className="h-5 w-5" />
-              </span>
-              <div>
-                <CardTitle>Preferencias de notificación</CardTitle>
-                <CardDescription>
-                  Elige qué hitos quieres recibir por correo y cuáles mantener
-                  en tu bandeja in-app.
-                </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="hidden grid-cols-[minmax(0,1fr)_88px_88px] items-center gap-4 border-b border-neutral-200/70 px-4 pb-3 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 md:grid">
+                <span>Evento</span>
+                <span className="text-center">Correo</span>
+                <span className="text-center">In-app</span>
               </div>
-            </div>
 
-            <Button
-              type="button"
-              onClick={handleNotificationSave}
-              disabled={
-                !hasNotificationChanges ||
-                updateNotificationPreferences.isPending
-              }
-              className="rounded-md bg-neutral-900 text-white hover:bg-neutral-800"
-            >
-              <Save className="h-4 w-4" />
-              {updateNotificationPreferences.isPending
-                ? "Guardando..."
-                : "Guardar preferencias"}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="hidden grid-cols-[minmax(0,1fr)_88px_88px] items-center gap-4 border-b border-neutral-200/70 px-4 pb-3 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 md:grid">
-            <span>Evento</span>
-            <span className="text-center">Correo</span>
-            <span className="text-center">In-app</span>
-          </div>
+              <div className="divide-y divide-neutral-200/70">
+                {NOTIFICATION_ROWS.map((row) => (
+                  <div
+                    key={row.type}
+                    className="grid gap-4 px-4 py-4 md:grid-cols-[minmax(0,1fr)_88px_88px] md:items-center"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-900">
+                        {row.label}
+                      </p>
+                      <p className="mt-1 text-sm text-neutral-500">
+                        {row.description}
+                      </p>
+                    </div>
 
-          <div className="divide-y divide-neutral-200/70">
-            {NOTIFICATION_ROWS.map((row) => (
-              <div
-                key={row.type}
-                className="grid gap-4 px-4 py-4 md:grid-cols-[minmax(0,1fr)_88px_88px] md:items-center"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-neutral-900">
-                    {row.label}
-                  </p>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    {row.description}
+                    <div className="flex items-center justify-between rounded-md border border-neutral-200/70 bg-neutral-50/70 px-3 py-2 md:justify-center md:border-0 md:bg-transparent md:px-0 md:py-0">
+                      <span className="text-xs font-medium text-neutral-500 md:hidden">
+                        Correo
+                      </span>
+                      <Checkbox
+                        checked={effectiveNotificationDraft[row.type].emailEnabled}
+                        onCheckedChange={(value) =>
+                          handleNotificationToggle(
+                            row.type,
+                            "emailEnabled",
+                            value === true,
+                          )
+                        }
+                        disabled={updateNotificationPreferences.isPending}
+                        aria-label={`Recibir ${row.label} por correo`}
+                        className="h-5 w-5 rounded-xs border-neutral-300 data-[state=checked]:border-mkmedia-blue data-[state=checked]:bg-mkmedia-blue"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-md border border-neutral-200/70 bg-neutral-50/70 px-3 py-2 md:justify-center md:border-0 md:bg-transparent md:px-0 md:py-0">
+                      <span className="text-xs font-medium text-neutral-500 md:hidden">
+                        In-app
+                      </span>
+                      <Checkbox
+                        checked={effectiveNotificationDraft[row.type].inAppEnabled}
+                        onCheckedChange={(value) =>
+                          handleNotificationToggle(
+                            row.type,
+                            "inAppEnabled",
+                            value === true,
+                          )
+                        }
+                        disabled={updateNotificationPreferences.isPending}
+                        aria-label={`Recibir ${row.label} en la bandeja in-app`}
+                        className="h-5 w-5 rounded-xs border-neutral-300 data-[state=checked]:border-neutral-900 data-[state=checked]:bg-neutral-900"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+                <div className="flex items-start gap-2">
+                  <Mail className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p>
+                    El correo de cuenta se mantiene como referencia y no es
+                    editable desde esta pantalla.
                   </p>
                 </div>
-
-                <div className="flex items-center justify-between rounded-2xl border border-neutral-200/70 bg-neutral-50/70 px-3 py-2 md:justify-center md:border-0 md:bg-transparent md:px-0 md:py-0">
-                  <span className="text-xs font-medium text-neutral-500 md:hidden">
-                    Correo
-                  </span>
-                  <Checkbox
-                    checked={effectiveNotificationDraft[row.type].emailEnabled}
-                    onCheckedChange={(value) =>
-                      handleNotificationToggle(
-                        row.type,
-                        "emailEnabled",
-                        value === true,
-                      )
-                    }
-                    disabled={updateNotificationPreferences.isPending}
-                    aria-label={`Recibir ${row.label} por correo`}
-                    className="h-5 w-5 rounded-md border-neutral-300 data-[state=checked]:border-[#0359A8] data-[state=checked]:bg-[#0359A8]"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between rounded-2xl border border-neutral-200/70 bg-neutral-50/70 px-3 py-2 md:justify-center md:border-0 md:bg-transparent md:px-0 md:py-0">
-                  <span className="text-xs font-medium text-neutral-500 md:hidden">
-                    In-app
-                  </span>
-                  <Checkbox
-                    checked={effectiveNotificationDraft[row.type].inAppEnabled}
-                    onCheckedChange={(value) =>
-                      handleNotificationToggle(
-                        row.type,
-                        "inAppEnabled",
-                        value === true,
-                      )
-                    }
-                    disabled={updateNotificationPreferences.isPending}
-                    aria-label={`Recibir ${row.label} en la bandeja in-app`}
-                    className="h-5 w-5 rounded-md border-neutral-300 data-[state=checked]:border-neutral-900 data-[state=checked]:bg-neutral-900"
-                  />
-                </div>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
-            <div className="flex items-start gap-2">
-              <Mail className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>
-                El correo de cuenta se mantiene como referencia y no es editable
-                desde esta pantalla.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

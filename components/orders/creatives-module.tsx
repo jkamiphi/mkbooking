@@ -477,23 +477,34 @@ export function CreativesModule({
     Boolean(latestProof) &&
     !isLatestProofDesignerApproved;
   const designTimeline = taskQuery.data?.events ?? [];
+  const panelRadiusClass = isClientSurface ? "rounded-md" : "rounded-2xl";
+  const blockRadiusClass = isClientSurface ? "rounded-md" : "rounded-xl";
+  const innerRadiusClass = isClientSurface ? "rounded-md" : "rounded-lg";
+  const borderedControlRadiusClass = isClientSurface ? "rounded-xs" : "rounded-md";
+  const dialogRadiusClass = isClientSurface ? "rounded-md" : undefined;
 
   return (
     <>
-      <section className="mt-6 rounded-2xl border border-neutral-200/80 bg-white p-5">
+      <section
+        className={`mt-6 border border-neutral-200/80 bg-white p-5 ${panelRadiusClass}`}
+      >
         <h2 className="mb-4 border-b border-neutral-100 pb-3 text-sm font-semibold text-neutral-900">
           Materiales Creativos (Artes)
         </h2>
 
         <div className="space-y-6">
           {isClientArtworkLocked ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <div
+              className={`border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 ${blockRadiusClass}`}
+            >
               Ya hay una prueba de diseño publicada; ahora solo puedes aprobarla
               o solicitar ajustes.
             </div>
           ) : null}
 
-          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
+          <div
+            className={`border border-neutral-200/80 bg-neutral-50/50 p-4 ${blockRadiusClass}`}
+          >
             <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
                 <h3 className="text-sm font-medium text-neutral-900">
@@ -510,6 +521,7 @@ export function CreativesModule({
                     isUploading={
                       uploadingTargetId === ORDER_GENERAL_UPLOAD_TARGET
                     }
+                    className={borderedControlRadiusClass}
                     label={
                       generalCreatives.length > 0
                         ? "Subir otro archivo"
@@ -519,7 +531,7 @@ export function CreativesModule({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 bg-white text-xs"
+                    className={`h-8 bg-white text-xs ${borderedControlRadiusClass}`}
                     onClick={() => openUrlDialog("CLIENT_ARTWORK")}
                     disabled={uploadingTargetId === ORDER_GENERAL_UPLOAD_TARGET}
                   >
@@ -533,6 +545,7 @@ export function CreativesModule({
             <CreativeList
               creatives={generalCreatives}
               canReview={canReviewClientArtwork}
+              isClientSurface={isClientSurface}
               onReview={openReviewDialog}
             />
           </div>
@@ -545,7 +558,7 @@ export function CreativesModule({
             return (
               <div
                 key={item.id}
-                className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4"
+                className={`border border-neutral-200/80 bg-neutral-50/50 p-4 ${blockRadiusClass}`}
               >
                 <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                   <div>
@@ -566,13 +579,14 @@ export function CreativesModule({
                           uploadClientArtworkFile(file, item.id)
                         }
                         isUploading={uploadingTargetId === item.id}
+                        className={borderedControlRadiusClass}
                         disabled={hasCreative}
                         label={hasCreative ? "Arte cargado" : "Subir archivo"}
                       />
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 bg-white text-xs"
+                        className={`h-8 bg-white text-xs ${borderedControlRadiusClass}`}
                         onClick={() => openUrlDialog("CLIENT_ARTWORK", item.id)}
                         disabled={hasCreative || uploadingTargetId === item.id}
                       >
@@ -586,6 +600,7 @@ export function CreativesModule({
                 <CreativeList
                   creatives={itemCreative ? [itemCreative] : []}
                   canReview={canReviewClientArtwork}
+                  isClientSurface={isClientSurface}
                   onReview={openReviewDialog}
                   emptyTitle="Aún no hay arte cargado para este espacio."
                 />
@@ -593,7 +608,9 @@ export function CreativesModule({
             );
           })}
 
-          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
+          <div
+            className={`border border-neutral-200/80 bg-neutral-50/50 p-4 ${blockRadiusClass}`}
+          >
             <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
                 <h3 className="text-sm font-medium text-neutral-900">
@@ -610,7 +627,7 @@ export function CreativesModule({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 bg-white text-xs"
+                    className={`h-8 bg-white text-xs ${borderedControlRadiusClass}`}
                     onClick={() => openUrlDialog("DESIGN_PROOF")}
                     disabled={uploadingTargetId === "design-proof"}
                   >
@@ -622,7 +639,9 @@ export function CreativesModule({
             </div>
 
             {taskQuery.data ? (
-              <div className="mb-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-600">
+              <div
+                className={`mb-3 border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-600 ${innerRadiusClass}`}
+              >
                 Estado de tarea:{" "}
                 <span className="font-medium text-neutral-900">
                   {taskQuery.data.status}
@@ -644,7 +663,9 @@ export function CreativesModule({
             ) : null}
 
             {isDesignReviewer && isDesignTaskBlockedBySales ? (
-              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <div
+                className={`mb-3 border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 ${innerRadiusClass}`}
+              >
                 Se habilita al aprobar validacion de Ventas.
               </div>
             ) : null}
@@ -652,18 +673,22 @@ export function CreativesModule({
             <CreativeList
               creatives={proofs}
               canReview={false}
+              isClientSurface={isClientSurface}
               onReview={() => undefined}
               emptyTitle="Aún no hay pruebas de color publicadas."
             />
 
             {canClientRespondToProof ? (
-              <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <div
+                className={`mt-4 border border-emerald-200 bg-emerald-50 p-3 ${innerRadiusClass}`}
+              >
                 <p className="text-xs text-emerald-900">
                   Ya puedes aprobar la prueba de color o solicitar ajustes.
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button
                     size="sm"
+                    className={isClientSurface ? "rounded-xs" : undefined}
                     onClick={() => {
                       setProofDecisionType("APPROVED");
                       setProofDecisionDialogOpen(true);
@@ -674,6 +699,7 @@ export function CreativesModule({
                   <Button
                     size="sm"
                     variant="outline"
+                    className={isClientSurface ? "rounded-xs" : undefined}
                     onClick={() => {
                       setProofDecisionType("CHANGES_REQUESTED");
                       setProofDecisionDialogOpen(true);
@@ -686,7 +712,9 @@ export function CreativesModule({
             ) : null}
 
             {canDesignerRespondToProof ? (
-              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <div
+                className={`mt-4 border border-blue-200 bg-blue-50 p-3 ${innerRadiusClass}`}
+              >
                 <p className="text-xs text-blue-900">
                   Puedes marcar aprobación final de diseño o solicitar ajustes
                   adicionales.
@@ -694,6 +722,7 @@ export function CreativesModule({
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button
                     size="sm"
+                    className={isClientSurface ? "rounded-xs" : undefined}
                     onClick={() => {
                       setDesignerDecisionType("APPROVED");
                       setDesignerDecisionDialogOpen(true);
@@ -704,6 +733,7 @@ export function CreativesModule({
                   <Button
                     size="sm"
                     variant="outline"
+                    className={isClientSurface ? "rounded-xs" : undefined}
                     onClick={() => {
                       setDesignerDecisionType("CHANGES_REQUESTED");
                       setDesignerDecisionDialogOpen(true);
@@ -717,7 +747,9 @@ export function CreativesModule({
           </div>
 
           {designTimeline.length > 0 ? (
-            <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
+            <div
+              className={`border border-neutral-200/80 bg-neutral-50/50 p-4 ${blockRadiusClass}`}
+            >
               <h3 className="mb-3 text-sm font-medium text-neutral-900">
                 Discusión y trazabilidad
               </h3>
@@ -725,7 +757,7 @@ export function CreativesModule({
                 {designTimeline.slice(0, 12).map((event) => (
                   <div
                     key={event.id}
-                    className="rounded-lg border border-neutral-200 bg-white p-3"
+                    className={`border border-neutral-200 bg-white p-3 ${innerRadiusClass}`}
                   >
                     <p className="text-xs font-medium text-neutral-900">
                       {designEventLabel(event.eventType)}
@@ -761,7 +793,7 @@ export function CreativesModule({
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className={dialogRadiusClass}>
           <DialogHeader>
             <DialogTitle>Revisión de arte cliente</DialogTitle>
             <DialogDescription>
@@ -771,7 +803,9 @@ export function CreativesModule({
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+            <div
+              className={`border border-neutral-200 bg-neutral-50 p-3 ${innerRadiusClass}`}
+            >
               <p className="text-xs font-medium text-neutral-900">
                 {reviewingCreative?.fileName}
               </p>
@@ -787,6 +821,7 @@ export function CreativesModule({
               <Button
                 type="button"
                 variant={reviewDecision === "APPROVED" ? "default" : "outline"}
+                className={isClientSurface ? "rounded-xs" : undefined}
                 onClick={() => setReviewDecision("APPROVED")}
               >
                 <CheckCircle2 className="mr-1.5 h-4 w-4" />
@@ -799,6 +834,7 @@ export function CreativesModule({
                     ? "destructive"
                     : "outline"
                 }
+                className={isClientSurface ? "rounded-xs" : undefined}
                 onClick={() => setReviewDecision("CHANGES_REQUESTED")}
               >
                 <AlertTriangle className="mr-1.5 h-4 w-4" />
@@ -822,6 +858,7 @@ export function CreativesModule({
             <Button
               type="button"
               variant="outline"
+              className={isClientSurface ? "rounded-xs" : undefined}
               onClick={() => {
                 setReviewingCreative(null);
                 setReviewNotes("");
@@ -830,7 +867,11 @@ export function CreativesModule({
             >
               Cancelar
             </Button>
-            <Button onClick={submitReview} disabled={reviewCreative.isPending}>
+            <Button
+              onClick={submitReview}
+              disabled={reviewCreative.isPending}
+              className={isClientSurface ? "rounded-xs" : undefined}
+            >
               {reviewCreative.isPending ? "Guardando..." : "Guardar revisión"}
             </Button>
           </DialogFooter>
@@ -845,7 +886,7 @@ export function CreativesModule({
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className={dialogRadiusClass}>
           <DialogHeader>
             <DialogTitle>
               {urlContext.kind === "DESIGN_PROOF"
@@ -885,6 +926,7 @@ export function CreativesModule({
             <Button
               type="button"
               variant="outline"
+              className={isClientSurface ? "rounded-xs" : undefined}
               onClick={() =>
                 setUrlContext((prev) => ({ ...prev, open: false }))
               }
@@ -894,6 +936,7 @@ export function CreativesModule({
             <Button
               onClick={submitExternalUrl}
               disabled={addCreative.isPending || uploadProof.isPending}
+              className={isClientSurface ? "rounded-xs" : undefined}
             >
               Guardar URL
             </Button>
@@ -905,7 +948,7 @@ export function CreativesModule({
         open={proofDecisionDialogOpen}
         onOpenChange={setProofDecisionDialogOpen}
       >
-        <DialogContent>
+        <DialogContent className={dialogRadiusClass}>
           <DialogHeader>
             <DialogTitle>
               {proofDecisionType === "APPROVED"
@@ -942,6 +985,7 @@ export function CreativesModule({
             <Button
               type="button"
               variant="outline"
+              className={isClientSurface ? "rounded-xs" : undefined}
               onClick={() => setProofDecisionDialogOpen(false)}
             >
               Cancelar
@@ -949,6 +993,7 @@ export function CreativesModule({
             <Button
               onClick={submitProofDecision}
               disabled={clientDecision.isPending}
+              className={isClientSurface ? "rounded-xs" : undefined}
             >
               {clientDecision.isPending ? "Guardando..." : "Confirmar"}
             </Button>
@@ -960,7 +1005,7 @@ export function CreativesModule({
         open={designerDecisionDialogOpen}
         onOpenChange={setDesignerDecisionDialogOpen}
       >
-        <DialogContent>
+        <DialogContent className={dialogRadiusClass}>
           <DialogHeader>
             <DialogTitle>
               {designerDecisionType === "APPROVED"
@@ -996,6 +1041,7 @@ export function CreativesModule({
             <Button
               type="button"
               variant="outline"
+              className={isClientSurface ? "rounded-xs" : undefined}
               onClick={() => setDesignerDecisionDialogOpen(false)}
             >
               Cancelar
@@ -1003,6 +1049,7 @@ export function CreativesModule({
             <Button
               onClick={submitDesignerDecision}
               disabled={designerDecision.isPending}
+              className={isClientSurface ? "rounded-xs" : undefined}
             >
               {designerDecision.isPending ? "Guardando..." : "Confirmar"}
             </Button>
@@ -1018,11 +1065,13 @@ function UploadButton({
   isUploading,
   label,
   disabled = false,
+  className,
 }: {
   onUpload: (f: File) => void;
   isUploading: boolean;
   label: string;
   disabled?: boolean;
+  className?: string;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1044,7 +1093,7 @@ function UploadButton({
       <Button
         size="sm"
         variant="outline"
-        className="h-8 shrink-0 bg-white text-xs"
+        className={`h-8 shrink-0 bg-white text-xs ${className ?? ""}`}
         onClick={() => fileInputRef.current?.click()}
         disabled={isUploading || disabled}
       >
@@ -1058,17 +1107,24 @@ function UploadButton({
 function CreativeList({
   creatives,
   canReview,
+  isClientSurface,
   onReview,
   emptyTitle = "Aún no hay archivos cargados.",
 }: {
   creatives: CreativeItem[];
   canReview: boolean;
+  isClientSurface: boolean;
   onReview: (creative: CreativeItem) => void;
   emptyTitle?: string;
 }) {
+  const rowRadiusClass = isClientSurface ? "rounded-md" : "rounded-lg";
+  const outlinedButtonRadiusClass = isClientSurface ? "rounded-xs" : "rounded-md";
+
   if (creatives.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-neutral-200 bg-white py-6 text-center">
+      <div
+        className={`border border-dashed border-neutral-200 bg-white py-6 text-center ${rowRadiusClass}`}
+      >
         <p className="text-sm text-neutral-500">{emptyTitle}</p>
       </div>
     );
@@ -1081,7 +1137,7 @@ function CreativeList({
         return (
           <div
             key={creative.id}
-            className={`flex flex-wrap items-center justify-between gap-4 rounded-lg border p-3 ${
+            className={`flex flex-wrap items-center justify-between gap-4 border p-3 ${rowRadiusClass} ${
               isLatest
                 ? "border-primary/20 bg-primary/5"
                 : "border-neutral-200 bg-white"
@@ -1154,7 +1210,7 @@ function CreativeList({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-6 px-2 text-[10px]"
+                  className={`h-6 px-2 text-[10px] ${outlinedButtonRadiusClass}`}
                   onClick={() => onReview(creative)}
                 >
                   Revisar

@@ -9,6 +9,7 @@ import {
   ChevronDown,
   LoaderCircle,
   Link2,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
@@ -17,12 +18,23 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type OrganizationContextSelectorProps = {
   variant?: "compact" | "sidebar" | "footer";
@@ -93,11 +105,57 @@ export function OrganizationContextSelector({
   const router = useRouter();
   const utils = trpc.useUtils();
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newOrganizationType, setNewOrganizationType] = useState<
+    "ADVERTISER" | "AGENCY"
+  >("ADVERTISER");
+  const [newOrganizationName, setNewOrganizationName] = useState("");
   const { data, isLoading } = trpc.organization.myContexts.useQuery();
+  const createStarterOrganization =
+    trpc.organization.createStarterOrganization.useMutation({
+      onSuccess: async () => {
+        await Promise.all([
+          utils.organization.myContexts.invalidate(),
+          utils.organization.myOrganizations.invalidate(),
+          utils.userProfile.current.invalidate(),
+          utils.userProfile.me.invalidate(),
+        ]);
+        setIsCreateDialogOpen(false);
+        setNewOrganizationName("");
+        toast.success("Negocio creado y disponible en tus accesos.");
+        startTransition(() => {
+          router.refresh();
+        });
+      },
+      onError: (error) => {
+        toast.error("No se pudo crear el negocio", {
+          description: error.message,
+        });
+      },
+    });
 
   const contexts = data?.contexts ?? [];
   const activeContext = data?.activeContext ?? contexts[0] ?? null;
   const groupedContexts = groupContexts(contexts);
+
+  function openCreateDialog(nextType: "ADVERTISER" | "AGENCY") {
+    setNewOrganizationType(nextType);
+    setNewOrganizationName("");
+    setIsCreateDialogOpen(true);
+  }
+
+  function handleCreateOrganization() {
+    const name = newOrganizationName.trim();
+    if (!name) {
+      toast.error("Escribe un nombre para el negocio.");
+      return;
+    }
+
+    createStarterOrganization.mutate({
+      name,
+      organizationType: newOrganizationType,
+    });
+  }
 
   async function handleContextChange(nextContextKey: string) {
     if (
@@ -152,10 +210,10 @@ export function OrganizationContextSelector({
       <div
         className={cn(
           variant === "sidebar"
-            ? "h-24 animate-pulse rounded-[1.35rem] bg-white/80 ring-1 ring-neutral-200/80"
+            ? "h-24 animate-pulse rounded-md bg-white/80 ring-1 ring-neutral-200/80"
             : variant === "footer"
-              ? "h-14 animate-pulse rounded-xl bg-white/80 ring-1 ring-neutral-200/80"
-              : "h-10 w-44 animate-pulse rounded-md border border-neutral-200/80 bg-white/80",
+              ? "h-14 animate-pulse rounded-md bg-white/80 ring-1 ring-neutral-200/80"
+              : "h-10 w-44 animate-pulse rounded-xs border border-neutral-200/80 bg-white/80",
           className,
         )}
       />
@@ -166,13 +224,11 @@ export function OrganizationContextSelector({
     return null;
   }
 
-  const isSingleContext = contexts.length <= 1;
-
   function renderMenuContent(align: "start" | "end") {
     return (
       <DropdownMenuContent
         align={align}
-        className="w-[22rem] border-neutral-200 bg-white"
+        className="w-[22rem] rounded-md border-neutral-200 bg-white"
       >
         <DropdownMenuLabel className="flex items-center gap-2 text-neutral-900">
           <CheckCircle2 className="h-4 w-4 text-mkmedia-blue" />
@@ -211,15 +267,115 @@ export function OrganizationContextSelector({
             </Fragment>
           ))}
         </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={() => openCreateDialog("ADVERTISER")}
+          className="cursor-pointer rounded-xs"
+        >
+          <Plus className="h-4 w-4 text-mkmedia-blue" />
+          Crear marca
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => openCreateDialog("AGENCY")}
+          className="cursor-pointer rounded-xs"
+        >
+          <Plus className="h-4 w-4 text-mkmedia-blue" />
+          Crear agencia
+        </DropdownMenuItem>
       </DropdownMenuContent>
     );
   }
+
+  const createOrganizationDialog = (
+    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <DialogContent className="rounded-md">
+        <DialogHeader>
+          <DialogTitle>Crear nuevo negocio</DialogTitle>
+          <DialogDescription>
+            Crea una marca o agencia nueva para operar con otro contexto.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Tipo</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={
+                  newOrganizationType === "ADVERTISER" ? "default" : "outline"
+                }
+                className={
+                  newOrganizationType === "ADVERTISER"
+                    ? "rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+                    : "rounded-xs"
+                }
+                onClick={() => setNewOrganizationType("ADVERTISER")}
+              >
+                Marca
+              </Button>
+              <Button
+                type="button"
+                variant={newOrganizationType === "AGENCY" ? "default" : "outline"}
+                className={
+                  newOrganizationType === "AGENCY"
+                    ? "rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+                    : "rounded-xs"
+                }
+                onClick={() => setNewOrganizationType("AGENCY")}
+              >
+                Agencia
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-organization-name">Nombre visible</Label>
+            <Input
+              id="new-organization-name"
+              value={newOrganizationName}
+              onChange={(event) => setNewOrganizationName(event.target.value)}
+              placeholder={
+                newOrganizationType === "AGENCY"
+                  ? "Ej. MK Media Agency"
+                  : "Ej. Marca Atlas"
+              }
+              className="rounded-xs border-neutral-300"
+              disabled={createStarterOrganization.isPending}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xs"
+            onClick={() => {
+              setIsCreateDialogOpen(false);
+              setNewOrganizationName("");
+            }}
+            disabled={createStarterOrganization.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            className="rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
+            onClick={handleCreateOrganization}
+            disabled={createStarterOrganization.isPending}
+          >
+            {createStarterOrganization.isPending
+              ? "Creando..."
+              : "Crear negocio"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   if (variant === "sidebar") {
     const sidebarBody = (
       <>
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-mkmedia-blue/[0.08] text-mkmedia-blue ring-1 ring-mkmedia-blue/12">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-mkmedia-blue/[0.08] text-mkmedia-blue ring-1 ring-mkmedia-blue/12">
             <Building2 className="h-4 w-4" />
           </span>
           <div className="min-w-0 flex-1 text-left">
@@ -233,16 +389,14 @@ export function OrganizationContextSelector({
               {activeContext.displayMeta}
             </p>
           </div>
-          {!isSingleContext ? (
-            <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-neutral-400" />
-          ) : null}
+          <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-neutral-400" />
         </div>
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-neutral-50/80 px-3 py-2 text-xs text-neutral-700 ring-1 ring-neutral-200/80">
+        <div className="mt-3 flex items-center gap-2 rounded-md bg-neutral-50/80 px-3 py-2 text-xs text-neutral-700 ring-1 ring-neutral-200/80">
           <BriefcaseBusiness className="h-3.5 w-3.5 text-mkmedia-blue" />
           <span className="truncate">{getTriggerTitle(activeContext)}</span>
         </div>
         {activeContext.accessType === "DELEGATED" ? (
-          <div className="mt-2 flex items-center gap-2 rounded-xl bg-mkmedia-yellow/15 px-3 py-2 text-xs text-neutral-700 ring-1 ring-mkmedia-yellow/35">
+          <div className="mt-2 flex items-center gap-2 rounded-md bg-mkmedia-yellow/15 px-3 py-2 text-xs text-neutral-700 ring-1 ring-mkmedia-yellow/35">
             <Link2 className="h-3.5 w-3.5 text-neutral-700" />
             <span className="truncate">
               Operas via {activeContext.viaOrganizationName}
@@ -252,35 +406,25 @@ export function OrganizationContextSelector({
       </>
     );
 
-    if (isSingleContext) {
-      return (
-        <div
-          className={cn(
-            "rounded-[1.35rem] bg-white/88 px-3.5 py-3 ring-1 ring-neutral-200/80",
-            className,
-          )}
-        >
-          {sidebarBody}
-        </div>
-      );
-    }
-
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className={cn(
-              "w-full rounded-[1.35rem] bg-white/88 px-3.5 py-3 text-left ring-1 ring-neutral-200/80 transition hover:bg-white hover:ring-mkmedia-blue/20",
-              className,
-            )}
-            disabled={isSaving}
-          >
-            {sidebarBody}
-          </button>
-        </DropdownMenuTrigger>
-        {renderMenuContent("start")}
-      </DropdownMenu>
+      <>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "w-full rounded-xs bg-white/88 px-3.5 py-3 text-left ring-1 ring-neutral-200/80 transition hover:bg-white hover:ring-mkmedia-blue/20",
+                className,
+              )}
+              disabled={isSaving}
+            >
+              {sidebarBody}
+            </button>
+          </DropdownMenuTrigger>
+          {renderMenuContent("start")}
+        </DropdownMenu>
+        {createOrganizationDialog}
+      </>
     );
   }
 
@@ -289,7 +433,7 @@ export function OrganizationContextSelector({
       <button
         type="button"
         className={cn(
-          "flex h-12 w-full items-center gap-2 rounded-xl bg-white px-3 text-left ring-1 ring-neutral-200/80 transition hover:bg-neutral-50",
+          "flex h-12 w-full items-center gap-2 rounded-xs bg-white px-3 text-left ring-1 ring-neutral-200/80 transition hover:bg-neutral-50",
           "hover:ring-mkmedia-blue/20",
           className,
         )}
@@ -313,10 +457,13 @@ export function OrganizationContextSelector({
     );
 
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>{footerTrigger}</DropdownMenuTrigger>
-        {renderMenuContent("end")}
-      </DropdownMenu>
+      <>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>{footerTrigger}</DropdownMenuTrigger>
+          {renderMenuContent("end")}
+        </DropdownMenu>
+        {createOrganizationDialog}
+      </>
     );
   }
 
@@ -325,11 +472,11 @@ export function OrganizationContextSelector({
       type="button"
       variant="ghost"
       className={cn(
-        "h-10 rounded-md border border-neutral-200 bg-white/90 px-3 text-neutral-700 shadow-sm hover:bg-white",
-        isSingleContext ? "cursor-default" : "hover:border-mkmedia-blue/30",
+        "h-10 rounded-xs border border-neutral-200 bg-white/90 px-3 text-neutral-700 shadow-sm hover:bg-white",
+        "hover:border-mkmedia-blue/30",
         className,
       )}
-      disabled={isSaving || isSingleContext}
+      disabled={isSaving}
     >
       {isSaving ? (
         <LoaderCircle className="h-4 w-4 animate-spin text-mkmedia-blue" />
@@ -342,20 +489,17 @@ export function OrganizationContextSelector({
       <span className="hidden text-xs text-neutral-500 sm:inline">
         {activeContext.displayMeta}
       </span>
-      {!isSingleContext ? (
-        <ChevronDown className="h-4 w-4 text-neutral-400" />
-      ) : null}
+      <ChevronDown className="h-4 w-4 text-neutral-400" />
     </Button>
   );
 
-  if (isSingleContext) {
-    return compactTrigger;
-  }
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>{compactTrigger}</DropdownMenuTrigger>
-      {renderMenuContent("end")}
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>{compactTrigger}</DropdownMenuTrigger>
+        {renderMenuContent("end")}
+      </DropdownMenu>
+      {createOrganizationDialog}
+    </>
   );
 }

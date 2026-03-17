@@ -165,7 +165,7 @@ export default async function OrderDetailPage({
   }));
   const detailContent = (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+      <section className="rounded-md border border-neutral-200/80 bg-white p-5">
         <h2 className="mb-4 border-b border-neutral-100 pb-3 text-sm font-semibold text-neutral-900">
           Detalle de Espacios ({order.lineItems.length})
         </h2>
@@ -176,7 +176,7 @@ export default async function OrderDetailPage({
               key={item.id}
               className="flex gap-4 border-b border-neutral-100 pb-4 last:border-0 last:pb-0"
             >
-              <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+              <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
                 <div className="flex h-full w-full items-center justify-center bg-neutral-50">
                   <span className="p-1 text-center text-[10px] leading-tight font-semibold text-neutral-400">
                     {item.face?.asset?.structureType?.name || "Cara"}
@@ -215,7 +215,7 @@ export default async function OrderDetailPage({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+      <section className="rounded-md border border-neutral-200/80 bg-white p-5">
         <h2 className="mb-4 border-b border-neutral-100 pb-3 text-sm font-semibold text-neutral-900">
           Servicios facturables ({order.serviceItems.length})
         </h2>
@@ -227,7 +227,7 @@ export default async function OrderDetailPage({
             {order.serviceItems.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between rounded-xl border border-neutral-100 p-3"
+                className="flex items-center justify-between rounded-md border border-neutral-100 p-3"
               >
                 <div>
                   <p className="text-sm font-medium text-neutral-900">
@@ -260,7 +260,7 @@ export default async function OrderDetailPage({
         allowReviewActions={false}
       />
     ) : (
-      <section className="rounded-2xl border border-neutral-200/80 bg-white p-5 text-sm text-neutral-600">
+      <section className="rounded-md border border-neutral-200/80 bg-white p-5 text-sm text-neutral-600">
         El flujo de diseño se habilita cuando la orden está confirmada.
       </section>
     );
@@ -309,7 +309,7 @@ export default async function OrderDetailPage({
 
         {/* Sidebar: Totals & Actions */}
         <div className="space-y-5">
-          <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+          <section className="rounded-md border border-neutral-200/80 bg-white p-5">
             <h2 className="mb-4 text-sm font-semibold text-neutral-900">
               Resumen Financiero
             </h2>
@@ -375,7 +375,7 @@ export default async function OrderDetailPage({
             )}
           </section>
 
-          <section className="rounded-2xl border border-neutral-200/80 bg-white p-5">
+          <section className="rounded-md border border-neutral-200/80 bg-white p-5">
             <h2 className="mb-3 text-sm font-semibold text-neutral-900">
               Validación de Ventas
             </h2>
@@ -386,7 +386,7 @@ export default async function OrderDetailPage({
               Última actualización: {formatDate(order.salesReviewUpdatedAt)}
             </p>
             {order.salesReviewNotes && (
-              <div className="mt-3 rounded-xl border border-neutral-100 bg-neutral-50 p-3 text-xs text-neutral-700">
+              <div className="mt-3 rounded-md border border-neutral-100 bg-neutral-50 p-3 text-xs text-neutral-700">
                 {order.salesReviewNotes}
               </div>
             )}
