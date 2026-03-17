@@ -30,12 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const NOTIFICATION_ROWS = [
   {
@@ -414,8 +409,10 @@ export function ProfileContent() {
 
   const currentProfile = profile;
   const fallbackName = splitRegisteredName(currentProfile.user.name);
-  const displayFirstName = currentProfile.firstName?.trim() || fallbackName.firstName;
-  const displayLastName = currentProfile.lastName?.trim() || fallbackName.lastName;
+  const displayFirstName =
+    currentProfile.firstName?.trim() || fallbackName.firstName;
+  const displayLastName =
+    currentProfile.lastName?.trim() || fallbackName.lastName;
   const effectiveNotificationDraft =
     notificationDraft ??
     buildNotificationDraft(currentProfile.notificationPreferences);
@@ -589,7 +586,7 @@ export function ProfileContent() {
         <TabsContent value="summary" className="space-y-5">
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.45fr)]">
             <Card className="overflow-hidden rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
-              <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))]">
+              <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))] pb-4">
                 <div className="flex items-center gap-3">
                   <span className="flex h-11 w-11 items-center justify-center rounded-md bg-mkmedia-blue text-white shadow-sm shadow-mkmedia-blue/25">
                     <UserRound className="h-5 w-5" />
@@ -621,7 +618,7 @@ export function ProfileContent() {
             </Card>
 
             <Card className="rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(15,23,42,0.2)]">
-              <CardHeader className="border-b border-neutral-200/70">
+              <CardHeader className="border-b border-neutral-200/70 pb-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span className="flex h-11 w-11 items-center justify-center rounded-md bg-neutral-900 text-white">
@@ -739,7 +736,7 @@ export function ProfileContent() {
 
         <TabsContent value="business" className="space-y-5">
           <Card className="overflow-hidden rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.28)]">
-            <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))]">
+            <CardHeader className="border-b border-neutral-200/70 bg-[linear-gradient(180deg,rgba(3,89,168,0.08),rgba(255,255,255,0))] pb-4">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-md bg-mkmedia-blue text-white shadow-sm shadow-mkmedia-blue/25">
                   <Building2 className="h-5 w-5" />
@@ -765,7 +762,8 @@ export function ProfileContent() {
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <ContextTone>
                       {formatOrganizationTypeLabel(
-                        currentProfile.activeOrganizationContext.organizationType,
+                        currentProfile.activeOrganizationContext
+                          .organizationType,
                       )}
                     </ContextTone>
                     <ContextTone variant="accent">
@@ -777,12 +775,16 @@ export function ProfileContent() {
                     <p className="mt-2 inline-flex items-center gap-1 text-xs text-neutral-600">
                       <Link2 className="h-3 w-3" />
                       Via{" "}
-                      {currentProfile.activeOrganizationContext.viaOrganizationName}
+                      {
+                        currentProfile.activeOrganizationContext
+                          .viaOrganizationName
+                      }
                     </p>
                   ) : null}
                   <div className="mt-4 flex items-center gap-2 text-xs text-neutral-500">
                     <BriefcaseBusiness className="h-3.5 w-3.5 text-mkmedia-blue" />
-                    Cambiar esta selección afecta solicitudes, órdenes y pricing.
+                    Cambiar esta selección afecta solicitudes, órdenes y
+                    pricing.
                   </div>
                 </div>
               ) : null}
@@ -811,7 +813,8 @@ export function ProfileContent() {
                               context={context}
                               isActive={
                                 context.contextKey ===
-                                currentProfile.activeOrganizationContext?.contextKey
+                                currentProfile.activeOrganizationContext
+                                  ?.contextKey
                               }
                               isSaving={
                                 switchingContextKey === context.contextKey
@@ -831,7 +834,8 @@ export function ProfileContent() {
                   </p>
                   <p className="mt-2 text-sm leading-6 text-neutral-600">
                     Crea tu primer espacio o vuelve al setup inicial. Si una
-                    agencia o empresa te comparte acceso, también aparecerá aquí.
+                    agencia o empresa te comparte acceso, también aparecerá
+                    aquí.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">
                     <Button
@@ -856,7 +860,7 @@ export function ProfileContent() {
 
         <TabsContent value="notifications" className="space-y-5">
           <Card className="rounded-md border-neutral-200/80 bg-white shadow-[0_24px_60px_-38px_rgba(3,89,168,0.18)]">
-            <CardHeader className="border-b border-neutral-200/70">
+            <CardHeader className="border-b border-neutral-200/70 pb-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="flex h-11 w-11 items-center justify-center rounded-md bg-mkmedia-blue text-white shadow-sm shadow-mkmedia-blue/25">
@@ -914,7 +918,9 @@ export function ProfileContent() {
                         Correo
                       </span>
                       <Checkbox
-                        checked={effectiveNotificationDraft[row.type].emailEnabled}
+                        checked={
+                          effectiveNotificationDraft[row.type].emailEnabled
+                        }
                         onCheckedChange={(value) =>
                           handleNotificationToggle(
                             row.type,
@@ -933,7 +939,9 @@ export function ProfileContent() {
                         In-app
                       </span>
                       <Checkbox
-                        checked={effectiveNotificationDraft[row.type].inAppEnabled}
+                        checked={
+                          effectiveNotificationDraft[row.type].inAppEnabled
+                        }
                         onCheckedChange={(value) =>
                           handleNotificationToggle(
                             row.type,

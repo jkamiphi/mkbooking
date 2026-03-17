@@ -255,7 +255,6 @@ function SidebarPanel({
 
       <footer className="border-t border-neutral-200/80 bg-white/78 px-3 py-3">
         <section className="space-y-2">
-          <SectionLabel>Operando como</SectionLabel>
           <OrganizationContextSelector variant="footer" />
         </section>
       </footer>

@@ -10,6 +10,7 @@ import {
   LoaderCircle,
   Link2,
   Plus,
+  ChevronsUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
@@ -315,7 +316,9 @@ export function OrganizationContextSelector({
               </Button>
               <Button
                 type="button"
-                variant={newOrganizationType === "AGENCY" ? "default" : "outline"}
+                variant={
+                  newOrganizationType === "AGENCY" ? "default" : "outline"
+                }
                 className={
                   newOrganizationType === "AGENCY"
                     ? "rounded-xs bg-mkmedia-blue text-white hover:bg-mkmedia-blue/90"
@@ -452,7 +455,7 @@ export function OrganizationContextSelector({
             {activeContext.displayMeta}
           </span>
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" />
+        <ChevronsUpDown className="h-4 w-4 shrink-0 text-neutral-400" />
       </button>
     );
 
