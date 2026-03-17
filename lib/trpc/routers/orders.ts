@@ -394,6 +394,7 @@ export const ordersRouter = router({
           where,
           include: {
             organization: true,
+            actingAgencyOrganization: true,
             lineItems: true,
             serviceItems: true,
           },

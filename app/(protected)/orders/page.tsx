@@ -1,5 +1,7 @@
 import Link from "next/link";
 import {
+  BriefcaseBusiness,
+  Building2,
   CalendarDays,
   FileText,
   PackageCheck,
@@ -28,6 +30,25 @@ function formatCurrency(value: string | number) {
     style: "currency",
     currency: "USD",
   }).format(Number(value));
+}
+
+function buildOperationContextLabel(input: {
+  brandName?: string | null;
+  actingAgencyName?: string | null;
+}) {
+  if (input.actingAgencyName && input.brandName) {
+    return `Agencia ${input.actingAgencyName} para ${input.brandName}`;
+  }
+
+  if (input.brandName) {
+    return `Marca ${input.brandName}`;
+  }
+
+  if (input.actingAgencyName) {
+    return `Agencia ${input.actingAgencyName}`;
+  }
+
+  return "Contexto no disponible";
 }
 
 const STATUS_CONFIG: Record<
@@ -116,6 +137,10 @@ export default async function OrdersPage() {
           {data.orders.map((order) => {
             const config =
               STATUS_CONFIG[order.status] || STATUS_CONFIG["DRAFT"];
+            const operationContextLabel = buildOperationContextLabel({
+              brandName: order.organization?.name,
+              actingAgencyName: order.actingAgencyOrganization?.name,
+            });
 
             return (
               <div
@@ -132,6 +157,15 @@ export default async function OrdersPage() {
                       · {formatDate(order.createdAt)}
                     </span>
                   </div>
+
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-neutral-600">
+                    {order.actingAgencyOrganization ? (
+                      <BriefcaseBusiness className="h-3.5 w-3.5 text-[#0359A8]" />
+                    ) : (
+                      <Building2 className="h-3.5 w-3.5 text-[#0359A8]" />
+                    )}
+                    {operationContextLabel}
+                  </p>
 
                   <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
                     <span className="inline-flex items-center font-medium text-neutral-900">

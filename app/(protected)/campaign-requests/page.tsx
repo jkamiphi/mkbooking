@@ -1,5 +1,7 @@
 import Link from "next/link";
 import {
+  BriefcaseBusiness,
+  Building2,
   CalendarDays,
   ChevronRight,
   ClipboardList,
@@ -19,6 +21,25 @@ function formatDate(value: Date | null) {
     month: "short",
     year: "numeric",
   });
+}
+
+function buildOperationContextLabel(input: {
+  brandName?: string | null;
+  actingAgencyName?: string | null;
+}) {
+  if (input.actingAgencyName && input.brandName) {
+    return `Agencia ${input.actingAgencyName} para ${input.brandName}`;
+  }
+
+  if (input.brandName) {
+    return `Marca ${input.brandName}`;
+  }
+
+  if (input.actingAgencyName) {
+    return `Agencia ${input.actingAgencyName}`;
+  }
+
+  return "Contexto no disponible";
 }
 
 const STATUS_EDGE_COLORS: Record<string, string> = {
@@ -99,6 +120,10 @@ export default async function CampaignRequestsPage() {
           {data.requests.map((request) => {
             const edgeColor =
               STATUS_EDGE_COLORS[request.status] || "border-l-neutral-300";
+            const operationContextLabel = buildOperationContextLabel({
+              brandName: request.organization?.name,
+              actingAgencyName: request.actingAgencyOrganization?.name,
+            });
 
             return (
               <Link
@@ -117,6 +142,15 @@ export default async function CampaignRequestsPage() {
                       · {formatDate(request.createdAt)}
                     </span>
                   </div>
+
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-neutral-600">
+                    {request.actingAgencyOrganization ? (
+                      <BriefcaseBusiness className="h-3.5 w-3.5 text-[#0359A8]" />
+                    ) : (
+                      <Building2 className="h-3.5 w-3.5 text-[#0359A8]" />
+                    )}
+                    {operationContextLabel}
+                  </p>
 
                   {/* Metrics row */}
                   <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
