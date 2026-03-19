@@ -14,13 +14,14 @@ export async function GET(request: Request) {
 
   const profile = await db.userProfile.findUnique({
     where: { userId: session.user.id },
-    select: { systemRole: true },
+    select: { systemRole: true, isActive: true },
   });
 
   return NextResponse.json({
     path: await resolveAuthenticatedEntryPath({
       userId: session.user.id,
       systemRole: profile?.systemRole,
+      isActive: profile?.isActive,
     }),
   });
 }

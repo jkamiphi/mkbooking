@@ -1,22 +1,10 @@
-import { Suspense } from "react";
-import { UsersContent } from "./users-content";
-import { AdminPageHeader, AdminPageShell } from "@/components/admin/page-shell";
+import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Gestión de Usuarios - Admin",
-  description: "Gestionar usuarios de la plataforma",
+  title: "Gestión de Cuentas - Admin",
+  description: "Redirección a la vista unificada de cuentas",
 };
 
 export default function UsersPage() {
-  return (
-    <AdminPageShell>
-      <AdminPageHeader
-        title="Gestión de usuarios"
-        description="Administrar acceso, estado y roles de todas las cuentas."
-      />
-      <Suspense fallback={null}>
-        <UsersContent />
-      </Suspense>
-    </AdminPageShell>
-  );
+  redirect("/admin/accounts");
 }

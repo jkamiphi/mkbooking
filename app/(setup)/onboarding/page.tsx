@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { resolveActiveOrganizationContextForUser } from "@/lib/services/organization-access";
 import { StarterSetupContent } from "@/components/onboarding/starter-setup-content";
 
@@ -16,6 +17,15 @@ export default async function OnboardingPage() {
 
   if (!session) {
     redirect("/login");
+  }
+
+  const profile = await db.userProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { isActive: true },
+  });
+
+  if (profile?.isActive === false) {
+    redirect("/inactive");
   }
 
   const organizationState = await resolveActiveOrganizationContextForUser(

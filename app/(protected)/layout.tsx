@@ -19,8 +19,12 @@ export default async function ProtectedLayout({
 
   const profile = await db.userProfile.findUnique({
     where: { userId: session.user.id },
-    select: { systemRole: true },
+    select: { systemRole: true, isActive: true },
   });
+
+  if (profile?.isActive === false) {
+    redirect("/inactive");
+  }
 
   if (profile?.systemRole === "INSTALLER") {
     redirect("/installers/tasks");

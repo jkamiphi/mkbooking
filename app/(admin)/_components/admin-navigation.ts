@@ -56,9 +56,9 @@ const adminNavigationTree: AdminNavigationNode[] = [
     children: [
       {
         type: "item",
-        key: "users",
-        name: "Usuarios",
-        href: "/admin/users",
+        key: "accounts",
+        name: "Cuentas",
+        href: "/admin/accounts",
         icon: Users,
         roles: ADMIN_ROLES,
       },

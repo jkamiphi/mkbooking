@@ -175,7 +175,7 @@ function SidebarPanel({
                 {displayName}
               </span>
               <span className="mt-0.5 block text-xs text-neutral-500">
-                Cliente workspace
+                Workspace activo
               </span>
             </span>
           </Link>

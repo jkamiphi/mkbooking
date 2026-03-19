@@ -35,14 +35,14 @@ export function DashboardContent() {
       name: "Total de Usuarios",
       value: stats?.totalUsers ?? 0,
       icon: Users,
-      href: "/admin/users",
+      href: "/admin/accounts",
       color: "bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400",
     },
     {
       name: "Usuarios Activos",
       value: stats?.activeUsers ?? 0,
       icon: UserCheck,
-      href: "/admin/users?isActive=true",
+      href: "/admin/accounts?isActive=true",
       color:
         "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400",
     },
@@ -50,7 +50,7 @@ export function DashboardContent() {
       name: "Personal",
       value: stats?.staffUsers ?? 0,
       icon: Building2,
-      href: "/admin/users?systemRole=STAFF",
+      href: "/admin/accounts?systemRole=STAFF",
       color:
         "bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400",
     },
@@ -58,7 +58,7 @@ export function DashboardContent() {
       name: "Nuevos Esta Semana",
       value: stats?.recentUsers ?? 0,
       icon: UserPlus,
-      href: "/admin/users",
+      href: "/admin/accounts",
       color:
         "bg-orange-100 text-orange-600 dark:bg-orange-900/50 dark:text-orange-400",
     },
@@ -96,14 +96,14 @@ export function DashboardContent() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link
-            href="/admin/users"
+            href="/admin/accounts"
             className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/40"
           >
             <Users className="h-5 w-5 text-muted-foreground" />
             <div>
-              <p className="font-medium text-foreground">Gestionar Usuarios</p>
+              <p className="font-medium text-foreground">Gestionar Cuentas</p>
               <p className="text-sm text-muted-foreground">
-                Ver y gestionar todos los usuarios
+                Vista unificada de usuarios, organizaciones y relaciones.
               </p>
             </div>
           </Link>
@@ -120,7 +120,7 @@ export function DashboardContent() {
             </div>
           </Link>
           <Link
-            href="/admin/users?isActive=false"
+            href="/admin/accounts?isActive=false"
             className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/40"
           >
             <UserCheck className="h-5 w-5 text-muted-foreground" />

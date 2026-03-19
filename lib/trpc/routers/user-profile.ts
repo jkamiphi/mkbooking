@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../init";
+import { router, protectedProcedure, adminProcedure } from "../init";
 import {
   getUserProfileByUserId,
   getOrCreateUserProfile,
@@ -81,8 +81,8 @@ export const userProfileRouter = router({
       return updateUserProfile(ctx.user.id, input, ctx.user.id);
     }),
 
-  // List all profiles (admin only - should add role check)
-  list: protectedProcedure
+  // List all profiles (admin only)
+  list: adminProcedure
     .input(
       z.object({
         isActive: z.boolean().optional(),
@@ -95,8 +95,8 @@ export const userProfileRouter = router({
       return listUserProfiles(input);
     }),
 
-  // Search profiles
-  search: protectedProcedure
+  // Search profiles (admin only)
+  search: adminProcedure
     .input(
       z.object({
         query: z.string().min(1),
@@ -107,22 +107,28 @@ export const userProfileRouter = router({
       return searchUserProfiles(input.query, input.take);
     }),
 
-  // Verify a user profile (admin only - should add role check)
-  verify: protectedProcedure
+  // Verify a user profile (admin only)
+  verify: adminProcedure
     .input(z.object({ userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return verifyUserProfile(input.userId, ctx.user.id);
     }),
 
-  // Deactivate a user profile (admin only - should add role check)
-  deactivate: protectedProcedure
+  // Deactivate a user profile (admin only)
+  deactivate: adminProcedure
     .input(z.object({ userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      if (input.userId === ctx.user.id) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot deactivate yourself",
+        });
+      }
       return deactivateUserProfile(input.userId, ctx.user.id);
     }),
 
-  // Reactivate a user profile (admin only - should add role check)
-  reactivate: protectedProcedure
+  // Reactivate a user profile (admin only)
+  reactivate: adminProcedure
     .input(z.object({ userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return reactivateUserProfile(input.userId, ctx.user.id);

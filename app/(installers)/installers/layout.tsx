@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { createServerTRPCCaller, getServerSession } from "@/lib/trpc/server";
+import { getServerSession } from "@/lib/trpc/server";
+import { db } from "@/lib/db";
 import { resolveAuthenticatedEntryPath } from "@/lib/navigation/role-home";
 import { InstallerAppShell } from "./_components/installer-app-shell";
 
@@ -14,14 +15,21 @@ export default async function InstallersLayout({
     redirect("/login");
   }
 
-  const caller = await createServerTRPCCaller();
-  const profile = await caller.userProfile.current();
+  const profile = await db.userProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { systemRole: true, isActive: true },
+  });
+
+  if (profile?.isActive === false) {
+    redirect("/inactive");
+  }
 
   if (!profile || profile.systemRole !== "INSTALLER") {
     redirect(
       await resolveAuthenticatedEntryPath({
         userId: session.user.id,
         systemRole: profile?.systemRole,
+        isActive: profile?.isActive,
       }),
     );
   }

@@ -1,13 +1,30 @@
 import { z } from "zod";
 import { router, adminProcedure, superAdminProcedure } from "../init";
 import {
+  addOrganizationMembership,
+  addOrganizationMembershipSchema,
+  adminGetAccountDetail,
   adminListUsers,
+  adminListAccounts,
+  adminListAccountsSchema,
   adminGetUserDetail,
   adminGetStats,
   adminSearchUsers,
   ADMIN_USER_ERRORS,
+  createBrandAndLinkSchema,
+  createBrandAndLinkToAgency,
   createAdminUser,
   createAdminUserSchema,
+  removeOrganizationMembership,
+  removeOrganizationMembershipSchema,
+  updateAccountType,
+  updateAccountTypeSchema,
+  updateAgencyClientRelationshipStatusPermissions,
+  updateAgencyClientRelationshipStatusPermissionsSchema,
+  updateOrganizationMembershipRole,
+  updateOrganizationMembershipRoleSchema,
+  upsertAgencyClientRelationship,
+  upsertAgencyClientRelationshipSchema,
   updateSystemRole,
   adminListUsersSchema,
   updateSystemRoleSchema,
@@ -18,6 +35,24 @@ import {
   reactivateUserProfile,
 } from "@/lib/services/user-profile";
 import { TRPCError } from "@trpc/server";
+
+function mapMutationError(error: unknown, fallbackMessage: string) {
+  if (error instanceof TRPCError) {
+    throw error;
+  }
+
+  if (error instanceof Error) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: error.message,
+    });
+  }
+
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: fallbackMessage,
+  });
+}
 
 export const adminRouter = router({
   // Get dashboard stats
@@ -32,6 +67,12 @@ export const adminRouter = router({
       return adminListUsers(input);
     }),
 
+  listAccounts: adminProcedure
+    .input(adminListAccountsSchema)
+    .query(async ({ input }) => {
+      return adminListAccounts(input);
+    }),
+
   // Get detailed user info
   getUserDetail: adminProcedure
     .input(z.object({ userId: z.string() }))
@@ -44,6 +85,19 @@ export const adminRouter = router({
         });
       }
       return user;
+    }),
+
+  getAccountDetail: adminProcedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ input }) => {
+      const account = await adminGetAccountDetail(input.userId);
+      if (!account) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No se encontró la cuenta.",
+        });
+      }
+      return account;
     }),
 
   // Search users
@@ -121,5 +175,82 @@ export const adminRouter = router({
     .input(z.object({ userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return reactivateUserProfile(input.userId, ctx.user.id);
+    }),
+
+  updateAccountType: adminProcedure
+    .input(updateAccountTypeSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await updateAccountType(input, ctx.user.id);
+      } catch (error) {
+        mapMutationError(error, "No se pudo actualizar el tipo de cuenta.");
+      }
+    }),
+
+  addOrganizationMembership: adminProcedure
+    .input(addOrganizationMembershipSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await addOrganizationMembership(input, ctx.user.id);
+      } catch (error) {
+        mapMutationError(error, "No se pudo agregar la membresía.");
+      }
+    }),
+
+  updateOrganizationMembershipRole: adminProcedure
+    .input(updateOrganizationMembershipRoleSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await updateOrganizationMembershipRole(
+          input.membershipId,
+          input.role,
+          ctx.user.id,
+        );
+      } catch (error) {
+        mapMutationError(error, "No se pudo actualizar el rol.");
+      }
+    }),
+
+  removeOrganizationMembership: adminProcedure
+    .input(removeOrganizationMembershipSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await removeOrganizationMembership(input.membershipId, ctx.user.id);
+      } catch (error) {
+        mapMutationError(error, "No se pudo remover la membresía.");
+      }
+    }),
+
+  createBrandAndLinkToAgency: adminProcedure
+    .input(createBrandAndLinkSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await createBrandAndLinkToAgency(input, ctx.user.id);
+      } catch (error) {
+        mapMutationError(error, "No se pudo crear y vincular la marca.");
+      }
+    }),
+
+  upsertAgencyClientRelationship: adminProcedure
+    .input(upsertAgencyClientRelationshipSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await upsertAgencyClientRelationship(input, ctx.user.id);
+      } catch (error) {
+        mapMutationError(error, "No se pudo vincular la marca con la agencia.");
+      }
+    }),
+
+  updateAgencyClientRelationshipStatusPermissions: adminProcedure
+    .input(updateAgencyClientRelationshipStatusPermissionsSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await updateAgencyClientRelationshipStatusPermissions(
+          input,
+          ctx.user.id,
+        );
+      } catch (error) {
+        mapMutationError(error, "No se pudo actualizar la relación.");
+      }
     }),
 });

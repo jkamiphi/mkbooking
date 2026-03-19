@@ -39,6 +39,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "User profile not found" }, { status: 404 });
   }
 
+  if (profile.isActive === false) {
+    return NextResponse.json({ message: "Account is inactive" }, { status: 403 });
+  }
+
   if (profile.organizationRoles.length > 0) {
     return NextResponse.json(
       { message: "Workspace already initialized" },

@@ -18,12 +18,13 @@ export default async function AuthLayout({
   if (session) {
     const profile = await db.userProfile.findUnique({
       where: { userId: session.user.id },
-      select: { systemRole: true },
+      select: { systemRole: true, isActive: true },
     });
     redirect(
       await resolveAuthenticatedEntryPath({
         userId: session.user.id,
         systemRole: profile?.systemRole,
+        isActive: profile?.isActive,
       }),
     );
   }

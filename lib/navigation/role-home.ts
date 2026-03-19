@@ -1,50 +1,33 @@
 import type { SystemRole } from "@prisma/client";
 import { resolveActiveOrganizationContextForUser } from "@/lib/services/organization-access";
+import {
+  resolveAuthenticatedEntryPathFromState,
+  resolvePostLoginPathByRole,
+} from "./role-home-state";
 
-export function resolvePostLoginPathByRole(
-  systemRole: SystemRole | null | undefined
-): string {
-  if (systemRole === "INSTALLER") {
-    return "/installers/tasks";
-  }
-
-  if (systemRole === "SALES") {
-    return "/admin/orders";
-  }
-
-  if (systemRole === "DESIGNER") {
-    return "/admin/design";
-  }
-
-  if (systemRole === "OPERATIONS_PRINT") {
-    return "/admin/print";
-  }
-
-  if (systemRole === "SUPERADMIN" || systemRole === "STAFF") {
-    return "/admin";
-  }
-
-  return "/profile";
-}
+export { resolveAuthenticatedEntryPathFromState, resolvePostLoginPathByRole };
 
 export async function resolveAuthenticatedEntryPath(input: {
   userId: string;
   systemRole: SystemRole | null | undefined;
+  isActive?: boolean | null;
 }) {
-  const roleHome = resolvePostLoginPathByRole(input.systemRole);
+  if (input.isActive === false) {
+    return "/inactive";
+  }
 
   if (
     input.systemRole &&
     input.systemRole !== "CUSTOMER"
   ) {
-    return roleHome;
+    return resolvePostLoginPathByRole(input.systemRole);
   }
 
   const starterState = await resolveActiveOrganizationContextForUser(input.userId);
 
-  if (starterState.needsStarterSetup) {
-    return "/onboarding";
-  }
-
-  return roleHome;
+  return resolveAuthenticatedEntryPathFromState({
+    systemRole: input.systemRole,
+    isActive: input.isActive,
+    needsStarterSetup: starterState.needsStarterSetup,
+  });
 }

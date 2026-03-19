@@ -26,6 +26,7 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
   const utils = trpc.useUtils();
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<SystemRole | null>(null);
+  const { data: me } = trpc.userProfile.me.useQuery();
 
   const {
     data: user,
@@ -84,6 +85,7 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
     user.firstName && user.lastName
       ? `${user.firstName} ${user.lastName}`
       : user.user.name;
+  const canChangeSystemRole = me?.systemRole === "SUPERADMIN";
 
   return (
     <div className="space-y-6">
@@ -312,18 +314,25 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
                 <Shield className="h-5 w-5" />
                 System Role
               </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedRole(user.systemRole);
-                  setShowRoleModal(true);
-                }}
-              >
-                Change
-              </Button>
+              {canChangeSystemRole ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedRole(user.systemRole);
+                    setShowRoleModal(true);
+                  }}
+                >
+                  Change
+                </Button>
+              ) : null}
             </div>
             <RoleBadge role={user.systemRole} />
+            {!canChangeSystemRole ? (
+              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                Solo SUPERADMIN puede cambiar el rol de sistema.
+              </p>
+            ) : null}
           </div>
 
           {/* Dates Card */}
@@ -449,12 +458,14 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
               <Button
                 className="flex-1"
                 onClick={() => {
-                  if (selectedRole) {
+                  if (canChangeSystemRole && selectedRole) {
                     updateRole.mutate({ userId, systemRole: selectedRole });
                   }
                 }}
                 disabled={
-                  updateRole.isPending || selectedRole === user.systemRole
+                  !canChangeSystemRole ||
+                  updateRole.isPending ||
+                  selectedRole === user.systemRole
                 }
               >
                 {updateRole.isPending ? "Saving..." : "Save Changes"}

@@ -42,26 +42,46 @@ type AllowedSystemRole =
   | "OPERATIONS_PRINT"
   | "INSTALLER";
 
-async function resolveUserSystemRole(
-  ctx: Context
-): Promise<AllowedSystemRole | "CUSTOMER" | null> {
+async function resolveUserAccessState(ctx: Context): Promise<{
+  systemRole: AllowedSystemRole | "CUSTOMER" | null;
+  isActive: boolean | null;
+}> {
   if (!ctx.user) {
-    return null;
+    return {
+      systemRole: null,
+      isActive: null,
+    };
   }
 
   const profile = await ctx.db.userProfile.findUnique({
     where: { userId: ctx.user.id },
-    select: { systemRole: true },
+    select: { systemRole: true, isActive: true },
   });
 
-  return profile?.systemRole ?? null;
+  return {
+    systemRole: profile?.systemRole ?? null,
+    isActive: profile?.isActive ?? null,
+  };
+}
+
+function assertUserIsActive(isActive: boolean | null) {
+  if (isActive === false) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Account is inactive",
+    });
+  }
 }
 
 // Middleware to check if user is authenticated
-const isAuthed = t.middleware(({ ctx, next }) => {
+const isAuthed = t.middleware(async ({ ctx, next }) => {
   if (!ctx.session || !ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
+
+  const accessState = await resolveUserAccessState(ctx);
+  assertUserIsActive(accessState.isActive);
+
   return next({
     ctx: {
       ...ctx,
@@ -77,7 +97,9 @@ const isAdmin = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const systemRole = await resolveUserSystemRole(ctx);
+  const accessState = await resolveUserAccessState(ctx);
+  assertUserIsActive(accessState.isActive);
+  const systemRole = accessState.systemRole;
 
   if (!systemRole || !["SUPERADMIN", "STAFF"].includes(systemRole)) {
     throw new TRPCError({
@@ -102,7 +124,9 @@ const isCommercial = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const systemRole = await resolveUserSystemRole(ctx);
+  const accessState = await resolveUserAccessState(ctx);
+  assertUserIsActive(accessState.isActive);
+  const systemRole = accessState.systemRole;
 
   if (!systemRole || !["SUPERADMIN", "STAFF", "SALES"].includes(systemRole)) {
     throw new TRPCError({
@@ -127,7 +151,9 @@ const isSalesReviewer = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const systemRole = await resolveUserSystemRole(ctx);
+  const accessState = await resolveUserAccessState(ctx);
+  assertUserIsActive(accessState.isActive);
+  const systemRole = accessState.systemRole;
 
   if (!systemRole || !["SUPERADMIN", "SALES"].includes(systemRole)) {
     throw new TRPCError({
@@ -152,7 +178,9 @@ const isDesignReviewer = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const systemRole = await resolveUserSystemRole(ctx);
+  const accessState = await resolveUserAccessState(ctx);
+  assertUserIsActive(accessState.isActive);
+  const systemRole = accessState.systemRole;
 
   if (!systemRole || !["SUPERADMIN", "STAFF", "DESIGNER"].includes(systemRole)) {
     throw new TRPCError({
@@ -177,7 +205,9 @@ const isPrintOperator = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const systemRole = await resolveUserSystemRole(ctx);
+  const accessState = await resolveUserAccessState(ctx);
+  assertUserIsActive(accessState.isActive);
+  const systemRole = accessState.systemRole;
 
   if (!systemRole || !["SUPERADMIN", "STAFF", "OPERATIONS_PRINT"].includes(systemRole)) {
     throw new TRPCError({
@@ -202,7 +232,9 @@ const isOperationsOperator = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const systemRole = await resolveUserSystemRole(ctx);
+  const accessState = await resolveUserAccessState(ctx);
+  assertUserIsActive(accessState.isActive);
+  const systemRole = accessState.systemRole;
 
   if (!systemRole || !["SUPERADMIN", "STAFF", "SALES"].includes(systemRole)) {
     throw new TRPCError({
@@ -226,12 +258,10 @@ const isInstaller = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const profile = await ctx.db.userProfile.findUnique({
-    where: { userId: ctx.user.id },
-    select: { systemRole: true, isActive: true },
-  });
+  const accessState = await resolveUserAccessState(ctx);
+  assertUserIsActive(accessState.isActive);
 
-  if (!profile || profile.systemRole !== "INSTALLER" || !profile.isActive) {
+  if (accessState.systemRole !== "INSTALLER") {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Installer access required",
@@ -243,7 +273,7 @@ const isInstaller = t.middleware(async ({ ctx, next }) => {
       ...ctx,
       session: ctx.session,
       user: ctx.user,
-      systemRole: profile.systemRole,
+      systemRole: accessState.systemRole,
     },
   });
 });
@@ -254,7 +284,9 @@ const isSuperAdmin = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const systemRole = await resolveUserSystemRole(ctx);
+  const accessState = await resolveUserAccessState(ctx);
+  assertUserIsActive(accessState.isActive);
+  const systemRole = accessState.systemRole;
 
   if (!systemRole || systemRole !== "SUPERADMIN") {
     throw new TRPCError({

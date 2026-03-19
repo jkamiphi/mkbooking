@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { resolveUploadScopeKeyPrefix, uploadPublicObject } from "@/lib/storage/s3";
 
 const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024;
@@ -47,6 +48,15 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const profile = await db.userProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { isActive: true },
+  });
+
+  if (profile?.isActive === false) {
+    return NextResponse.json({ error: "Account is inactive" }, { status: 403 });
   }
 
   const formData = await request.formData();

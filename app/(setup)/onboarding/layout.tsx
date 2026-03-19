@@ -22,14 +22,19 @@ export default async function OnboardingLayout({
 
   const profile = await db.userProfile.findUnique({
     where: { userId: session.user.id },
-    select: { systemRole: true },
+    select: { systemRole: true, isActive: true },
   });
+
+  if (profile?.isActive === false) {
+    redirect("/inactive");
+  }
 
   if (profile?.systemRole && profile.systemRole !== "CUSTOMER") {
     redirect(
       await resolveAuthenticatedEntryPath({
         userId: session.user.id,
         systemRole: profile.systemRole,
+        isActive: profile.isActive,
       }),
     );
   }

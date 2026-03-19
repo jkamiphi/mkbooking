@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import {
   ORGANIZATION_CONTEXT_COOKIE_NAME,
   resolveActiveOrganizationContextForUser,
@@ -18,6 +19,15 @@ export async function POST(request: Request) {
 
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const profile = await db.userProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { isActive: true },
+  });
+
+  if (profile?.isActive === false) {
+    return NextResponse.json({ message: "Account is inactive" }, { status: 403 });
   }
 
   const rawBody = await request

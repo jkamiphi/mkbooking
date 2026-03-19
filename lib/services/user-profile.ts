@@ -373,12 +373,21 @@ export async function verifyUserProfile(userId: string, verifiedBy: string) {
 }
 
 export async function deactivateUserProfile(userId: string, updatedBy: string) {
-  return db.userProfile.update({
-    where: { userId },
-    data: {
-      isActive: false,
-      updatedBy,
-    },
+  return db.$transaction(async (tx) => {
+    const profile = await tx.userProfile.update({
+      where: { userId },
+      data: {
+        isActive: false,
+        updatedBy,
+      },
+    });
+
+    // Invalidate active sessions immediately after deactivation.
+    await tx.session.deleteMany({
+      where: { userId },
+    });
+
+    return profile;
   });
 }
 
