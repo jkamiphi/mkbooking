@@ -96,7 +96,7 @@ async function enrichUserProfileWithOrganizationContext<
     return null;
   }
 
-  const { contexts, activeContext } =
+  const { contexts, activeContext, accountType } =
     await resolveActiveOrganizationContextForUser(
       profile.userId,
       activeContextKey,
@@ -104,6 +104,7 @@ async function enrichUserProfileWithOrganizationContext<
 
   return {
     ...profile,
+    accountType,
     organizationContexts: contexts,
     activeOrganizationContext: activeContext,
   };

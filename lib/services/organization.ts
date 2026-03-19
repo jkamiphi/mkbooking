@@ -343,39 +343,44 @@ export async function createStarterOrganization(
     (membership) => membership.organization.organizationType === OrganizationType.AGENCY,
   );
   const hasDirectOrganizations = profile.organizationRoles.length > 0;
+  const effectiveAccountType =
+    profile.accountType === UserAccountType.AGENCY ||
+    directAgencyMemberships.length > 0
+      ? UserAccountType.AGENCY
+      : UserAccountType.DIRECT_CLIENT;
 
-  if (profile.accountType === UserAccountType.DIRECT_CLIENT) {
-    if (hasDirectOrganizations) {
+  if (directAgencyMemberships.length > 0) {
+    if (input.organizationType !== OrganizationType.DIRECT_CLIENT) {
       throw new Error(
-        "Las cuentas de cliente directo no pueden crear más negocios desde este flujo.",
+        "Las cuentas de agencia solo pueden crear marcas cliente desde este flujo.",
       );
     }
 
+    const resolvedUserId = options?.userId ?? profile.userId;
+    const { activeContext } = await resolveActiveOrganizationContextForUser(
+      resolvedUserId,
+      options?.activeContextKey,
+    );
+    const explicitAgencyId =
+      activeContext?.operatingAgencyOrganizationId ??
+      (activeContext?.organizationType === OrganizationType.AGENCY &&
+      activeContext?.accessType === "DIRECT"
+        ? activeContext.organizationId
+        : null);
+    const operatingAgencyId =
+      (explicitAgencyId &&
+      directAgencyMemberships.some(
+        (membership) => membership.organizationId === explicitAgencyId,
+      )
+        ? explicitAgencyId
+        : null) ?? directAgencyMemberships[0].organizationId;
+
     return db.$transaction(async (tx) => {
-      const organization = await tx.organization.create({
+      const clientBrand = await tx.brand.create({
         data: {
           name: displayName,
           legalName: displayName,
-          organizationType: OrganizationType.DIRECT_CLIENT,
-          legalEntityType: LegalEntityType.LEGAL_ENTITY,
-          createdById: userProfileId,
-        },
-      });
-
-      await tx.organizationMember.create({
-        data: {
-          organizationId: organization.id,
-          userProfileId,
-          role: OrganizationRole.OWNER,
-          acceptedAt: new Date(),
-        },
-      });
-
-      const brand = await tx.brand.create({
-        data: {
-          ownerOrganizationId: organization.id,
-          name: displayName,
-          legalName: displayName,
+          ownerOrganizationId: null,
           createdBy: userProfileId,
           updatedBy: userProfileId,
         },
@@ -384,38 +389,34 @@ export async function createStarterOrganization(
       await tx.brandAccess.upsert({
         where: {
           organizationId_brandId: {
-            organizationId: organization.id,
-            brandId: brand.id,
+            organizationId: operatingAgencyId,
+            brandId: clientBrand.id,
           },
         },
         create: {
-          organizationId: organization.id,
-          brandId: brand.id,
-          accessType: BrandAccessType.OWNER,
+          organizationId: operatingAgencyId,
+          brandId: clientBrand.id,
+          accessType: BrandAccessType.DELEGATED,
           status: OrganizationRelationshipStatus.ACTIVE,
           createdBy: userProfileId,
           updatedBy: userProfileId,
           canCreateRequests: true,
           canCreateOrders: true,
-          canViewBilling: true,
-          canManageContacts: true,
+          canViewBilling: false,
+          canManageContacts: false,
         },
         update: {
-          accessType: BrandAccessType.OWNER,
+          accessType: BrandAccessType.DELEGATED,
           status: OrganizationRelationshipStatus.ACTIVE,
           updatedBy: userProfileId,
-          canCreateRequests: true,
-          canCreateOrders: true,
-          canViewBilling: true,
-          canManageContacts: true,
         },
       });
 
-      return brand;
+      return clientBrand;
     });
   }
 
-  if (directAgencyMemberships.length === 0) {
+  if (effectiveAccountType === UserAccountType.AGENCY) {
     if (input.organizationType !== OrganizationType.AGENCY) {
       throw new Error("Primero debes crear tu agencia principal.");
     }
@@ -431,37 +432,37 @@ export async function createStarterOrganization(
     );
   }
 
-  if (input.organizationType !== OrganizationType.DIRECT_CLIENT) {
+  if (hasDirectOrganizations) {
     throw new Error(
-      "Las cuentas de agencia solo pueden crear marcas cliente desde este flujo.",
+      "Las cuentas de cliente directo no pueden crear más negocios desde este flujo.",
     );
   }
 
-  const resolvedUserId = options?.userId ?? profile.userId;
-  const { activeContext } = await resolveActiveOrganizationContextForUser(
-    resolvedUserId,
-    options?.activeContextKey,
-  );
-  const explicitAgencyId =
-    activeContext?.operatingAgencyOrganizationId ??
-    (activeContext?.organizationType === OrganizationType.AGENCY &&
-    activeContext?.accessType === "DIRECT"
-      ? activeContext.organizationId
-      : null);
-  const operatingAgencyId =
-    (explicitAgencyId &&
-    directAgencyMemberships.some(
-      (membership) => membership.organizationId === explicitAgencyId,
-    )
-      ? explicitAgencyId
-      : null) ?? directAgencyMemberships[0].organizationId;
-
   return db.$transaction(async (tx) => {
-    const clientBrand = await tx.brand.create({
+    const organization = await tx.organization.create({
       data: {
         name: displayName,
         legalName: displayName,
-        ownerOrganizationId: null,
+        organizationType: OrganizationType.DIRECT_CLIENT,
+        legalEntityType: LegalEntityType.LEGAL_ENTITY,
+        createdById: userProfileId,
+      },
+    });
+
+    await tx.organizationMember.create({
+      data: {
+        organizationId: organization.id,
+        userProfileId,
+        role: OrganizationRole.OWNER,
+        acceptedAt: new Date(),
+      },
+    });
+
+    const brand = await tx.brand.create({
+      data: {
+        ownerOrganizationId: organization.id,
+        name: displayName,
+        legalName: displayName,
         createdBy: userProfileId,
         updatedBy: userProfileId,
       },
@@ -470,30 +471,34 @@ export async function createStarterOrganization(
     await tx.brandAccess.upsert({
       where: {
         organizationId_brandId: {
-          organizationId: operatingAgencyId,
-          brandId: clientBrand.id,
+          organizationId: organization.id,
+          brandId: brand.id,
         },
       },
       create: {
-        organizationId: operatingAgencyId,
-        brandId: clientBrand.id,
-        accessType: BrandAccessType.DELEGATED,
+        organizationId: organization.id,
+        brandId: brand.id,
+        accessType: BrandAccessType.OWNER,
         status: OrganizationRelationshipStatus.ACTIVE,
         createdBy: userProfileId,
         updatedBy: userProfileId,
         canCreateRequests: true,
         canCreateOrders: true,
-        canViewBilling: false,
-        canManageContacts: false,
+        canViewBilling: true,
+        canManageContacts: true,
       },
       update: {
-        accessType: BrandAccessType.DELEGATED,
+        accessType: BrandAccessType.OWNER,
         status: OrganizationRelationshipStatus.ACTIVE,
         updatedBy: userProfileId,
+        canCreateRequests: true,
+        canCreateOrders: true,
+        canViewBilling: true,
+        canManageContacts: true,
       },
     });
 
-    return clientBrand;
+    return brand;
   });
 }
 

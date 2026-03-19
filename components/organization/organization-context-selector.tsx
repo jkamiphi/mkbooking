@@ -203,7 +203,6 @@ export function OrganizationContextSelector({
   );
 
   const canCreateClientBrand =
-    accountType === "AGENCY" &&
     contexts.some(
       (context) =>
         context.organizationType === "AGENCY" && context.accessType === "DIRECT",

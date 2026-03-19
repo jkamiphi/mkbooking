@@ -656,8 +656,18 @@ export async function resolveActiveOrganizationContextForUser(
     where: { userId },
     select: { accountType: true },
   });
-  const accountType = profile?.accountType ?? UserAccountType.DIRECT_CLIENT;
+  const persistedAccountType =
+    profile?.accountType ?? UserAccountType.DIRECT_CLIENT;
   const contexts = await listAccessibleOrganizationContextsForUser(userId);
+  const hasDirectAgencyContext = contexts.some(
+    (context) =>
+      context.organizationType === OrganizationType.AGENCY &&
+      context.accessType === "DIRECT",
+  );
+  const accountType =
+    persistedAccountType === UserAccountType.AGENCY || hasDirectAgencyContext
+      ? UserAccountType.AGENCY
+      : UserAccountType.DIRECT_CLIENT;
   const hasAccessibleContexts = contexts.length > 0;
   const hasDirectOrganizations = contexts.some(
     (context) => context.accessType === "DIRECT",

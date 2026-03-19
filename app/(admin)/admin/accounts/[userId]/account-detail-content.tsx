@@ -91,7 +91,10 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
   const { data: me } = trpc.userProfile.me.useQuery();
 
   const accountQuery = trpc.admin.getAccountDetail.useQuery({ userId });
-  const organizationsQuery = trpc.organization.list.useQuery({ skip: 0, take: 300 });
+  const organizationsQuery = trpc.organization.list.useQuery({
+    skip: 0,
+    take: 300,
+  });
   const advertisersQuery = trpc.organization.list.useQuery({
     organizationType: "DIRECT_CLIENT",
     isActive: true,
@@ -104,7 +107,8 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
   const [selectedSystemRole, setSelectedSystemRole] =
     useState<SystemRole | null>(null);
   const [membershipOrganizationId, setMembershipOrganizationId] = useState("");
-  const [membershipRole, setMembershipRole] = useState<OrganizationRole>("ADMIN");
+  const [membershipRole, setMembershipRole] =
+    useState<OrganizationRole>("ADMIN");
   const [membershipRoleDrafts, setMembershipRoleDrafts] = useState<
     Record<string, OrganizationRole>
   >({});
@@ -199,15 +203,16 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
     },
   });
 
-  const updateMembershipRole = trpc.admin.updateOrganizationMembershipRole.useMutation({
-    onSuccess: async () => {
-      await invalidateAccountViews();
-      toast.success("Rol de membresía actualizado.");
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const updateMembershipRole =
+    trpc.admin.updateOrganizationMembershipRole.useMutation({
+      onSuccess: async () => {
+        await invalidateAccountViews();
+        toast.success("Rol de membresía actualizado.");
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
 
   const removeMembership = trpc.admin.removeOrganizationMembership.useMutation({
     onSuccess: async () => {
@@ -233,16 +238,17 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
     },
   });
 
-  const upsertRelationship = trpc.admin.upsertAgencyClientRelationship.useMutation({
-    onSuccess: async () => {
-      await invalidateAccountViews();
-      toast.success("Relación agencia-marca actualizada.");
-      setLinkAdvertiserId("");
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const upsertRelationship =
+    trpc.admin.upsertAgencyClientRelationship.useMutation({
+      onSuccess: async () => {
+        await invalidateAccountViews();
+        toast.success("Relación agencia-marca actualizada.");
+        setLinkAdvertiserId("");
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
 
   const updateRelationship =
     trpc.admin.updateAgencyClientRelationshipStatusPermissions.useMutation({
@@ -279,7 +285,7 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
 
   if (accountQuery.error || !account) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+      <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
         No se pudo cargar el detalle de la cuenta.
       </div>
     );
@@ -301,15 +307,13 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/admin/accounts">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              Volver
-            </Button>
-          </Link>
           <div>
-            <p className="text-xl font-semibold text-foreground">{displayName}</p>
-            <p className="text-sm text-muted-foreground">{account.user.email}</p>
+            <p className="text-xl font-semibold text-foreground">
+              {displayName}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {account.user.email}
+            </p>
           </div>
         </div>
 
@@ -332,8 +336,10 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
-          <TabsTrigger value="organizations">Organizaciones</TabsTrigger>
-          <TabsTrigger value="relationships">Relaciones agencia-marca</TabsTrigger>
+          <TabsTrigger value="memberships">Membresías</TabsTrigger>
+          <TabsTrigger value="relationships">
+            Relaciones agencia-marca
+          </TabsTrigger>
           <TabsTrigger value="security">Seguridad/Acceso</TabsTrigger>
         </TabsList>
 
@@ -352,23 +358,33 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                 <p className="text-sm text-foreground">{account.user.email}</p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Teléfono</Label>
-                <p className="text-sm text-foreground">{account.phone || "-"}</p>
+                <Label className="text-xs text-muted-foreground">
+                  Teléfono
+                </Label>
+                <p className="text-sm text-foreground">
+                  {account.phone || "-"}
+                </p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Locale / Zona horaria</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Locale / Zona horaria
+                </Label>
                 <p className="text-sm text-foreground">
                   {account.locale} / {account.timezone}
                 </p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Cuenta creada</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Cuenta creada
+                </Label>
                 <p className="text-sm text-foreground">
                   {new Date(account.createdAt).toLocaleDateString("es-PA")}
                 </p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Última actualización</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Última actualización
+                </Label>
                 <p className="text-sm text-foreground">
                   {new Date(account.updatedAt).toLocaleDateString("es-PA")}
                 </p>
@@ -406,13 +422,15 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                 }
               >
                 <Save className="mr-2 h-4 w-4" />
-                {updateAccountType.isPending ? "Guardando..." : "Guardar tipo de cuenta"}
+                {updateAccountType.isPending
+                  ? "Guardando..."
+                  : "Guardar tipo de cuenta"}
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="organizations" className="space-y-4">
+        <TabsContent value="memberships" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Agregar membresía</CardTitle>
@@ -422,12 +440,15 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                 <Label className="mb-1.5 block">Organización</Label>
                 <SelectNative
                   value={membershipOrganizationId}
-                  onChange={(event) => setMembershipOrganizationId(event.target.value)}
+                  onChange={(event) =>
+                    setMembershipOrganizationId(event.target.value)
+                  }
                 >
                   <option value="">Selecciona organización</option>
                   {allOrganizations.map((organization) => (
                     <option key={organization.id} value={organization.id}>
-                      {organization.name} ({ORGANIZATION_TYPE_LABELS[organization.organizationType]})
+                      {organization.name} (
+                      {ORGANIZATION_TYPE_LABELS[organization.organizationType]})
                     </option>
                   ))}
                 </SelectNative>
@@ -456,9 +477,13 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                       role: membershipRole,
                     })
                   }
-                  disabled={addMembership.isPending || !membershipOrganizationId}
+                  disabled={
+                    addMembership.isPending || !membershipOrganizationId
+                  }
                 >
-                  {addMembership.isPending ? "Agregando..." : "Agregar membresía"}
+                  {addMembership.isPending
+                    ? "Agregando..."
+                    : "Agregar membresía"}
                 </Button>
               </div>
             </CardContent>
@@ -473,13 +498,19 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                 account.organizationRoles.map((membership) => (
                   <div
                     key={membership.membershipId}
-                    className="rounded-lg border border-border bg-background p-3"
+                    className="rounded-md border border-border bg-background p-3"
                   >
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
-                        <p className="font-medium text-foreground">{membership.organization.name}</p>
+                        <p className="font-medium text-foreground">
+                          {membership.organization.name}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          {ORGANIZATION_TYPE_LABELS[membership.organization.organizationType]}
+                          {
+                            ORGANIZATION_TYPE_LABELS[
+                              membership.organization.organizationType
+                            ]
+                          }
                         </p>
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -491,7 +522,8 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                           onChange={(event) =>
                             setMembershipRoleDrafts((current) => ({
                               ...current,
-                              [membership.membershipId]: event.target.value as OrganizationRole,
+                              [membership.membershipId]: event.target
+                                .value as OrganizationRole,
                             }))
                           }
                         >
@@ -531,7 +563,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">Sin membresías activas.</p>
+                <p className="text-sm text-muted-foreground">
+                  Sin membresías activas.
+                </p>
               )}
             </CardContent>
           </Card>
@@ -549,7 +583,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                     <Label className="mb-1.5 block">Agencia operativa</Label>
                     <SelectNative
                       value={effectiveNewBrandAgencyId}
-                      onChange={(event) => setNewBrandAgencyId(event.target.value)}
+                      onChange={(event) =>
+                        setNewBrandAgencyId(event.target.value)
+                      }
                     >
                       {agencyMemberships.map((membership) => (
                         <option
@@ -567,28 +603,36 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                       <Label className="mb-1.5 block">Nombre de marca *</Label>
                       <Input
                         value={newBrandName}
-                        onChange={(event) => setNewBrandName(event.target.value)}
+                        onChange={(event) =>
+                          setNewBrandName(event.target.value)
+                        }
                       />
                     </div>
                     <div>
                       <Label className="mb-1.5 block">Razón social</Label>
                       <Input
                         value={newBrandLegalName}
-                        onChange={(event) => setNewBrandLegalName(event.target.value)}
+                        onChange={(event) =>
+                          setNewBrandLegalName(event.target.value)
+                        }
                       />
                     </div>
                     <div>
                       <Label className="mb-1.5 block">Nombre comercial</Label>
                       <Input
                         value={newBrandTradeName}
-                        onChange={(event) => setNewBrandTradeName(event.target.value)}
+                        onChange={(event) =>
+                          setNewBrandTradeName(event.target.value)
+                        }
                       />
                     </div>
                     <div>
                       <Label className="mb-1.5 block">RUC / Tax ID</Label>
                       <Input
                         value={newBrandTaxId}
-                        onChange={(event) => setNewBrandTaxId(event.target.value)}
+                        onChange={(event) =>
+                          setNewBrandTaxId(event.target.value)
+                        }
                       />
                     </div>
                   </div>
@@ -610,13 +654,15 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                       !newBrandName.trim()
                     }
                   >
-                    {createBrandAndLink.isPending ? "Creando..." : "Crear y vincular"}
+                    {createBrandAndLink.isPending
+                      ? "Creando..."
+                      : "Crear y vincular"}
                   </Button>
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Esta cuenta no tiene membresías en agencias. Agrega una membresía de
-                  agencia para habilitar este flujo.
+                  Esta cuenta no tiene membresías en agencias. Agrega una
+                  membresía de agencia para habilitar este flujo.
                 </p>
               )}
             </CardContent>
@@ -649,7 +695,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                   <Label className="mb-1.5 block">Marca</Label>
                   <SelectNative
                     value={linkAdvertiserId}
-                    onChange={(event) => setLinkAdvertiserId(event.target.value)}
+                    onChange={(event) =>
+                      setLinkAdvertiserId(event.target.value)
+                    }
                   >
                     <option value="">Selecciona marca</option>
                     {allAdvertisers.map((organization) => (
@@ -695,7 +743,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                     type="checkbox"
                     className={permissionCheckboxClasses()}
                     checked={linkCanCreateOrders}
-                    onChange={(event) => setLinkCanCreateOrders(event.target.checked)}
+                    onChange={(event) =>
+                      setLinkCanCreateOrders(event.target.checked)
+                    }
                   />
                   Puede crear órdenes
                 </label>
@@ -704,7 +754,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                     type="checkbox"
                     className={permissionCheckboxClasses()}
                     checked={linkCanViewBilling}
-                    onChange={(event) => setLinkCanViewBilling(event.target.checked)}
+                    onChange={(event) =>
+                      setLinkCanViewBilling(event.target.checked)
+                    }
                   />
                   Puede ver facturación
                 </label>
@@ -739,7 +791,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                   !linkAdvertiserId
                 }
               >
-                {upsertRelationship.isPending ? "Guardando..." : "Vincular marca"}
+                {upsertRelationship.isPending
+                  ? "Guardando..."
+                  : "Vincular marca"}
               </Button>
             </CardContent>
           </Card>
@@ -760,14 +814,26 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                   };
 
                   return (
-                    <div key={relationship.id} className="rounded-lg border p-3">
+                    <div
+                      key={relationship.id}
+                      className="rounded-md border p-3"
+                    >
                       <div className="mb-3 flex flex-wrap items-center gap-2">
                         <Building2 className="h-4 w-4 text-muted-foreground" />
                         <p className="text-sm text-foreground">
-                          <span className="font-medium">{relationship.sourceOrganization.name}</span>{" "}
-                          → <span className="font-medium">{relationship.targetOrganization.name}</span>
+                          <span className="font-medium">
+                            {relationship.sourceOrganization.name}
+                          </span>{" "}
+                          →{" "}
+                          <span className="font-medium">
+                            {relationship.targetOrganization.name}
+                          </span>
                         </p>
-                        <Badge variant={getRelationshipStatusBadgeVariant(draft.status)}>
+                        <Badge
+                          variant={getRelationshipStatusBadgeVariant(
+                            draft.status,
+                          )}
+                        >
                           {RELATIONSHIP_STATUS_LABELS[draft.status]}
                         </Badge>
                       </div>
@@ -782,8 +848,8 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                                 ...current,
                                 [relationship.id]: {
                                   ...draft,
-                                  status:
-                                    event.target.value as OrganizationRelationshipStatus,
+                                  status: event.target
+                                    .value as OrganizationRelationshipStatus,
                                 },
                               }))
                             }
@@ -889,7 +955,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                   );
                 })
               ) : (
-                <p className="text-sm text-muted-foreground">Sin relaciones gestionadas.</p>
+                <p className="text-sm text-muted-foreground">
+                  Sin relaciones gestionadas.
+                </p>
               )}
             </CardContent>
           </Card>
@@ -903,20 +971,25 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                 account.clientRelationships.map((relationship) => (
                   <div
                     key={relationship.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    className="flex items-center justify-between rounded-md border p-3"
                   >
                     <p className="text-sm text-foreground">
-                      {relationship.sourceOrganization.name} → {relationship.targetOrganization.name}
+                      {relationship.sourceOrganization.name} →{" "}
+                      {relationship.targetOrganization.name}
                     </p>
                     <Badge
-                      variant={getRelationshipStatusBadgeVariant(relationship.status)}
+                      variant={getRelationshipStatusBadgeVariant(
+                        relationship.status,
+                      )}
                     >
                       {RELATIONSHIP_STATUS_LABELS[relationship.status]}
                     </Badge>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">Sin relaciones como marca.</p>
+                <p className="text-sm text-muted-foreground">
+                  Sin relaciones como marca.
+                </p>
               )}
             </CardContent>
           </Card>
@@ -962,7 +1035,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                   effectiveSystemRole === account.systemRole
                 }
               >
-                {updateSystemRole.isPending ? "Guardando..." : "Guardar rol de sistema"}
+                {updateSystemRole.isPending
+                  ? "Guardando..."
+                  : "Guardar rol de sistema"}
               </Button>
             </CardContent>
           </Card>
@@ -973,29 +1048,47 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Estado de cuenta</span>
+                <span className="text-sm text-muted-foreground">
+                  Estado de cuenta
+                </span>
                 <span
                   className={`flex items-center gap-1 text-sm ${account.isActive ? "text-emerald-600" : "text-red-600"}`}
                 >
-                  {account.isActive ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                  {account.isActive ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
                   {account.isActive ? "Activa" : "Inactiva"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Perfil verificado</span>
+                <span className="text-sm text-muted-foreground">
+                  Perfil verificado
+                </span>
                 <span
                   className={`flex items-center gap-1 text-sm ${account.isVerified ? "text-emerald-600" : "text-muted-foreground"}`}
                 >
-                  {account.isVerified ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                  {account.isVerified ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
                   {account.isVerified ? "Sí" : "No"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Email verificado</span>
+                <span className="text-sm text-muted-foreground">
+                  Email verificado
+                </span>
                 <span
                   className={`flex items-center gap-1 text-sm ${account.user.emailVerified ? "text-emerald-600" : "text-muted-foreground"}`}
                 >
-                  {account.user.emailVerified ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                  {account.user.emailVerified ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <XCircle className="h-4 w-4" />
+                  )}
                   {account.user.emailVerified ? "Sí" : "No"}
                 </span>
               </div>
@@ -1008,7 +1101,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                     disabled={verifyUser.isPending}
                   >
                     <UserCheck className="mr-1 h-4 w-4" />
-                    {verifyUser.isPending ? "Verificando..." : "Verificar usuario"}
+                    {verifyUser.isPending
+                      ? "Verificando..."
+                      : "Verificar usuario"}
                   </Button>
                 ) : null}
 
@@ -1020,7 +1115,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                     disabled={deactivateUser.isPending}
                   >
                     <UserX className="mr-1 h-4 w-4" />
-                    {deactivateUser.isPending ? "Desactivando..." : "Desactivar cuenta"}
+                    {deactivateUser.isPending
+                      ? "Desactivando..."
+                      : "Desactivar cuenta"}
                   </Button>
                 ) : (
                   <Button
@@ -1030,7 +1127,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                     disabled={reactivateUser.isPending}
                   >
                     <UserCheck className="mr-1 h-4 w-4" />
-                    {reactivateUser.isPending ? "Reactivando..." : "Reactivar cuenta"}
+                    {reactivateUser.isPending
+                      ? "Reactivando..."
+                      : "Reactivar cuenta"}
                   </Button>
                 )}
               </div>
@@ -1052,11 +1151,13 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
-                Cuenta creada: {new Date(account.user.createdAt).toLocaleDateString("es-PA")}
+                Cuenta creada:{" "}
+                {new Date(account.user.createdAt).toLocaleDateString("es-PA")}
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
-                Perfil actualizado: {new Date(account.updatedAt).toLocaleDateString("es-PA")}
+                Perfil actualizado:{" "}
+                {new Date(account.updatedAt).toLocaleDateString("es-PA")}
               </div>
             </CardContent>
           </Card>
