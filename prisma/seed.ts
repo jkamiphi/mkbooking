@@ -238,6 +238,307 @@ interface ZoneWithProvince {
   };
 }
 
+interface SeedUserInput {
+  email: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  password: string;
+  systemRole:
+    | "SUPERADMIN"
+    | "STAFF"
+    | "DESIGNER"
+    | "SALES"
+    | "OPERATIONS_PRINT"
+    | "INSTALLER"
+    | "CUSTOMER";
+  accountType: "DIRECT_CLIENT" | "AGENCY";
+  isActive?: boolean;
+}
+
+interface SeedBusinessUser {
+  email: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface SeedAgencyOrganization {
+  key: string;
+  name: string;
+  legalName: string;
+  tradeName: string;
+  taxId: string;
+  email: string;
+  phone: string;
+  industry: string;
+  ownerUser: SeedBusinessUser;
+}
+
+interface SeedDirectClientOrganization {
+  key: string;
+  name: string;
+  legalName: string;
+  tradeName: string;
+  taxId: string;
+  email: string;
+  phone: string;
+  industry: string;
+  ownerUser: SeedBusinessUser;
+  brand: {
+    name: string;
+    legalName: string;
+    tradeName: string;
+    taxId: string;
+    email: string;
+    phone: string;
+    industry: string;
+  };
+}
+
+interface SeedOrganizationInput {
+  name: string;
+  legalName: string;
+  tradeName: string | null;
+  organizationType: "DIRECT_CLIENT" | "AGENCY";
+  taxId: string;
+  email: string | null;
+  phone: string | null;
+  industry: string | null;
+  createdByProfileId: string;
+}
+
+interface SeedBrandInput {
+  ownerOrganizationId: string;
+  name: string;
+  legalName: string;
+  tradeName: string | null;
+  taxId: string;
+  email: string | null;
+  phone: string | null;
+  industry: string | null;
+  createdByProfileId: string;
+}
+
+const seedB2BPassword = "Seed123!";
+
+const platformInternalUsers: SeedUserInput[] = [
+  {
+    email: "seed.superadmin@mkbooking.com",
+    name: "Seed Superadmin",
+    firstName: "Seed",
+    lastName: "Superadmin",
+    password: seedB2BPassword,
+    systemRole: "SUPERADMIN",
+    accountType: "DIRECT_CLIENT",
+  },
+  {
+    email: "seed.staff@mkbooking.com",
+    name: "Seed Staff",
+    firstName: "Seed",
+    lastName: "Staff",
+    password: seedB2BPassword,
+    systemRole: "STAFF",
+    accountType: "DIRECT_CLIENT",
+  },
+  {
+    email: "seed.designer@mkbooking.com",
+    name: "Seed Designer",
+    firstName: "Seed",
+    lastName: "Designer",
+    password: seedB2BPassword,
+    systemRole: "DESIGNER",
+    accountType: "DIRECT_CLIENT",
+  },
+  {
+    email: "seed.sales@mkbooking.com",
+    name: "Seed Sales",
+    firstName: "Seed",
+    lastName: "Sales",
+    password: seedB2BPassword,
+    systemRole: "SALES",
+    accountType: "DIRECT_CLIENT",
+  },
+  {
+    email: "seed.operations.print@mkbooking.com",
+    name: "Seed Operations Print",
+    firstName: "Seed",
+    lastName: "Operations Print",
+    password: seedB2BPassword,
+    systemRole: "OPERATIONS_PRINT",
+    accountType: "DIRECT_CLIENT",
+  },
+];
+
+const seedAgencies: SeedAgencyOrganization[] = [
+  {
+    key: "agency_a",
+    name: "Agencia A - MK Nexus",
+    legalName: "MK Nexus Agency S.A.",
+    tradeName: "MK Nexus",
+    taxId: "RUC-AGY-1001-01",
+    email: "contacto@nexus-agency.pa",
+    phone: "+507 6200-1001",
+    industry: "Advertising Agency",
+    ownerUser: {
+      email: "owner.nexus@mkbooking.com",
+      name: "Laura Batista",
+      firstName: "Laura",
+      lastName: "Batista",
+    },
+  },
+  {
+    key: "agency_b",
+    name: "Agencia B - Istmo Growth",
+    legalName: "Istmo Growth Media S.A.",
+    tradeName: "Istmo Growth",
+    taxId: "RUC-AGY-1002-01",
+    email: "contacto@istmogrowth.pa",
+    phone: "+507 6200-1002",
+    industry: "Media Buying",
+    ownerUser: {
+      email: "owner.istmo@mkbooking.com",
+      name: "Gabriel Ríos",
+      firstName: "Gabriel",
+      lastName: "Ríos",
+    },
+  },
+  {
+    key: "agency_c",
+    name: "Agencia C - Canal Impact",
+    legalName: "Canal Impact Partners S.A.",
+    tradeName: "Canal Impact",
+    taxId: "RUC-AGY-1003-01",
+    email: "contacto@canalimpact.pa",
+    phone: "+507 6200-1003",
+    industry: "Integrated Marketing",
+    ownerUser: {
+      email: "owner.canalimpact@mkbooking.com",
+      name: "Patricia León",
+      firstName: "Patricia",
+      lastName: "León",
+    },
+  },
+];
+
+const seedDirectClients: SeedDirectClientOrganization[] = [
+  {
+    key: "client_1",
+    name: "Café Montaña Panamá",
+    legalName: "Café Montaña Panamá S.A.",
+    tradeName: "Café Montaña",
+    taxId: "RUC-CLI-2001-01",
+    email: "compras@cafemontana.pa",
+    phone: "+507 6300-2001",
+    industry: "Food & Beverage",
+    ownerUser: {
+      email: "owner.cafemontana@mkbooking.com",
+      name: "Ricardo Castillo",
+      firstName: "Ricardo",
+      lastName: "Castillo",
+    },
+    brand: {
+      name: "Café Montaña",
+      legalName: "Café Montaña Panamá S.A.",
+      tradeName: "Café Montaña",
+      taxId: "RUC-BRD-3001-01",
+      email: "brand@cafemontana.pa",
+      phone: "+507 6300-3001",
+      industry: "Coffee Retail",
+    },
+  },
+  {
+    key: "client_2",
+    name: "Banco Faro Panamá",
+    legalName: "Banco Faro Panamá S.A.",
+    tradeName: "Banco Faro",
+    taxId: "RUC-CLI-2002-01",
+    email: "marketing@bancofaro.pa",
+    phone: "+507 6300-2002",
+    industry: "Financial Services",
+    ownerUser: {
+      email: "owner.bancofaro@mkbooking.com",
+      name: "Andrea Vega",
+      firstName: "Andrea",
+      lastName: "Vega",
+    },
+    brand: {
+      name: "Banco Faro",
+      legalName: "Banco Faro Panamá S.A.",
+      tradeName: "Banco Faro",
+      taxId: "RUC-BRD-3002-01",
+      email: "brand@bancofaro.pa",
+      phone: "+507 6300-3002",
+      industry: "Banking",
+    },
+  },
+  {
+    key: "client_3",
+    name: "Tecnoplus Retail Panamá",
+    legalName: "Tecnoplus Retail Panamá S.A.",
+    tradeName: "Tecnoplus",
+    taxId: "RUC-CLI-2003-01",
+    email: "marketing@tecnoplus.pa",
+    phone: "+507 6300-2003",
+    industry: "Retail",
+    ownerUser: {
+      email: "owner.tecnoplus@mkbooking.com",
+      name: "Miguel Pitti",
+      firstName: "Miguel",
+      lastName: "Pitti",
+    },
+    brand: {
+      name: "Tecnoplus",
+      legalName: "Tecnoplus Retail Panamá S.A.",
+      tradeName: "Tecnoplus",
+      taxId: "RUC-BRD-3003-01",
+      email: "brand@tecnoplus.pa",
+      phone: "+507 6300-3003",
+      industry: "Consumer Electronics",
+    },
+  },
+  {
+    key: "client_4",
+    name: "Salud Vital Labs",
+    legalName: "Salud Vital Labs S.A.",
+    tradeName: "Salud Vital",
+    taxId: "RUC-CLI-2004-01",
+    email: "marketing@saludvital.pa",
+    phone: "+507 6300-2004",
+    industry: "Healthcare",
+    ownerUser: {
+      email: "owner.saludvital@mkbooking.com",
+      name: "Carla De León",
+      firstName: "Carla",
+      lastName: "De León",
+    },
+    brand: {
+      name: "Salud Vital",
+      legalName: "Salud Vital Labs S.A.",
+      tradeName: "Salud Vital",
+      taxId: "RUC-BRD-3004-01",
+      email: "brand@saludvital.pa",
+      phone: "+507 6300-3004",
+      industry: "Health Products",
+    },
+  },
+];
+
+const agencyBrandDistribution: Array<{ agencyKey: string; clientKeys: string[] }> = [
+  {
+    agencyKey: "agency_a",
+    clientKeys: ["client_1", "client_2", "client_3"],
+  },
+  {
+    agencyKey: "agency_b",
+    clientKeys: ["client_2", "client_3", "client_4"],
+  },
+  {
+    agencyKey: "agency_c",
+    clientKeys: ["client_1", "client_3", "client_4"],
+  },
+];
+
 const defaultInstallerPassword =
   process.env.SEED_INSTALLER_PASSWORD || "Installer123!";
 
@@ -490,6 +791,336 @@ async function upsertInstallerUsers(zones: ZoneWithProvince[]) {
         })),
         skipDuplicates: true,
       });
+    }
+  }
+}
+
+async function upsertSeedUser(input: SeedUserInput) {
+  const now = new Date();
+  const user = await prisma.user.upsert({
+    where: { email: normalizeEmail(input.email) },
+    update: {
+      name: input.name,
+      emailVerified: true,
+      updatedAt: now,
+    },
+    create: {
+      id: crypto.randomUUID(),
+      email: normalizeEmail(input.email),
+      name: input.name,
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  await upsertCredentialAccount(user.id, input.password);
+
+  const profile = await prisma.userProfile.upsert({
+    where: { userId: user.id },
+    update: {
+      systemRole: input.systemRole,
+      accountType: input.accountType,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      isActive: input.isActive ?? true,
+      isVerified: true,
+    },
+    create: {
+      userId: user.id,
+      systemRole: input.systemRole,
+      accountType: input.accountType,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      isActive: input.isActive ?? true,
+      isVerified: true,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return {
+    userId: user.id,
+    profileId: profile.id,
+  };
+}
+
+async function upsertSeedOrganization(input: SeedOrganizationInput) {
+  return prisma.organization.upsert({
+    where: { taxId: input.taxId },
+    update: {
+      name: input.name,
+      legalName: input.legalName,
+      tradeName: input.tradeName,
+      organizationType: input.organizationType,
+      legalEntityType: "LEGAL_ENTITY",
+      taxId: input.taxId,
+      email: input.email,
+      phone: input.phone,
+      industry: input.industry,
+      isActive: true,
+      isVerified: true,
+      updatedBy: input.createdByProfileId,
+    },
+    create: {
+      name: input.name,
+      legalName: input.legalName,
+      tradeName: input.tradeName,
+      organizationType: input.organizationType,
+      legalEntityType: "LEGAL_ENTITY",
+      taxId: input.taxId,
+      email: input.email,
+      phone: input.phone,
+      industry: input.industry,
+      isActive: true,
+      isVerified: true,
+      createdById: input.createdByProfileId,
+      updatedBy: input.createdByProfileId,
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+}
+
+async function upsertOwnerMembership(organizationId: string, userProfileId: string) {
+  await prisma.organizationMember.upsert({
+    where: {
+      organizationId_userProfileId: {
+        organizationId,
+        userProfileId,
+      },
+    },
+    update: {
+      role: "OWNER",
+      isActive: true,
+      acceptedAt: new Date(),
+      expiresAt: null,
+    },
+    create: {
+      organizationId,
+      userProfileId,
+      role: "OWNER",
+      isActive: true,
+      acceptedAt: new Date(),
+    },
+  });
+}
+
+async function upsertSeedBrand(input: SeedBrandInput) {
+  return prisma.brand.upsert({
+    where: { taxId: input.taxId },
+    update: {
+      ownerOrganizationId: input.ownerOrganizationId,
+      name: input.name,
+      legalName: input.legalName,
+      tradeName: input.tradeName,
+      legalEntityType: "LEGAL_ENTITY",
+      taxId: input.taxId,
+      email: input.email,
+      phone: input.phone,
+      industry: input.industry,
+      isActive: true,
+      isVerified: true,
+      updatedBy: input.createdByProfileId,
+    },
+    create: {
+      ownerOrganizationId: input.ownerOrganizationId,
+      name: input.name,
+      legalName: input.legalName,
+      tradeName: input.tradeName,
+      legalEntityType: "LEGAL_ENTITY",
+      taxId: input.taxId,
+      email: input.email,
+      phone: input.phone,
+      industry: input.industry,
+      isActive: true,
+      isVerified: true,
+      createdBy: input.createdByProfileId,
+      updatedBy: input.createdByProfileId,
+    },
+    select: {
+      id: true,
+    },
+  });
+}
+
+async function upsertOwnerBrandAccess(
+  organizationId: string,
+  brandId: string,
+  actorProfileId: string,
+) {
+  await prisma.brandAccess.upsert({
+    where: {
+      organizationId_brandId: {
+        organizationId,
+        brandId,
+      },
+    },
+    update: {
+      accessType: "OWNER",
+      status: "ACTIVE",
+      canCreateRequests: true,
+      canCreateOrders: true,
+      canViewBilling: true,
+      canManageContacts: true,
+      updatedBy: actorProfileId,
+    },
+    create: {
+      organizationId,
+      brandId,
+      accessType: "OWNER",
+      status: "ACTIVE",
+      canCreateRequests: true,
+      canCreateOrders: true,
+      canViewBilling: true,
+      canManageContacts: true,
+      createdBy: actorProfileId,
+      updatedBy: actorProfileId,
+    },
+  });
+}
+
+async function upsertDelegatedBrandAccess(
+  organizationId: string,
+  brandId: string,
+  actorProfileId: string,
+) {
+  await prisma.brandAccess.upsert({
+    where: {
+      organizationId_brandId: {
+        organizationId,
+        brandId,
+      },
+    },
+    update: {
+      accessType: "DELEGATED",
+      status: "ACTIVE",
+      canCreateRequests: true,
+      canCreateOrders: true,
+      canViewBilling: false,
+      canManageContacts: false,
+      updatedBy: actorProfileId,
+    },
+    create: {
+      organizationId,
+      brandId,
+      accessType: "DELEGATED",
+      status: "ACTIVE",
+      canCreateRequests: true,
+      canCreateOrders: true,
+      canViewBilling: false,
+      canManageContacts: false,
+      createdBy: actorProfileId,
+      updatedBy: actorProfileId,
+    },
+  });
+}
+
+async function upsertB2BCommercialAndStaffSeed() {
+  for (const internalUser of platformInternalUsers) {
+    await upsertSeedUser(internalUser);
+  }
+
+  const agenciesByKey = new Map<
+    string,
+    { organizationId: string; ownerProfileId: string }
+  >();
+  for (const agency of seedAgencies) {
+    const owner = await upsertSeedUser({
+      ...agency.ownerUser,
+      password: seedB2BPassword,
+      systemRole: "CUSTOMER",
+      accountType: "AGENCY",
+    });
+
+    const organization = await upsertSeedOrganization({
+      name: agency.name,
+      legalName: agency.legalName,
+      tradeName: agency.tradeName,
+      organizationType: "AGENCY",
+      taxId: agency.taxId,
+      email: agency.email,
+      phone: agency.phone,
+      industry: agency.industry,
+      createdByProfileId: owner.profileId,
+    });
+
+    await upsertOwnerMembership(organization.id, owner.profileId);
+    agenciesByKey.set(agency.key, {
+      organizationId: organization.id,
+      ownerProfileId: owner.profileId,
+    });
+  }
+
+  const clientBrandsByKey = new Map<
+    string,
+    { brandId: string; organizationId: string; ownerProfileId: string }
+  >();
+  for (const client of seedDirectClients) {
+    const owner = await upsertSeedUser({
+      ...client.ownerUser,
+      password: seedB2BPassword,
+      systemRole: "CUSTOMER",
+      accountType: "DIRECT_CLIENT",
+    });
+
+    const organization = await upsertSeedOrganization({
+      name: client.name,
+      legalName: client.legalName,
+      tradeName: client.tradeName,
+      organizationType: "DIRECT_CLIENT",
+      taxId: client.taxId,
+      email: client.email,
+      phone: client.phone,
+      industry: client.industry,
+      createdByProfileId: owner.profileId,
+    });
+
+    await upsertOwnerMembership(organization.id, owner.profileId);
+
+    const brand = await upsertSeedBrand({
+      ownerOrganizationId: organization.id,
+      name: client.brand.name,
+      legalName: client.brand.legalName,
+      tradeName: client.brand.tradeName,
+      taxId: client.brand.taxId,
+      email: client.brand.email,
+      phone: client.brand.phone,
+      industry: client.brand.industry,
+      createdByProfileId: owner.profileId,
+    });
+
+    await upsertOwnerBrandAccess(organization.id, brand.id, owner.profileId);
+    clientBrandsByKey.set(client.key, {
+      brandId: brand.id,
+      organizationId: organization.id,
+      ownerProfileId: owner.profileId,
+    });
+  }
+
+  for (const distribution of agencyBrandDistribution) {
+    const agency = agenciesByKey.get(distribution.agencyKey);
+    if (!agency) {
+      throw new Error(`Agency key not found in seed distribution: ${distribution.agencyKey}`);
+    }
+
+    for (const clientKey of distribution.clientKeys) {
+      const client = clientBrandsByKey.get(clientKey);
+      if (!client) {
+        throw new Error(`Client key not found in seed distribution: ${clientKey}`);
+      }
+
+      await upsertDelegatedBrandAccess(
+        agency.organizationId,
+        client.brandId,
+        agency.ownerProfileId,
+      );
     }
   }
 }
@@ -973,6 +1604,9 @@ async function main() {
     name,
   }));
   await upsertRestrictionTags();
+
+  console.log("Seeding B2B accounts and brand relationships...");
+  await upsertB2BCommercialAndStaffSeed();
 
   const zones = await prisma.zone.findMany({
     where: { provinceId: { in: provinces.map((province) => province.id) } },

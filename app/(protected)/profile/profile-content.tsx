@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
+import { filterClientBrandsForActiveContext } from "@/lib/organization-context-scope";
 import {
   Card,
   CardContent,
@@ -193,8 +194,9 @@ function FieldRow({
 
 type ProfileOrganizationContext = {
   contextKey: string;
+  organizationId: string;
   organizationName: string;
-  organizationType: string;
+  organizationType: "DIRECT_CLIENT" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
   accessType: "DIRECT" | "DELEGATED";
   viaOrganizationName: string | null;
   role: string;
@@ -205,6 +207,7 @@ type ProfileOrganizationContext = {
     | "DIRECT_ACCESS";
   displayMeta: string;
   operatingEntityType: "DIRECT_CLIENT" | "AGENCY";
+  operatingAgencyOrganizationId: string | null;
   operatingAgencyOrganizationName: string | null;
   targetBrandOrganizationId: string | null;
   operatingSummary: string;
@@ -215,6 +218,7 @@ type ProfileAccountType = "DIRECT_CLIENT" | "AGENCY";
 function buildContextSections(
   accountType: ProfileAccountType,
   contexts: ProfileOrganizationContext[],
+  activeContext: ProfileOrganizationContext | null,
 ) {
   if (accountType === "AGENCY") {
     return [
@@ -232,9 +236,7 @@ function buildContextSections(
         key: "CLIENT_BRAND",
         title: "Marcas cliente",
         description: "Marcas operadas por tu agencia.",
-        contexts: contexts.filter((context) =>
-          Boolean(context.targetBrandOrganizationId),
-        ),
+        contexts: filterClientBrandsForActiveContext(contexts, activeContext),
       },
       {
         key: "DIRECT_ACCESS",
@@ -496,6 +498,8 @@ export function ProfileContent() {
   const groupedContexts = buildContextSections(
     accountType,
     currentProfile.organizationContexts as ProfileOrganizationContext[],
+    (currentProfile.activeOrganizationContext as ProfileOrganizationContext | null) ??
+      null,
   );
 
   function handlePersonalDraftChange(

@@ -14,6 +14,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
+import {
+  filterClientBrandsForActiveContext,
+  hasActiveAgencyScope,
+} from "@/lib/organization-context-scope";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +50,7 @@ type AccountType = "DIRECT_CLIENT" | "AGENCY";
 
 type ContextLike = {
   contextKey: string;
+  organizationId: string;
   organizationName: string;
   organizationType: "DIRECT_CLIENT" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
   displayCategory: "OWN_BRAND" | "OWN_AGENCY" | "CLIENT_BRAND" | "DIRECT_ACCESS";
@@ -68,14 +73,16 @@ type ContextGroup = {
 function buildContextGroups(
   contexts: ContextLike[],
   accountType: AccountType,
+  activeContext: ContextLike | null,
 ): ContextGroup[] {
   if (accountType === "AGENCY") {
     const ownAgencies = contexts.filter(
       (context) =>
         context.displayCategory === "OWN_AGENCY" && context.accessType === "DIRECT",
     );
-    const clientBrands = contexts.filter(
-      (context) => Boolean(context.targetBrandOrganizationId),
+    const clientBrands = filterClientBrandsForActiveContext(
+      contexts,
+      activeContext,
     );
     const extraAccess = contexts.filter(
       (context) =>
@@ -198,15 +205,11 @@ export function OrganizationContextSelector({
   const contexts = useMemo(() => data?.contexts ?? [], [data?.contexts]);
   const activeContext = data?.activeContext ?? contexts[0] ?? null;
   const groupedContexts = useMemo(
-    () => buildContextGroups(contexts, accountType),
-    [contexts, accountType],
+    () => buildContextGroups(contexts, accountType, activeContext),
+    [contexts, accountType, activeContext],
   );
 
-  const canCreateClientBrand =
-    contexts.some(
-      (context) =>
-        context.organizationType === "AGENCY" && context.accessType === "DIRECT",
-    );
+  const canCreateClientBrand = hasActiveAgencyScope(activeContext);
 
   function openCreateDialog() {
     if (!canCreateClientBrand) {
