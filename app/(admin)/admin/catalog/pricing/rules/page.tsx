@@ -44,7 +44,7 @@ export default function PriceRulesPage() {
   const [faceId, setFaceId] = useState("");
   const [structureTypeId, setStructureTypeId] = useState("");
   const [zoneId, setZoneId] = useState("");
-  const [organizationId, setOrganizationId] = useState("");
+  const [brandId, setBrandId] = useState("");
   const [price, setPrice] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -56,14 +56,14 @@ export default function PriceRulesPage() {
   const facesQuery = trpc.catalog.faces.pricingOptions.useQuery({ take: 100 });
   const structureTypesQuery = trpc.inventory.structureTypes.publicList.useQuery();
   const zonesQuery = trpc.inventory.zones.publicList.useQuery();
-  const orgsQuery = trpc.organization.list.useQuery({ skip: 0, take: 100 });
+  const brandsQuery = trpc.admin.listBrands.useQuery({ skip: 0, take: 100 });
   const rulesQuery = trpc.catalog.priceRules.list.useQuery();
 
   function resetFormState() {
     setFaceId("");
     setStructureTypeId("");
     setZoneId("");
-    setOrganizationId("");
+    setBrandId("");
     setPrice("");
     setStartDate("");
     setEndDate("");
@@ -102,7 +102,7 @@ export default function PriceRulesPage() {
       faceId: faceId || undefined,
       structureTypeId: structureTypeId || undefined,
       zoneId: zoneId || undefined,
-      organizationId: organizationId || undefined,
+      brandId: brandId || undefined,
       priceDaily: parsedPrice,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
@@ -196,15 +196,15 @@ export default function PriceRulesPage() {
                 </SelectNative>
               </div>
               <div>
-                <Label className="mb-1.5 block">Cliente</Label>
+                <Label className="mb-1.5 block">Marca</Label>
                 <SelectNative
-                  value={organizationId}
-                  onChange={(event) => setOrganizationId(event.target.value)}
+                  value={brandId}
+                  onChange={(event) => setBrandId(event.target.value)}
                 >
-                  <option value="">Todos los clientes</option>
-                  {orgsQuery.data?.organizations.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
+                  <option value="">Todas las marcas</option>
+                  {brandsQuery.data?.brands.map((brand) => (
+                    <option key={brand.id} value={brand.id}>
+                      {brand.name}
                     </option>
                   ))}
                 </SelectNative>
@@ -286,7 +286,7 @@ export default function PriceRulesPage() {
                       : rule.structureType
                       ? rule.structureType.name
                       : "Global"}
-                    {rule.organization ? ` · ${rule.organization.name}` : ""}
+                    {rule.brand ? ` · ${rule.brand.name}` : ""}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {rule.currency} {String(rule.priceDaily)}

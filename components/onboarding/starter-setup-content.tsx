@@ -37,7 +37,7 @@ function resolveWorkspaceCopy(accountType: AccountType) {
       "Tu cuenta opera como cliente directo. Crea tu marca principal para solicitar y operar campañas.",
     placeholder: "Ej. Marca Atlas",
     buttonLabel: "Crear marca",
-    organizationType: "ADVERTISER" as const,
+    organizationType: "DIRECT_CLIENT" as const,
   };
 }
 

@@ -302,7 +302,7 @@ export async function listPrintInbox(
             id: true,
             code: true,
             status: true,
-            organization: {
+            brand: {
               select: {
                 name: true,
               },

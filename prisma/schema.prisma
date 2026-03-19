@@ -180,7 +180,7 @@ model UserProfile {
 // ============================================================================
 
 enum OrganizationType {
-  ADVERTISER
+  DIRECT_CLIENT
   AGENCY
   MEDIA_OWNER
   PLATFORM_ADMIN
@@ -245,13 +245,8 @@ model Organization {
   members           OrganizationMember[]
   contacts          OrganizationContact[]
   documents         OrganizationDocument[]
-  catalogPriceRules CatalogPriceRule[]
-  catalogHolds      CatalogHold[]
-  campaignRequests  CampaignRequest[]
-  orders            Order[]
-  notifications     UserNotification[]
-  outgoingRelationships OrganizationRelationship[] @relation("OrganizationRelationshipSource")
-  incomingRelationships OrganizationRelationship[] @relation("OrganizationRelationshipTarget")
+  ownedBrands       Brand[]            @relation("OrganizationOwnedBrands")
+  brandAccesses     BrandAccess[]
   agencyCatalogHolds CatalogHold[] @relation("CatalogHoldActingAgency")
   agencyCampaignRequests CampaignRequest[] @relation("CampaignRequestActingAgency")
   agencyOrders      Order[] @relation("OrderActingAgency")
@@ -280,18 +275,19 @@ enum OrganizationRole {
   @@map("organization_role")
 }
 
-enum OrganizationRelationshipType {
-  AGENCY_CLIENT
-
-  @@map("organization_relationship_type")
-}
-
 enum OrganizationRelationshipStatus {
   PENDING
   ACTIVE
   INACTIVE
 
-  @@map("organization_relationship_status")
+  @@map("brand_access_status")
+}
+
+enum BrandAccessType {
+  OWNER
+  DELEGATED
+
+  @@map("brand_access_type")
 }
 
 model OrganizationMember {
@@ -327,34 +323,79 @@ model OrganizationMember {
   @@map("organization_member")
 }
 
-model OrganizationRelationship {
+model Brand {
   id String @id @default(cuid())
 
-  sourceOrganizationId String
-  targetOrganizationId String
+  ownerOrganizationId String?
 
-  relationshipType OrganizationRelationshipType
-  status           OrganizationRelationshipStatus @default(PENDING)
+  name            String
+  legalName       String?
+  tradeName       String?
+  legalEntityType LegalEntityType @default(LEGAL_ENTITY)
+
+  taxId     String? @unique
+  dvCode    String?
+
+  email    String?
+  phone    String?
+  whatsapp String?
+  website  String?
+
+  description String? @db.Text
+  logoUrl     String?
+  industry    String?
+
+  isActive   Boolean @default(true)
+  isVerified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  ownerOrganization Organization? @relation("OrganizationOwnedBrands", fields: [ownerOrganizationId], references: [id], onDelete: SetNull)
+  accesses          BrandAccess[]
+  catalogPriceRules CatalogPriceRule[]
+  catalogHolds      CatalogHold[]
+  campaignRequests  CampaignRequest[]
+  orders            Order[]
+  notifications     UserNotification[]
+
+  @@index([ownerOrganizationId])
+  @@index([isActive])
+  @@index([isVerified])
+  @@index([taxId])
+  @@map("brand")
+}
+
+model BrandAccess {
+  id String @id @default(cuid())
+
+  organizationId String
+  brandId        String
+
+  accessType BrandAccessType           @default(DELEGATED)
+  status     OrganizationRelationshipStatus @default(ACTIVE)
 
   canCreateRequests Boolean @default(true)
   canCreateOrders   Boolean @default(true)
   canViewBilling    Boolean @default(false)
   canManageContacts Boolean @default(false)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdById String?
-  updatedBy   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
 
-  sourceOrganization Organization @relation("OrganizationRelationshipSource", fields: [sourceOrganizationId], references: [id], onDelete: Cascade)
-  targetOrganization Organization @relation("OrganizationRelationshipTarget", fields: [targetOrganizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
-  @@unique([sourceOrganizationId, targetOrganizationId, relationshipType])
-  @@index([sourceOrganizationId])
-  @@index([targetOrganizationId])
-  @@index([relationshipType])
+  @@unique([organizationId, brandId])
+  @@index([organizationId])
+  @@index([brandId])
+  @@index([accessType])
   @@index([status])
-  @@map("organization_relationship")
+  @@map("brand_access")
 }
 
 // ============================================================================
@@ -730,7 +771,7 @@ model CatalogPriceRule {
   faceId          String?
   structureTypeId String?
   zoneId          String?
-  organizationId  String?
+  brandId         String?
 
   priceDaily Decimal   @db.Decimal(12, 2)
   currency   String    @default("USD")
@@ -743,12 +784,12 @@ model CatalogPriceRule {
   face          CatalogFace?   @relation(fields: [faceId], references: [faceId], onDelete: Cascade)
   structureType StructureType? @relation(fields: [structureTypeId], references: [id], onDelete: Restrict)
   zone          Zone?          @relation(fields: [zoneId], references: [id], onDelete: Restrict)
-  organization  Organization?  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand         Brand?         @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@index([faceId])
   @@index([structureTypeId])
   @@index([zoneId])
-  @@index([organizationId])
+  @@index([brandId])
   @@index([isActive])
   @@index([startDate])
   @@map("catalog_price_rule")
@@ -774,8 +815,8 @@ model CatalogPromo {
 model CatalogHold {
   id String @id @default(cuid())
 
-  faceId         String
-  organizationId String?
+  faceId                    String
+  brandId                   String?
   actingAgencyOrganizationId String?
   createdById    String?
 
@@ -787,12 +828,12 @@ model CatalogHold {
   updatedAt DateTime @updatedAt
 
   face         CatalogFace   @relation(fields: [faceId], references: [id], onDelete: Cascade)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  brand        Brand?        @relation(fields: [brandId], references: [id], onDelete: SetNull)
   actingAgencyOrganization Organization? @relation("CatalogHoldActingAgency", fields: [actingAgencyOrganizationId], references: [id], onDelete: SetNull)
   createdBy    UserProfile?  @relation("CatalogHoldCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([faceId])
-  @@index([organizationId])
+  @@index([brandId])
   @@index([actingAgencyOrganizationId])
   @@index([status])
   @@index([expiresAt])
@@ -814,7 +855,7 @@ model CampaignRequest {
   contactEmail String?
   contactPhone String?
 
-  organizationId String?
+  brandId                   String?
   actingAgencyOrganizationId String?
   createdById    String?
 
@@ -827,7 +868,7 @@ model CampaignRequest {
 
   zone          Zone?                           @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   structureType StructureType?                  @relation(fields: [structureTypeId], references: [id], onDelete: SetNull)
-  organization  Organization?                   @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  brand         Brand?                          @relation(fields: [brandId], references: [id], onDelete: SetNull)
   actingAgencyOrganization Organization?        @relation("CampaignRequestActingAgency", fields: [actingAgencyOrganizationId], references: [id], onDelete: SetNull)
   createdBy     UserProfile?                    @relation("CampaignRequestCreator", fields: [createdById], references: [id], onDelete: SetNull)
   resolvedBy    UserProfile?                    @relation("CampaignRequestResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
@@ -838,7 +879,7 @@ model CampaignRequest {
   @@index([status])
   @@index([zoneId])
   @@index([structureTypeId])
-  @@index([organizationId])
+  @@index([brandId])
   @@index([actingAgencyOrganizationId])
   @@index([createdById])
   @@index([createdAt])
@@ -1063,7 +1104,7 @@ model Order {
   campaignRequestId String? @unique
 
   // Information
-  organizationId String?
+  brandId                   String?
   actingAgencyOrganizationId String?
   createdById    String?
   clientName     String?
@@ -1101,7 +1142,7 @@ model Order {
 
   // Relations
   campaignRequest   CampaignRequest?        @relation(fields: [campaignRequestId], references: [id], onDelete: SetNull)
-  organization      Organization?           @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  brand             Brand?                  @relation(fields: [brandId], references: [id], onDelete: SetNull)
   actingAgencyOrganization Organization?    @relation("OrderActingAgency", fields: [actingAgencyOrganizationId], references: [id], onDelete: SetNull)
   createdBy         UserProfile?            @relation("OrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
   companyConfirmBy  UserProfile?            @relation("OrderConfirmer", fields: [companyConfirmedById], references: [id], onDelete: SetNull)
@@ -1120,7 +1161,7 @@ model Order {
   notifications     UserNotification[]
 
   @@index([status])
-  @@index([organizationId])
+  @@index([brandId])
   @@index([actingAgencyOrganizationId])
   @@index([createdById])
   @@index([campaignRequestId])
@@ -1804,7 +1845,7 @@ model UserNotification {
   id String @id @default(cuid())
 
   userProfileId  String
-  organizationId String?
+  brandId        String?
   orderId        String?
 
   type       NotificationType
@@ -1820,7 +1861,7 @@ model UserNotification {
   updatedAt DateTime @updatedAt
 
   userProfile  UserProfile   @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  brand        Brand?        @relation(fields: [brandId], references: [id], onDelete: SetNull)
   order        Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   @@unique([userProfileId, sourceKey])

@@ -20,7 +20,7 @@ type PageProps = {
 
 type ActiveContextLike = {
   organizationName: string;
-  organizationType: "ADVERTISER" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
+  organizationType: "DIRECT_CLIENT" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
   operatingAgencyOrganizationName: string | null;
   targetBrandOrganizationId: string | null;
 };
@@ -210,7 +210,7 @@ export default async function CampaignRequestsPage({ searchParams }: PageProps) 
             const edgeColor =
               STATUS_EDGE_COLORS[request.status] || "border-l-neutral-300";
             const operationContextLabel = buildOperationContextLabel({
-              brandName: request.organization?.name,
+              brandName: request.brand?.name,
               actingAgencyName: request.actingAgencyOrganization?.name,
             });
 

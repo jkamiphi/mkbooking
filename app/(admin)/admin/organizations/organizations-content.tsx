@@ -447,7 +447,7 @@ export function OrganizationsContent() {
                             province: organization.province,
                             description: organization.description,
                             organizationType:
-                              organization.managedType === "AGENCY" ? "AGENCY" : "ADVERTISER",
+                              organization.managedType === "AGENCY" ? "AGENCY" : "DIRECT_CLIENT",
                             legalEntityType: organization.legalEntityType,
                           }}
                         />

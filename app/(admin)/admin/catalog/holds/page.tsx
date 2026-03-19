@@ -167,7 +167,7 @@ export default function HoldsPage() {
   function openEditDialog(hold: NonNullable<typeof holdsQuery.data>[number]) {
     setEditingHoldId(hold.id);
     setEditExpiresAt(toDateTimeLocalInputValue(hold.expiresAt));
-    setEditOrganizationId(hold.organization?.id ?? "");
+    setEditOrganizationId(hold.brand?.id ?? "");
     setEditError(null);
     setIsEditDialogOpen(true);
   }
@@ -187,7 +187,7 @@ export default function HoldsPage() {
     setCreateError(null);
     createHold.mutate({
       faceId: createFaceId,
-      organizationId: createOrganizationId || undefined,
+      brandId: createOrganizationId || undefined,
     });
   }
 
@@ -226,7 +226,7 @@ export default function HoldsPage() {
     updateHold.mutate({
       holdId: editingHoldId,
       expiresAt: nextExpiryDate,
-      organizationId: editOrganizationId || null,
+      brandId: editOrganizationId || null,
     });
   }
 
@@ -449,7 +449,7 @@ export default function HoldsPage() {
                     {hold.face.face.asset.code} - {hold.face.face.code}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {hold.organization?.name ?? "-"}
+                    {hold.brand?.name ?? "-"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{hold.status}</TableCell>
                   <TableCell className="text-muted-foreground">

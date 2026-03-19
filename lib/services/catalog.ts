@@ -30,7 +30,7 @@ export const createPriceRuleSchema = z
     faceId: z.string().optional(),
     structureTypeId: z.string().optional(),
     zoneId: z.string().optional(),
-    organizationId: z.string().optional(),
+    brandId: z.string().optional(),
     priceDaily: z.number().min(0),
     currency: z.string().optional(),
     startDate: z.coerce.date().optional(),
@@ -58,13 +58,13 @@ export const createPromoSchema = z.object({
 
 export const createHoldSchema = z.object({
   faceId: z.string().min(1),
-  organizationId: z.string().optional(),
+  brandId: z.string().optional(),
 });
 
 export const updateHoldSchema = z.object({
   holdId: z.string().min(1),
   expiresAt: z.coerce.date().optional(),
-  organizationId: z.string().nullable().optional(),
+  brandId: z.string().nullable().optional(),
 });
 
 export type UpsertCatalogFaceInput = z.infer<typeof upsertCatalogFaceSchema>;
@@ -127,7 +127,7 @@ export async function getCatalogFaceByFaceId(faceId: string) {
       priceRules: {
         orderBy: { createdAt: "desc" },
         include: {
-          organization: true,
+          brand: true,
           structureType: true,
           zone: { include: { province: true } },
         },
@@ -162,7 +162,7 @@ export async function getCatalogFaceByFaceId(faceId: string) {
       priceRules: {
         orderBy: { createdAt: "desc" },
         include: {
-          organization: true,
+          brand: true,
           structureType: true,
           zone: { include: { province: true } },
         },
@@ -175,12 +175,12 @@ function ruleRank(rule: {
   faceId: string | null;
   zoneId: string | null;
   structureTypeId: string | null;
-  organizationId: string | null;
+  brandId: string | null;
 }) {
   const hasFace = !!rule.faceId;
   const hasZone = !!rule.zoneId;
   const hasStructure = !!rule.structureTypeId;
-  const hasOrg = !!rule.organizationId;
+  const hasOrg = !!rule.brandId;
 
   if (hasFace && hasOrg) return 1;
   if (hasFace) return 2;
@@ -197,13 +197,13 @@ function ruleMatches(
     faceId: string | null;
     zoneId: string | null;
     structureTypeId: string | null;
-    organizationId: string | null;
+    brandId: string | null;
   },
   params: {
     faceId: string;
     zoneId: string;
     structureTypeId: string;
-    organizationId?: string | null;
+    brandId?: string | null;
   }
 ) {
   if (rule.faceId && rule.faceId !== params.faceId) return false;
@@ -211,7 +211,7 @@ function ruleMatches(
   if (rule.structureTypeId && rule.structureTypeId !== params.structureTypeId) {
     return false;
   }
-  if (rule.organizationId && rule.organizationId !== params.organizationId) {
+  if (rule.brandId && rule.brandId !== params.brandId) {
     return false;
   }
   return true;
@@ -222,14 +222,14 @@ function pickEffectiveRule<T extends { id: string; createdAt: Date }>({
   faceId,
   zoneId,
   structureTypeId,
-  organizationId,
+  brandId,
 }: {
   rules: Array<
     T & {
       faceId: string | null;
       zoneId: string | null;
       structureTypeId: string | null;
-      organizationId: string | null;
+      brandId: string | null;
       startDate: Date;
       endDate: Date | null;
     }
@@ -237,10 +237,10 @@ function pickEffectiveRule<T extends { id: string; createdAt: Date }>({
   faceId: string;
   zoneId: string;
   structureTypeId: string;
-  organizationId?: string | null;
+  brandId?: string | null;
 }) {
   const matches = rules.filter((rule) =>
-    ruleMatches(rule, { faceId, zoneId, structureTypeId, organizationId })
+    ruleMatches(rule, { faceId, zoneId, structureTypeId, brandId })
   );
   if (!matches.length) return null;
   return matches.sort((a, b) => {
@@ -264,7 +264,7 @@ export type FacePricingContext = {
 
 async function findActiveRulesForFaces(
   faces: FacePricingContext[],
-  organizationId?: string
+  brandId?: string
 ) {
   if (!faces.length) return [];
 
@@ -290,9 +290,9 @@ async function findActiveRulesForFaces(
       startDate: { lte: now },
       AND: [
         { OR: [{ endDate: null }, { endDate: { gte: now } }] },
-        organizationId
-          ? { OR: [{ organizationId }, { organizationId: null }] }
-          : { organizationId: null },
+        brandId
+          ? { OR: [{ brandId }, { brandId: null }] }
+          : { brandId: null },
         { OR: ruleOr },
       ],
     },
@@ -302,9 +302,9 @@ async function findActiveRulesForFaces(
 
 export async function resolveEffectivePriceRuleMapForFaces(
   faces: FacePricingContext[],
-  organizationId?: string,
+  brandId?: string,
 ) {
-  const rules = await findActiveRulesForFaces(faces, organizationId);
+  const rules = await findActiveRulesForFaces(faces, brandId);
 
   return new Map(
     faces.map((face) => [
@@ -314,7 +314,7 @@ export async function resolveEffectivePriceRuleMapForFaces(
         faceId: face.id,
         zoneId: face.asset.zoneId,
         structureTypeId: face.asset.structureTypeId,
-        organizationId: organizationId ?? undefined,
+        brandId: brandId ?? undefined,
       }),
     ]),
   );
@@ -323,7 +323,7 @@ export async function resolveEffectivePriceRuleMapForFaces(
 function mapFacesWithEffectivePrice<T extends FacePricingContext>({
   faces,
   rules,
-  organizationId,
+  brandId,
 }: {
   faces: T[];
   rules: Array<{
@@ -331,14 +331,14 @@ function mapFacesWithEffectivePrice<T extends FacePricingContext>({
     faceId: string | null;
     zoneId: string | null;
     structureTypeId: string | null;
-    organizationId: string | null;
+    brandId: string | null;
     priceDaily: Prisma.Decimal;
     currency: string;
     createdAt: Date;
     startDate: Date;
     endDate: Date | null;
   }>;
-  organizationId?: string;
+  brandId?: string;
 }) {
   return faces.map((face) => {
     const rule = pickEffectiveRule({
@@ -346,7 +346,7 @@ function mapFacesWithEffectivePrice<T extends FacePricingContext>({
       faceId: face.id,
       zoneId: face.asset.zoneId,
       structureTypeId: face.asset.structureTypeId,
-      organizationId: organizationId ?? undefined,
+      brandId: brandId ?? undefined,
     });
 
     return {
@@ -417,7 +417,7 @@ export async function listCatalogFaces(options?: {
   isPublished?: boolean;
   structureTypeId?: string;
   zoneId?: string;
-  organizationId?: string;
+  brandId?: string;
   availableFrom?: Date;
   availableTo?: Date;
   skip?: number;
@@ -428,7 +428,7 @@ export async function listCatalogFaces(options?: {
     isPublished,
     structureTypeId,
     zoneId,
-    organizationId,
+    brandId,
     availableFrom,
     availableTo,
     skip = 0,
@@ -540,11 +540,11 @@ export async function listCatalogFaces(options?: {
     getActivePromo(),
   ]);
 
-  const activeRules = await findActiveRulesForFaces(faces, organizationId);
+  const activeRules = await findActiveRulesForFaces(faces, brandId);
   const facesWithPrice = mapFacesWithEffectivePrice({
     faces,
     rules: activeRules,
-    organizationId,
+    brandId,
   });
   const facesWithResolvedImage = facesWithPrice.map((face) => ({
     ...face,
@@ -591,7 +591,7 @@ export async function listCatalogPricingFaceOptions(options?: {
 
 export async function getPublicCatalogFaceDetailById(
   faceId: string,
-  options?: { organizationId?: string }
+  options?: { brandId?: string }
 ) {
   const now = new Date();
   const face = await db.assetFace.findFirst({
@@ -641,13 +641,13 @@ export async function getPublicCatalogFaceDetailById(
             },
             orderBy: { expiresAt: "asc" },
             include: {
-              organization: true,
+              brand: true,
             },
           },
           priceRules: {
             orderBy: { createdAt: "desc" },
             include: {
-              organization: true,
+              brand: true,
               structureType: true,
               zone: { include: { province: true } },
             },
@@ -662,7 +662,7 @@ export async function getPublicCatalogFaceDetailById(
   }
 
   const [activeRules, promo, rawRelatedFaces] = await Promise.all([
-    findActiveRulesForFaces([face], options?.organizationId),
+    findActiveRulesForFaces([face], options?.brandId),
     getActivePromo(),
     db.assetFace.findMany({
       where: {
@@ -693,12 +693,12 @@ export async function getPublicCatalogFaceDetailById(
 
   const relatedRules = await findActiveRulesForFaces(
     rawRelatedFaces,
-    options?.organizationId
+    options?.brandId
   );
   const relatedFaces = mapFacesWithEffectivePrice({
     faces: rawRelatedFaces,
     rules: relatedRules,
-    organizationId: options?.organizationId,
+    brandId: options?.brandId,
   }).map((relatedFace) => ({
     ...relatedFace,
     resolvedImageUrl: resolveCatalogFaceImageUrl(relatedFace),
@@ -709,7 +709,7 @@ export async function getPublicCatalogFaceDetailById(
     faceId: face.id,
     zoneId: face.asset.zoneId,
     structureTypeId: face.asset.structureTypeId,
-    organizationId: options?.organizationId ?? undefined,
+    brandId: options?.brandId ?? undefined,
   });
 
   return {
@@ -736,7 +736,7 @@ export async function createPriceRule(input: CreatePriceRuleInput) {
       faceId: input.faceId ?? null,
       structureTypeId: input.structureTypeId ?? null,
       zoneId: input.zoneId ?? null,
-      organizationId: input.organizationId ?? null,
+      brandId: input.brandId ?? null,
       priceDaily: input.priceDaily,
       currency: input.currency ?? "USD",
       startDate: toDate(input.startDate) ?? new Date(),
@@ -750,21 +750,21 @@ export async function listPriceRules(options?: {
   faceId?: string;
   structureTypeId?: string;
   zoneId?: string;
-  organizationId?: string;
+  brandId?: string;
   isActive?: boolean;
 }) {
   const where: Prisma.CatalogPriceRuleWhereInput = {};
   if (options?.faceId) where.faceId = options.faceId;
   if (options?.structureTypeId) where.structureTypeId = options.structureTypeId;
   if (options?.zoneId) where.zoneId = options.zoneId;
-  if (options?.organizationId) where.organizationId = options.organizationId;
+  if (options?.brandId) where.brandId = options.brandId;
   if (options?.isActive !== undefined) where.isActive = options.isActive;
 
   return db.catalogPriceRule.findMany({
     where,
     orderBy: { createdAt: "desc" },
     include: {
-      organization: true,
+      brand: true,
       structureType: true,
       zone: { include: { province: true } },
       face: { include: { face: { include: { asset: true } } } },
@@ -824,7 +824,7 @@ export async function listHolds(status?: z.infer<typeof holdStatusSchema>) {
     orderBy: { createdAt: "desc" },
     include: {
       face: { include: { face: { include: { asset: true } } } },
-      organization: true,
+      brand: true,
     },
   });
 }
@@ -845,7 +845,7 @@ export async function createHold(
   return db.catalogHold.create({
     data: {
       faceId: catalogFace.id,
-      organizationId: input.organizationId ?? null,
+      brandId: input.brandId ?? null,
       createdById: profile?.id ?? null,
       expiresAt,
       status: "ACTIVE",
@@ -895,8 +895,8 @@ export async function updateHold(input: UpdateHoldInput) {
     where: { id: input.holdId },
     data: {
       expiresAt: nextExpiryDate ?? undefined,
-      organizationId:
-        input.organizationId !== undefined ? input.organizationId : undefined,
+      brandId:
+        input.brandId !== undefined ? input.brandId : undefined,
     },
   });
 }

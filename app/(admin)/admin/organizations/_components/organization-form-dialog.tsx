@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
 
 const organizationTypeOptions = [
-  { value: "ADVERTISER", label: "Cliente directo" },
+  { value: "DIRECT_CLIENT", label: "Cliente directo" },
   { value: "AGENCY", label: "Agencia" },
 ] as const;
 
@@ -66,7 +66,7 @@ export function OrganizationFormDialog({
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
-    organizationType: initialData?.organizationType ?? "ADVERTISER",
+    organizationType: initialData?.organizationType ?? "DIRECT_CLIENT",
     legalEntityType: initialData?.legalEntityType ?? "LEGAL_ENTITY",
     legalName: initialData?.legalName ?? "",
     tradeName: initialData?.tradeName ?? "",

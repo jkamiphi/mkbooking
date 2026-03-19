@@ -240,7 +240,7 @@ export function PrintInboxTable() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-neutral-900">
-                          {task.order.organization?.name || task.order.clientName || "Sin cliente"}
+                          {task.order.brand?.name || task.order.clientName || "Sin cliente"}
                         </div>
                         <div className="text-xs text-neutral-500">
                           {task.order.clientEmail || "Sin email"}

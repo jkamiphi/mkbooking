@@ -47,7 +47,7 @@ type AccountType = "DIRECT_CLIENT" | "AGENCY";
 type ContextLike = {
   contextKey: string;
   organizationName: string;
-  organizationType: "ADVERTISER" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
+  organizationType: "DIRECT_CLIENT" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
   displayCategory: "OWN_BRAND" | "OWN_AGENCY" | "CLIENT_BRAND" | "DIRECT_ACCESS";
   displayMeta: string;
   accessType: "DIRECT" | "DELEGATED";
@@ -228,7 +228,7 @@ export function OrganizationContextSelector({
 
     createStarterOrganization.mutate({
       name,
-      organizationType: "ADVERTISER",
+      organizationType: "DIRECT_CLIENT",
     });
   }
 

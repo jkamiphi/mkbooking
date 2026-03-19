@@ -185,7 +185,7 @@ const operationalWorkOrderListInclude = {
       code: true,
       clientName: true,
       clientEmail: true,
-      organization: {
+      brand: {
         select: { name: true },
       },
     },
@@ -429,7 +429,7 @@ function buildOperationalWorkOrderWhere(
       },
       {
         order: {
-          organization: {
+          brand: {
             name: {
               contains: search,
               mode: "insensitive",

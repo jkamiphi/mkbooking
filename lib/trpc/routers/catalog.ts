@@ -65,7 +65,7 @@ const publicFaceListInputSchema = z
     isPublished: z.boolean().optional(),
     structureTypeId: z.string().optional(),
     zoneId: z.string().optional(),
-    organizationId: z.string().optional(),
+    brandId: z.string().optional(),
     availableFrom: z.coerce.date().optional(),
     availableTo: z.coerce.date().optional(),
     skip: z.number().min(0).default(0),
@@ -117,12 +117,12 @@ export const catalogRouter = router({
       .input(
         z.object({
           faceId: z.string().min(1),
-          organizationId: z.string().optional(),
+          brandId: z.string().optional(),
         })
       )
       .query(async ({ input }) => {
         return getPublicCatalogFaceDetailById(input.faceId, {
-          organizationId: input.organizationId,
+          brandId: input.brandId,
         });
       }),
     upsert: adminProcedure
@@ -145,7 +145,7 @@ export const catalogRouter = router({
             faceId: z.string().optional(),
             structureTypeId: z.string().optional(),
             zoneId: z.string().optional(),
-            organizationId: z.string().optional(),
+            brandId: z.string().optional(),
             isActive: z.boolean().optional(),
           })
           .optional()
@@ -237,8 +237,8 @@ export const catalogRouter = router({
         return createCampaignRequest(
           {
             ...input,
-            // Evita que el cliente publique organizationId arbitrario.
-            organizationId: undefined,
+            // Evita que el cliente publique brandId arbitrario.
+            brandId: undefined,
           },
           {
             createdByUserId: ctx.user?.id,

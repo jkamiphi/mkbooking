@@ -132,11 +132,11 @@ export default async function NewCampaignRequestPage({ searchParams }: PageProps
   }
 
   if (faceIds.length > 0) {
-    const organizationId = profile?.activeOrganizationContext?.organizationId;
+    const brandId = profile?.activeOrganizationContext?.brandId ?? undefined;
     const catalog = await caller.catalog.faces.publicList({
       isPublished: true,
       take: 100,
-      organizationId,
+      brandId,
     });
 
     const faceIdSet = new Set(faceIds);

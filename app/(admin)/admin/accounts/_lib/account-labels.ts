@@ -22,7 +22,7 @@ export const ACCOUNT_TYPE_LABELS: Record<UserAccountType, string> = {
 };
 
 export const ORGANIZATION_TYPE_LABELS: Record<OrganizationType, string> = {
-  ADVERTISER: "Marca",
+  DIRECT_CLIENT: "Cliente directo",
   AGENCY: "Agencia",
   MEDIA_OWNER: "Dueño de medios",
   PLATFORM_ADMIN: "Admin plataforma",

@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import {
-  LegalEntityType,
   OrganizationRelationshipStatus,
+  BrandAccessType,
+  LegalEntityType,
   OrganizationType,
   OrganizationRole,
   Prisma,
@@ -87,7 +88,7 @@ export const organizationRelationshipPermissionsSchema = z.object({
 
 export const createAgencyClientRelationshipSchema = z.object({
   agencyOrganizationId: z.string().min(1),
-  advertiserOrganizationId: z.string().min(1),
+  brandId: z.string().min(1),
   status: z.nativeEnum(OrganizationRelationshipStatus).optional(),
   permissions: organizationRelationshipPermissionsSchema.optional(),
 });
@@ -95,7 +96,7 @@ export const createAgencyClientRelationshipSchema = z.object({
 export const createStarterOrganizationSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   organizationType: z.enum([
-    OrganizationType.ADVERTISER,
+    OrganizationType.DIRECT_CLIENT,
     OrganizationType.AGENCY,
   ]),
 });
@@ -247,7 +248,7 @@ export async function registerNaturalPerson(
     {
       name: fullName,
       legalName: fullName,
-      organizationType: OrganizationType.ADVERTISER,
+      organizationType: OrganizationType.DIRECT_CLIENT,
       legalEntityType: LegalEntityType.NATURAL_PERSON,
       cedula: input.cedula,
       phone: input.phone,
@@ -266,7 +267,7 @@ export async function registerBusiness(
       name: input.tradeName || input.legalName,
       legalName: input.legalName,
       tradeName: input.tradeName,
-      organizationType: OrganizationType.ADVERTISER,
+      organizationType: OrganizationType.DIRECT_CLIENT,
       legalEntityType: LegalEntityType.LEGAL_ENTITY,
       taxId: input.taxId,
       dvCode: input.dvCode,
@@ -350,15 +351,68 @@ export async function createStarterOrganization(
       );
     }
 
-    return createOrganizationWithOwner(
-      {
-        name: displayName,
-        legalName: displayName,
-        organizationType: OrganizationType.ADVERTISER,
-        legalEntityType: LegalEntityType.LEGAL_ENTITY,
-      },
-      userProfileId,
-    );
+    return db.$transaction(async (tx) => {
+      const organization = await tx.organization.create({
+        data: {
+          name: displayName,
+          legalName: displayName,
+          organizationType: OrganizationType.DIRECT_CLIENT,
+          legalEntityType: LegalEntityType.LEGAL_ENTITY,
+          createdById: userProfileId,
+        },
+      });
+
+      await tx.organizationMember.create({
+        data: {
+          organizationId: organization.id,
+          userProfileId,
+          role: OrganizationRole.OWNER,
+          acceptedAt: new Date(),
+        },
+      });
+
+      const brand = await tx.brand.create({
+        data: {
+          ownerOrganizationId: organization.id,
+          name: displayName,
+          legalName: displayName,
+          createdBy: userProfileId,
+          updatedBy: userProfileId,
+        },
+      });
+
+      await tx.brandAccess.upsert({
+        where: {
+          organizationId_brandId: {
+            organizationId: organization.id,
+            brandId: brand.id,
+          },
+        },
+        create: {
+          organizationId: organization.id,
+          brandId: brand.id,
+          accessType: BrandAccessType.OWNER,
+          status: OrganizationRelationshipStatus.ACTIVE,
+          createdBy: userProfileId,
+          updatedBy: userProfileId,
+          canCreateRequests: true,
+          canCreateOrders: true,
+          canViewBilling: true,
+          canManageContacts: true,
+        },
+        update: {
+          accessType: BrandAccessType.OWNER,
+          status: OrganizationRelationshipStatus.ACTIVE,
+          updatedBy: userProfileId,
+          canCreateRequests: true,
+          canCreateOrders: true,
+          canViewBilling: true,
+          canManageContacts: true,
+        },
+      });
+
+      return brand;
+    });
   }
 
   if (directAgencyMemberships.length === 0) {
@@ -377,7 +431,7 @@ export async function createStarterOrganization(
     );
   }
 
-  if (input.organizationType !== OrganizationType.ADVERTISER) {
+  if (input.organizationType !== OrganizationType.DIRECT_CLIENT) {
     throw new Error(
       "Las cuentas de agencia solo pueden crear marcas cliente desde este flujo.",
     );
@@ -403,30 +457,29 @@ export async function createStarterOrganization(
       : null) ?? directAgencyMemberships[0].organizationId;
 
   return db.$transaction(async (tx) => {
-    const clientBrand = await tx.organization.create({
+    const clientBrand = await tx.brand.create({
       data: {
         name: displayName,
         legalName: displayName,
-        organizationType: OrganizationType.ADVERTISER,
-        legalEntityType: LegalEntityType.LEGAL_ENTITY,
-        createdById: userProfileId,
+        ownerOrganizationId: null,
+        createdBy: userProfileId,
+        updatedBy: userProfileId,
       },
     });
 
-    await tx.organizationRelationship.upsert({
+    await tx.brandAccess.upsert({
       where: {
-        sourceOrganizationId_targetOrganizationId_relationshipType: {
-          sourceOrganizationId: operatingAgencyId,
-          targetOrganizationId: clientBrand.id,
-          relationshipType: "AGENCY_CLIENT",
+        organizationId_brandId: {
+          organizationId: operatingAgencyId,
+          brandId: clientBrand.id,
         },
       },
       create: {
-        sourceOrganizationId: operatingAgencyId,
-        targetOrganizationId: clientBrand.id,
-        relationshipType: "AGENCY_CLIENT",
+        organizationId: operatingAgencyId,
+        brandId: clientBrand.id,
+        accessType: BrandAccessType.DELEGATED,
         status: OrganizationRelationshipStatus.ACTIVE,
-        createdById: userProfileId,
+        createdBy: userProfileId,
         updatedBy: userProfileId,
         canCreateRequests: true,
         canCreateOrders: true,
@@ -434,6 +487,7 @@ export async function createStarterOrganization(
         canManageContacts: false,
       },
       update: {
+        accessType: BrandAccessType.DELEGATED,
         status: OrganizationRelationshipStatus.ACTIVE,
         updatedBy: userProfileId,
       },
@@ -512,11 +566,7 @@ export async function createAgencyClientRelationship(
   input: CreateAgencyClientRelationshipInput,
   createdByProfileId: string
 ) {
-  if (input.agencyOrganizationId === input.advertiserOrganizationId) {
-    throw new Error("La agencia y el cliente no pueden ser la misma organización.");
-  }
-
-  const [agencyOrganization, advertiserOrganization] = await Promise.all([
+  const [agencyOrganization, brand] = await Promise.all([
     db.organization.findUnique({
       where: { id: input.agencyOrganizationId },
       select: {
@@ -525,12 +575,11 @@ export async function createAgencyClientRelationship(
         organizationType: true,
       },
     }),
-    db.organization.findUnique({
-      where: { id: input.advertiserOrganizationId },
+    db.brand.findUnique({
+      where: { id: input.brandId },
       select: {
         id: true,
         isActive: true,
-        organizationType: true,
       },
     }),
   ]);
@@ -543,73 +592,67 @@ export async function createAgencyClientRelationship(
     throw new Error("La organización origen debe ser una agencia.");
   }
 
-  if (!advertiserOrganization || !advertiserOrganization.isActive) {
-    throw new Error("La organización cliente no existe o está inactiva.");
-  }
-
-  if (advertiserOrganization.organizationType !== OrganizationType.ADVERTISER) {
-    throw new Error("La organización destino debe ser un anunciante.");
+  if (!brand || !brand.isActive) {
+    throw new Error("La marca no existe o está inactiva.");
   }
 
   const permissions = resolveRelationshipPermissions(input.permissions);
 
-  return db.organizationRelationship.upsert({
+  return db.brandAccess.upsert({
     where: {
-      sourceOrganizationId_targetOrganizationId_relationshipType: {
-        sourceOrganizationId: input.agencyOrganizationId,
-        targetOrganizationId: input.advertiserOrganizationId,
-        relationshipType: "AGENCY_CLIENT",
+      organizationId_brandId: {
+        organizationId: input.agencyOrganizationId,
+        brandId: input.brandId,
       },
     },
     create: {
-      sourceOrganizationId: input.agencyOrganizationId,
-      targetOrganizationId: input.advertiserOrganizationId,
-      relationshipType: "AGENCY_CLIENT",
+      organizationId: input.agencyOrganizationId,
+      brandId: input.brandId,
+      accessType: BrandAccessType.DELEGATED,
       status: input.status ?? OrganizationRelationshipStatus.ACTIVE,
-      createdById: createdByProfileId,
+      createdBy: createdByProfileId,
       updatedBy: createdByProfileId,
       ...permissions,
     },
     update: {
+      accessType: BrandAccessType.DELEGATED,
       status: input.status ?? OrganizationRelationshipStatus.ACTIVE,
       updatedBy: createdByProfileId,
       ...permissions,
     },
     include: {
-      sourceOrganization: true,
-      targetOrganization: true,
+      organization: true,
+      brand: true,
     },
   });
 }
 
 export async function listAgencyClients(agencyOrganizationId: string) {
-  return db.organizationRelationship.findMany({
+  return db.brandAccess.findMany({
     where: {
-      sourceOrganizationId: agencyOrganizationId,
-      relationshipType: "AGENCY_CLIENT",
+      organizationId: agencyOrganizationId,
     },
     orderBy: [
       { status: "asc" },
-      { targetOrganization: { name: "asc" } },
+      { brand: { name: "asc" } },
     ],
     include: {
-      targetOrganization: true,
+      brand: true,
     },
   });
 }
 
-export async function listClientAgencies(advertiserOrganizationId: string) {
-  return db.organizationRelationship.findMany({
+export async function listClientAgencies(brandId: string) {
+  return db.brandAccess.findMany({
     where: {
-      targetOrganizationId: advertiserOrganizationId,
-      relationshipType: "AGENCY_CLIENT",
+      brandId,
     },
     orderBy: [
       { status: "asc" },
-      { sourceOrganization: { name: "asc" } },
+      { organization: { name: "asc" } },
     ],
     include: {
-      sourceOrganization: true,
+      organization: true,
     },
   });
 }

@@ -306,8 +306,8 @@ function ContextTone({
 }
 
 function formatOrganizationTypeLabel(value: string) {
-  if (value === "ADVERTISER") {
-    return "Marca";
+  if (value === "DIRECT_CLIENT") {
+    return "Cliente directo";
   }
 
   if (value === "AGENCY") {

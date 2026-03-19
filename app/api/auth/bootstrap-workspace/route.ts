@@ -16,7 +16,7 @@ function resolveBootstrapOrganizationType(accountType: UserAccountType) {
     return OrganizationType.AGENCY;
   }
 
-  return OrganizationType.ADVERTISER;
+  return OrganizationType.DIRECT_CLIENT;
 }
 
 export async function POST(request: Request) {

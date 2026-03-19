@@ -93,7 +93,7 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
   const accountQuery = trpc.admin.getAccountDetail.useQuery({ userId });
   const organizationsQuery = trpc.organization.list.useQuery({ skip: 0, take: 300 });
   const advertisersQuery = trpc.organization.list.useQuery({
-    organizationType: "ADVERTISER",
+    organizationType: "DIRECT_CLIENT",
     isActive: true,
     skip: 0,
     take: 300,
@@ -725,7 +725,7 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
                 onClick={() =>
                   upsertRelationship.mutate({
                     agencyOrganizationId: effectiveLinkAgencyId,
-                    advertiserOrganizationId: linkAdvertiserId,
+                    brandId: linkAdvertiserId,
                     status: linkRelationshipStatus,
                     canCreateRequests: linkCanCreateRequests,
                     canCreateOrders: linkCanCreateOrders,

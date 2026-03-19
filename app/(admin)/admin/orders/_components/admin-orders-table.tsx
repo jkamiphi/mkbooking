@@ -213,7 +213,7 @@ export function AdminOrdersTable() {
                                         </td>
                                         <td className="px-5 py-4">
                                             <span className="block font-medium text-neutral-900">
-                                                {order.organization?.name || order.clientName || "Sin cliente"}
+                                                {order.brand?.name || order.clientName || "Sin cliente"}
                                             </span>
                                         </td>
                                         <td className="px-5 py-4 text-neutral-600">

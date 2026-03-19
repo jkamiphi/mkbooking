@@ -60,7 +60,7 @@ function buildOrderOwnershipFilters(
     const ownershipFilter: Prisma.OrderWhereInput = {};
 
     if (condition.organizationId) {
-      ownershipFilter.organizationId = condition.organizationId;
+      ownershipFilter.brandId = condition.organizationId;
     }
 
     if (condition.actingAgencyOrganizationId !== undefined) {
@@ -231,7 +231,7 @@ export const ordersRouter = router({
             structureTypeId: assignment.face.asset.structureTypeId,
           },
         })),
-        request.organizationId ?? undefined,
+        request.brandId ?? undefined,
       );
 
       const lineItemsData = request.assignments.map((assignment) => {
@@ -300,7 +300,7 @@ export const ordersRouter = router({
         const newOrder = await tx.order.create({
           data: {
             campaignRequestId: request.id,
-            organizationId: request.organizationId,
+            brandId: request.brandId,
             actingAgencyOrganizationId: request.actingAgencyOrganizationId,
             createdById: userProfile.id,
             clientName: request.contactName,
@@ -353,7 +353,7 @@ export const ordersRouter = router({
         db.order.findMany({
           where,
           include: {
-            organization: true,
+            brand: true,
             createdBy: {
               include: { user: true },
             },
@@ -411,7 +411,7 @@ export const ordersRouter = router({
         db.order.findMany({
           where,
           include: {
-            organization: true,
+            brand: true,
             actingAgencyOrganization: true,
             lineItems: true,
             serviceItems: true,
@@ -469,7 +469,7 @@ export const ordersRouter = router({
               },
             },
           },
-          organization: true,
+          brand: true,
           campaignRequest: true,
           companyConfirmBy: true,
           salesReviewBy: {
@@ -836,7 +836,7 @@ export const ordersRouter = router({
           await tx.catalogHold.create({
             data: {
               faceId: catalogFace.id,
-              organizationId: order.organizationId,
+              brandId: order.brandId,
               createdById: userProfile.id,
               status: "ACTIVE",
               expiresAt: order.toDate || expiresAt,

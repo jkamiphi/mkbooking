@@ -119,7 +119,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
             <AdminPageHeader
                 title={`Orden ${order.code}`}
-                description={`Detalle de la orden para ${order.organization?.name || "cliente desconocido"}.`}
+                description={`Detalle de la orden para ${order.brand?.name || "cliente desconocido"}.`}
             />
 
             <div className="mb-6 flex flex-wrap items-center gap-3">

@@ -8,7 +8,7 @@ type PrismaClientLike = Prisma.TransactionClient | typeof db;
 interface ResolvedOrderNotificationRecipients {
   orderId: string;
   orderCode: string;
-  organizationId: string | null;
+  brandId: string | null;
   recipients: Array<{
     userProfileId: string;
     email: string | null;
@@ -60,13 +60,17 @@ async function resolveOrderRecipientProfileIds(
     select: {
       id: true,
       code: true,
-      organizationId: true,
+      brandId: true,
       createdById: true,
-      organization: {
+      brand: {
         select: {
-          members: {
-            where: { isActive: true },
-            select: { userProfileId: true },
+          ownerOrganization: {
+            select: {
+              members: {
+                where: { isActive: true },
+                select: { userProfileId: true },
+              },
+            },
           },
         },
       },
@@ -79,8 +83,8 @@ async function resolveOrderRecipientProfileIds(
 
   const recipients = new Set<string>();
 
-  if (order.organizationId) {
-    for (const member of order.organization?.members ?? []) {
+  if (order.brandId) {
+    for (const member of order.brand?.ownerOrganization?.members ?? []) {
       recipients.add(member.userProfileId);
     }
   }
@@ -92,7 +96,7 @@ async function resolveOrderRecipientProfileIds(
   return {
     orderId: order.id,
     orderCode: order.code,
-    organizationId: order.organizationId ?? null,
+    brandId: order.brandId ?? null,
     recipientProfileIds: [...recipients],
   };
 }
@@ -180,7 +184,7 @@ export async function resolveOrderRecipients(
     return {
       orderId: resolvedOrder.orderId,
       orderCode: resolvedOrder.orderCode,
-      organizationId: resolvedOrder.organizationId,
+      brandId: resolvedOrder.brandId,
       recipients: [],
     };
   }
@@ -193,7 +197,7 @@ export async function resolveOrderRecipients(
   return {
     orderId: resolvedOrder.orderId,
     orderCode: resolvedOrder.orderCode,
-    organizationId: resolvedOrder.organizationId,
+    brandId: resolvedOrder.brandId,
     recipients: profiles.map((profile) => {
       const preference = profile.notificationPreferences[0];
 
@@ -256,7 +260,7 @@ export async function createOrderNotifications(
       ? await client.userNotification.createMany({
           data: inAppRecipients.map((recipient) => ({
             userProfileId: recipient.userProfileId,
-            organizationId: resolved.organizationId,
+            brandId: resolved.brandId,
             orderId: input.orderId,
             type: input.type,
             title: input.title,

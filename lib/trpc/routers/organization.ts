@@ -26,8 +26,8 @@ import {
 import { getOrCreateUserProfile } from "@/lib/services/user-profile";
 import { TRPCError } from "@trpc/server";
 import {
-  LegalEntityType,
   OrganizationRelationshipStatus,
+  LegalEntityType,
   OrganizationType,
 } from "@prisma/client";
 import {
@@ -277,31 +277,29 @@ export const organizationRouter = router({
         });
       }
 
-      const advertiserAccess = await ctx.db.organization.findFirst({
-        where: {
-          id: input.advertiserOrganizationId,
-          isActive: true,
-          organizationType: OrganizationType.ADVERTISER,
-          OR: [
-            { createdById: profile.id },
-            {
-              members: {
-                some: {
-                  userProfileId: profile.id,
-                  isActive: true,
-                  role: { in: ["OWNER", "ADMIN"] },
-                },
-              },
-            },
-          ],
-        },
-        select: { id: true },
+      const brand = await ctx.db.brand.findUnique({
+        where: { id: input.brandId },
+        select: { id: true, isActive: true },
       });
 
-      if (!advertiserAccess) {
+      if (!brand || !brand.isActive) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Brand not found",
+        });
+      }
+
+      const accessibleContexts = await listAccessibleOrganizationContextsForUser(
+        ctx.user.id,
+      );
+      const hasBrandAccess = accessibleContexts.some(
+        (context) => context.targetBrandOrganizationId === input.brandId,
+      );
+
+      if (!hasBrandAccess) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "You need direct or owner access to the advertiser organization",
+          message: "You need direct or owner access to the brand",
         });
       }
 
@@ -352,7 +350,7 @@ export const organizationRouter = router({
   clientAgencies: protectedProcedure
     .input(
       z.object({
-        advertiserOrganizationId: z.string().min(1),
+        brandId: z.string().min(1),
         status: z.nativeEnum(OrganizationRelationshipStatus).optional(),
       }),
     )
@@ -361,7 +359,7 @@ export const organizationRouter = router({
         ctx.user.id,
       );
       const hasAccess = accessibleContexts.some(
-        (context) => context.organizationId === input.advertiserOrganizationId,
+        (context) => context.targetBrandOrganizationId === input.brandId,
       );
 
       if (!hasAccess) {
@@ -371,7 +369,7 @@ export const organizationRouter = router({
         });
       }
 
-      const relationships = await listClientAgencies(input.advertiserOrganizationId);
+      const relationships = await listClientAgencies(input.brandId);
 
       if (!input.status) {
         return relationships;

@@ -17,7 +17,7 @@ type PageProps = {
 
 type ActiveContextLike = {
   organizationName: string;
-  organizationType: "ADVERTISER" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
+  organizationType: "DIRECT_CLIENT" | "AGENCY" | "MEDIA_OWNER" | "PLATFORM_ADMIN";
   operatingAgencyOrganizationName: string | null;
   targetBrandOrganizationId: string | null;
 };
@@ -223,7 +223,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
             const config =
               STATUS_CONFIG[order.status] || STATUS_CONFIG["DRAFT"];
             const operationContextLabel = buildOperationContextLabel({
-              brandName: order.organization?.name,
+              brandName: order.brand?.name,
               actingAgencyName: order.actingAgencyOrganization?.name,
             });
 

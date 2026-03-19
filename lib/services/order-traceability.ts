@@ -305,7 +305,7 @@ export async function issueOperationalInstallationReport(
           code: true,
           clientName: true,
           clientEmail: true,
-          organization: {
+          brand: {
             select: {
               name: true,
             },
@@ -422,7 +422,7 @@ export async function issueOperationalInstallationReport(
       code: workOrder.order.code,
       clientName: workOrder.order.clientName ?? null,
       clientEmail: workOrder.order.clientEmail ?? null,
-      organizationName: workOrder.order.organization?.name ?? null,
+      organizationName: workOrder.order.brand?.name ?? null,
     },
     face: {
       id: workOrder.face.id,
@@ -630,7 +630,7 @@ export async function getOrderTraceability(
   const order = await db.order.findUnique({
     where: { id: orderId },
     include: {
-      organization: true,
+      brand: true,
       companyConfirmBy: {
         include: {
           user: {
@@ -1178,7 +1178,7 @@ export async function getOrderTraceability(
       code: order.code,
       clientName: order.clientName,
       clientEmail: order.clientEmail,
-      organizationName: order.organization?.name ?? null,
+      organizationName: order.brand?.name ?? null,
       operationsClosedAt: order.operationsClosedAt,
       caseFileArchivedAt: order.caseFileArchivedAt,
       operationsClosedBy: resolveProfileDisplay(order.operationsClosedBy),

@@ -138,11 +138,11 @@ export default async function FaceDetailPage({
     createServerTRPCCaller(),
   ]);
   const profile = session?.user?.id ? await caller.userProfile.current() : null;
-  const organizationId = profile?.activeOrganizationContext?.organizationId;
+  const brandId = profile?.activeOrganizationContext?.brandId ?? undefined;
 
   const detail = await caller.catalog.faces.publicDetail({
     faceId,
-    organizationId,
+    brandId,
   });
   if (!detail) notFound();
 
@@ -722,8 +722,8 @@ export default async function FaceDetailPage({
                               ? `Zona (${rule.zone?.name || "N/D"})`
                               : rule.structureTypeId
                                 ? `Tipo (${rule.structureType?.name || "N/D"})`
-                                : rule.organizationId
-                                  ? `Organización (${rule.organization?.name || "N/D"})`
+                                : rule.brandId
+                                  ? `Marca (${rule.brand?.name || "N/D"})`
                                   : "Global"}
                         </p>
                       </div>

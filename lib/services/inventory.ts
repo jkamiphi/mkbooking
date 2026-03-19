@@ -651,7 +651,7 @@ export async function listAssetControlRows(options?: {
                 currency: true,
                 fromDate: true,
                 toDate: true,
-                organization: {
+                brand: {
                   select: {
                     name: true,
                   },
@@ -700,7 +700,7 @@ export async function listAssetControlRows(options?: {
     activeRuleOr.length > 0
       ? await db.catalogPriceRule.findMany({
           where: {
-            organizationId: null,
+            brandId: null,
             isActive: true,
             startDate: { lte: todayPanama },
             OR: [{ endDate: null }, { endDate: { gte: todayPanama } }],
@@ -761,7 +761,7 @@ export async function listAssetControlRows(options?: {
       illuminated: face.asset.illuminated,
       materialType: face.productionSpec?.material ?? null,
       occupancyStatus: activeOrder ? ("OCUPADO" as const) : ("DISPONIBLE" as const),
-      clientName: activeOrder?.organization?.name || activeOrder?.clientName || null,
+      clientName: activeOrder?.brand?.name || activeOrder?.clientName || null,
       checkIn: activeOrder?.fromDate ?? null,
       checkOut: activeOrder?.toDate ?? null,
       dueInDays: getDaysUntilPanama(activeOrder?.toDate ?? null),

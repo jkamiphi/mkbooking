@@ -174,7 +174,7 @@ async function findOwnedWorkOrderOrThrow(
           code: true,
           clientName: true,
           clientEmail: true,
-          organization: {
+          brand: {
             select: {
               name: true,
             },
@@ -237,7 +237,7 @@ export async function listInstallerTasksMine(
             code: true,
             clientName: true,
             clientEmail: true,
-            organization: {
+            brand: {
               select: { name: true },
             },
           },
@@ -301,7 +301,7 @@ export async function listInstallerTasksMine(
       assetAddress: workOrder.face.asset.address,
       zoneName: workOrder.zone.name,
       provinceName: workOrder.zone.province.name,
-      organizationName: workOrder.order.organization?.name ?? null,
+      organizationName: workOrder.order.brand?.name ?? null,
       clientName: workOrder.order.clientName ?? null,
       clientEmail: workOrder.order.clientEmail ?? null,
       assignedAt: workOrder.assignedAt,
@@ -344,7 +344,7 @@ export async function getInstallerTaskById(actorUserId: string, workOrderId: str
           code: true,
           clientName: true,
           clientEmail: true,
-          organization: {
+          brand: {
             select: {
               name: true,
             },
@@ -438,7 +438,7 @@ export async function getInstallerTaskById(actorUserId: string, workOrderId: str
       name: workOrder.zone.name,
       provinceName: workOrder.zone.province.name,
     },
-    organizationName: workOrder.order.organization?.name ?? null,
+    organizationName: workOrder.order.brand?.name ?? null,
     clientName: workOrder.order.clientName ?? null,
     clientEmail: workOrder.order.clientEmail ?? null,
     assignedAt: workOrder.assignedAt,

@@ -52,7 +52,7 @@ export const adminListUsersSchema = z.object({
 
 const userAccountTypeSchema = z.enum(["DIRECT_CLIENT", "AGENCY"]);
 
-const organizationRelationshipStatusSchema = z.enum([
+const brandAccessStatusSchema = z.enum([
   "PENDING",
   "ACTIVE",
   "INACTIVE",
@@ -73,7 +73,7 @@ export const adminListAccountsSchema = z.object({
   accountType: userAccountTypeSchema.optional(),
   isActive: z.boolean().optional(),
   organizationType: z.nativeEnum(OrganizationType).optional(),
-  relationshipStatus: organizationRelationshipStatusSchema.optional(),
+  relationshipStatus: brandAccessStatusSchema.optional(),
   search: z.string().optional(),
   skip: z.number().min(0).default(0),
   take: z.number().min(1).max(100).default(20),
@@ -98,7 +98,7 @@ export const adminListManagedOrganizationsSchema = z.object({
 export const adminListBrandsSchema = z.object({
   isActive: z.boolean().optional(),
   isVerified: z.boolean().optional(),
-  relationshipStatus: organizationRelationshipStatusSchema.optional(),
+  relationshipStatus: brandAccessStatusSchema.optional(),
   search: z.string().optional(),
   skip: z.number().min(0).default(0),
   take: z.number().min(1).max(100).default(20),
@@ -137,8 +137,8 @@ export const createBrandAndLinkSchema = z.object({
 
 export const upsertAgencyClientRelationshipSchema = z.object({
   agencyOrganizationId: z.string().min(1),
-  advertiserOrganizationId: z.string().min(1),
-  status: organizationRelationshipStatusSchema.optional(),
+  brandId: z.string().min(1),
+  status: brandAccessStatusSchema.optional(),
   canCreateRequests: z.boolean().optional(),
   canCreateOrders: z.boolean().optional(),
   canViewBilling: z.boolean().optional(),
@@ -148,7 +148,7 @@ export const upsertAgencyClientRelationshipSchema = z.object({
 export const updateAgencyClientRelationshipStatusPermissionsSchema = z
   .object({
     relationshipId: z.string().min(1),
-    status: organizationRelationshipStatusSchema.optional(),
+    status: brandAccessStatusSchema.optional(),
     canCreateRequests: z.boolean().optional(),
     canCreateOrders: z.boolean().optional(),
     canViewBilling: z.boolean().optional(),
@@ -448,20 +448,9 @@ function buildRelationshipSummary(
   );
 }
 
-const CURRENT_BRAND_RELATIONSHIP_STATUSES: OrganizationRelationshipStatus[] = [
-  OrganizationRelationshipStatus.ACTIVE,
-  OrganizationRelationshipStatus.PENDING,
-];
-
 function getDirectClientWhereClause(): Prisma.OrganizationWhereInput {
   return {
-    organizationType: OrganizationType.ADVERTISER,
-    incomingRelationships: {
-      none: {
-        relationshipType: "AGENCY_CLIENT",
-        status: { in: CURRENT_BRAND_RELATIONSHIP_STATUSES },
-      },
-    },
+    organizationType: OrganizationType.DIRECT_CLIENT,
   };
 }
 
@@ -730,25 +719,6 @@ export async function adminListAccounts(
     });
   }
 
-  if (relationshipStatus) {
-    andFilters.push({
-      organizationRoles: {
-        some: {
-          isActive: true,
-          organization: {
-            organizationType: OrganizationType.AGENCY,
-            outgoingRelationships: {
-              some: {
-                relationshipType: "AGENCY_CLIENT",
-                status: relationshipStatus,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
   if (search?.trim()) {
     const normalizedSearch = search.trim();
     where.OR = [
@@ -845,13 +815,12 @@ export async function adminListAccounts(
 
   const relationships =
     agencyOrganizationIds.length > 0
-      ? await db.organizationRelationship.findMany({
+      ? await db.brandAccess.findMany({
           where: {
-            sourceOrganizationId: { in: agencyOrganizationIds },
-            relationshipType: "AGENCY_CLIENT",
+            organizationId: { in: agencyOrganizationIds },
           },
           select: {
-            sourceOrganizationId: true,
+            organizationId: true,
             status: true,
           },
         })
@@ -864,12 +833,12 @@ export async function adminListAccounts(
 
   for (const relationship of relationships) {
     const existing =
-      relationshipStatusesByAgency.get(relationship.sourceOrganizationId) ?? [];
+      relationshipStatusesByAgency.get(relationship.organizationId) ?? [];
     existing.push(relationship.status);
-    relationshipStatusesByAgency.set(relationship.sourceOrganizationId, existing);
+    relationshipStatusesByAgency.set(relationship.organizationId, existing);
   }
 
-  const accounts: AdminAccountRow[] = profiles.map((profile) => {
+  let accounts: AdminAccountRow[] = profiles.map((profile) => {
     const agencyStatuses = profile.organizationRoles
       .filter(
         (membership) =>
@@ -905,10 +874,22 @@ export async function adminListAccounts(
     };
   });
 
+  if (relationshipStatus) {
+    accounts = accounts.filter((account) => {
+      if (relationshipStatus === OrganizationRelationshipStatus.ACTIVE) {
+        return account.relationshipSummary.active > 0;
+      }
+      if (relationshipStatus === OrganizationRelationshipStatus.PENDING) {
+        return account.relationshipSummary.pending > 0;
+      }
+      return account.relationshipSummary.inactive > 0;
+    });
+  }
+
   return {
     accounts,
-    total,
-    hasMore: skip + accounts.length < total,
+    total: relationshipStatus ? accounts.length : total,
+    hasMore: relationshipStatus ? false : skip + accounts.length < total,
   };
 }
 
@@ -1034,23 +1015,12 @@ export async function adminListBrands(
     orderDirection,
   } = input;
 
-  const andFilters: Prisma.OrganizationWhereInput[] = [
-    { organizationType: OrganizationType.ADVERTISER },
-    {
-      incomingRelationships: {
-        some: {
-          relationshipType: "AGENCY_CLIENT",
-          status: { in: CURRENT_BRAND_RELATIONSHIP_STATUSES },
-        },
-      },
-    },
-  ];
+  const andFilters: Prisma.BrandWhereInput[] = [];
 
   if (relationshipStatus) {
     andFilters.push({
-      incomingRelationships: {
+      accesses: {
         some: {
-          relationshipType: "AGENCY_CLIENT",
           status: relationshipStatus,
         },
       },
@@ -1070,19 +1040,18 @@ export async function adminListBrands(
         { legalName: { contains: normalizedSearch, mode: "insensitive" } },
         { tradeName: { contains: normalizedSearch, mode: "insensitive" } },
         { taxId: { contains: normalizedSearch, mode: "insensitive" } },
-        { cedula: { contains: normalizedSearch, mode: "insensitive" } },
       ],
     });
   }
 
-  const where: Prisma.OrganizationWhereInput = { AND: andFilters };
-  const prismaOrderBy: Prisma.OrganizationOrderByWithRelationInput =
+  const where: Prisma.BrandWhereInput = andFilters.length > 0 ? { AND: andFilters } : {};
+  const prismaOrderBy: Prisma.BrandOrderByWithRelationInput =
     orderBy === "name"
       ? { name: orderDirection ?? "asc" }
       : { createdAt: orderDirection ?? "desc" };
 
   const [brands, total] = await Promise.all([
-    db.organization.findMany({
+    db.brand.findMany({
       where,
       skip,
       take,
@@ -1097,11 +1066,10 @@ export async function adminListBrands(
         isActive: true,
         isVerified: true,
         createdAt: true,
-        incomingRelationships: {
-          where: { relationshipType: "AGENCY_CLIENT" },
+        accesses: {
           orderBy: [
             { status: "asc" },
-            { sourceOrganization: { name: "asc" } },
+            { organization: { name: "asc" } },
           ],
           select: {
             id: true,
@@ -1110,7 +1078,7 @@ export async function adminListBrands(
             canCreateOrders: true,
             canViewBilling: true,
             canManageContacts: true,
-            sourceOrganization: {
+            organization: {
               select: {
                 id: true,
                 name: true,
@@ -1121,7 +1089,7 @@ export async function adminListBrands(
         },
       },
     }),
-    db.organization.count({ where }),
+    db.brand.count({ where }),
   ]);
 
   const mappedBrands: AdminBrandRow[] = brands.map((brand) => ({
@@ -1135,16 +1103,16 @@ export async function adminListBrands(
     isVerified: brand.isVerified,
     createdAt: brand.createdAt,
     relationshipSummary: buildRelationshipSummary(
-      brand.incomingRelationships.map((relationship) => relationship.status),
+      brand.accesses.map((relationship) => relationship.status),
     ),
-    linkedAgencies: brand.incomingRelationships.map((relationship) => ({
+    linkedAgencies: brand.accesses.map((relationship) => ({
       id: relationship.id,
       status: relationship.status,
       canCreateRequests: relationship.canCreateRequests,
       canCreateOrders: relationship.canCreateOrders,
       canViewBilling: relationship.canViewBilling,
       canManageContacts: relationship.canManageContacts,
-      sourceOrganization: relationship.sourceOrganization,
+      sourceOrganization: relationship.organization,
     })),
   }));
 
@@ -1218,22 +1186,17 @@ export async function adminGetAccountDetail(
     )
     .map((membership) => membership.organization.id);
 
-  const advertiserOrganizationIds = profile.organizationRoles
-    .filter(
-      (membership) =>
-        membership.organization.organizationType ===
-        OrganizationType.ADVERTISER,
-    )
-    .map((membership) => membership.organization.id);
+  const organizationIds = profile.organizationRoles.map(
+    (membership) => membership.organization.id,
+  );
 
-  const [managedRelationships, clientRelationships] = await Promise.all([
+  const [managedAccesses, clientAccesses] = await Promise.all([
     agencyOrganizationIds.length > 0
-      ? db.organizationRelationship.findMany({
+      ? db.brandAccess.findMany({
           where: {
-            sourceOrganizationId: { in: agencyOrganizationIds },
-            relationshipType: "AGENCY_CLIENT",
+            organizationId: { in: agencyOrganizationIds },
           },
-          orderBy: [{ status: "asc" }, { targetOrganization: { name: "asc" } }],
+          orderBy: [{ status: "asc" }, { brand: { name: "asc" } }],
           select: {
             id: true,
             status: true,
@@ -1241,30 +1204,35 @@ export async function adminGetAccountDetail(
             canCreateOrders: true,
             canViewBilling: true,
             canManageContacts: true,
-            sourceOrganization: {
+            organization: {
               select: {
                 id: true,
                 name: true,
                 organizationType: true,
               },
             },
-            targetOrganization: {
+            brand: {
               select: {
                 id: true,
                 name: true,
-                organizationType: true,
+                ownerOrganization: {
+                  select: {
+                    organizationType: true,
+                  },
+                },
               },
             },
           },
         })
       : Promise.resolve([]),
-    advertiserOrganizationIds.length > 0
-      ? db.organizationRelationship.findMany({
+    organizationIds.length > 0
+      ? db.brandAccess.findMany({
           where: {
-            targetOrganizationId: { in: advertiserOrganizationIds },
-            relationshipType: "AGENCY_CLIENT",
+            brand: {
+              ownerOrganizationId: { in: organizationIds },
+            },
           },
-          orderBy: [{ status: "asc" }, { sourceOrganization: { name: "asc" } }],
+          orderBy: [{ status: "asc" }, { organization: { name: "asc" } }],
           select: {
             id: true,
             status: true,
@@ -1272,24 +1240,62 @@ export async function adminGetAccountDetail(
             canCreateOrders: true,
             canViewBilling: true,
             canManageContacts: true,
-            sourceOrganization: {
+            organization: {
               select: {
                 id: true,
                 name: true,
                 organizationType: true,
               },
             },
-            targetOrganization: {
+            brand: {
               select: {
                 id: true,
                 name: true,
-                organizationType: true,
+                ownerOrganization: {
+                  select: {
+                    organizationType: true,
+                  },
+                },
               },
             },
           },
         })
       : Promise.resolve([]),
   ]);
+
+  const managedRelationships = managedAccesses.map((relationship) => ({
+    id: relationship.id,
+    status: relationship.status,
+    canCreateRequests: relationship.canCreateRequests,
+    canCreateOrders: relationship.canCreateOrders,
+    canViewBilling: relationship.canViewBilling,
+    canManageContacts: relationship.canManageContacts,
+    sourceOrganization: relationship.organization,
+    targetOrganization: {
+      id: relationship.brand.id,
+      name: relationship.brand.name,
+      organizationType:
+        relationship.brand.ownerOrganization?.organizationType ??
+        OrganizationType.DIRECT_CLIENT,
+    },
+  }));
+
+  const clientRelationships = clientAccesses.map((relationship) => ({
+    id: relationship.id,
+    status: relationship.status,
+    canCreateRequests: relationship.canCreateRequests,
+    canCreateOrders: relationship.canCreateOrders,
+    canViewBilling: relationship.canViewBilling,
+    canManageContacts: relationship.canManageContacts,
+    sourceOrganization: relationship.organization,
+    targetOrganization: {
+      id: relationship.brand.id,
+      name: relationship.brand.name,
+      organizationType:
+        relationship.brand.ownerOrganization?.organizationType ??
+        OrganizationType.DIRECT_CLIENT,
+    },
+  }));
 
   return {
     ...profile,
@@ -1538,16 +1544,34 @@ export async function createBrandAndLinkToAgency(
     throw new Error("No se encontró el usuario para asignar la marca.");
   }
 
+  const assigneeOwnerOrganizationId = assigneeProfile
+    ? (
+        await db.organizationMember.findFirst({
+          where: {
+            userProfileId: assigneeProfile.id,
+            isActive: true,
+            role: { in: [OrganizationRole.OWNER, OrganizationRole.ADMIN] },
+            organization: {
+              isActive: true,
+              organizationType: OrganizationType.DIRECT_CLIENT,
+            },
+          },
+          select: { organizationId: true },
+        })
+      )?.organizationId ?? null
+    : null;
+
   return db.$transaction(async (tx) => {
-    const brand = await tx.organization.create({
+    const brand = await tx.brand.create({
       data: {
+        ownerOrganizationId: assigneeOwnerOrganizationId,
         name: input.name.trim(),
         legalName: normalizeOptional(input.legalName) ?? input.name.trim(),
         tradeName: normalizeOptional(input.tradeName),
         taxId: normalizeOptional(input.taxId),
-        organizationType: OrganizationType.ADVERTISER,
         legalEntityType: LegalEntityType.LEGAL_ENTITY,
-        createdById: actorProfile.id,
+        createdBy: actorProfile.id,
+        updatedBy: actorProfile.id,
       },
       select: {
         id: true,
@@ -1555,31 +1579,30 @@ export async function createBrandAndLinkToAgency(
         legalName: true,
         tradeName: true,
         taxId: true,
-        organizationType: true,
         legalEntityType: true,
         isActive: true,
         isVerified: true,
       },
     });
 
-    const relationship = await tx.organizationRelationship.upsert({
+    const relationship = await tx.brandAccess.upsert({
       where: {
-        sourceOrganizationId_targetOrganizationId_relationshipType: {
-          sourceOrganizationId: input.agencyOrganizationId,
-          targetOrganizationId: brand.id,
-          relationshipType: "AGENCY_CLIENT",
+        organizationId_brandId: {
+          organizationId: input.agencyOrganizationId,
+          brandId: brand.id,
         },
       },
       create: {
-        sourceOrganizationId: input.agencyOrganizationId,
-        targetOrganizationId: brand.id,
-        relationshipType: "AGENCY_CLIENT",
+        organizationId: input.agencyOrganizationId,
+        brandId: brand.id,
+        accessType: "DELEGATED",
         status: OrganizationRelationshipStatus.ACTIVE,
-        createdById: actorProfile.id,
+        createdBy: actorProfile.id,
         updatedBy: actorProfile.id,
         ...resolveRelationshipPermissions({}),
       },
       update: {
+        accessType: "DELEGATED",
         status: OrganizationRelationshipStatus.ACTIVE,
         updatedBy: actorProfile.id,
         ...resolveRelationshipPermissions({}),
@@ -1594,38 +1617,39 @@ export async function createBrandAndLinkToAgency(
       },
     });
 
-    const membership =
-      assigneeProfile === null
-        ? null
-        : await tx.organizationMember.upsert({
-            where: {
-              organizationId_userProfileId: {
-                organizationId: brand.id,
-                userProfileId: assigneeProfile.id,
-              },
-            },
-            create: {
-              organizationId: brand.id,
-              userProfileId: assigneeProfile.id,
-              role: OrganizationRole.OWNER,
-              acceptedAt: new Date(),
-              invitedBy: actorUserId,
-            },
-            update: {
-              role: OrganizationRole.OWNER,
-              isActive: true,
-              acceptedAt: new Date(),
-              invitedBy: actorUserId,
-            },
-            select: {
-              id: true,
-              role: true,
-              isActive: true,
-              acceptedAt: true,
-            },
-          });
+    if (assigneeOwnerOrganizationId) {
+      await tx.brandAccess.upsert({
+        where: {
+          organizationId_brandId: {
+            organizationId: assigneeOwnerOrganizationId,
+            brandId: brand.id,
+          },
+        },
+        create: {
+          organizationId: assigneeOwnerOrganizationId,
+          brandId: brand.id,
+          accessType: "OWNER",
+          status: OrganizationRelationshipStatus.ACTIVE,
+          canCreateRequests: true,
+          canCreateOrders: true,
+          canViewBilling: true,
+          canManageContacts: true,
+          createdBy: actorProfile.id,
+          updatedBy: actorProfile.id,
+        },
+        update: {
+          accessType: "OWNER",
+          status: OrganizationRelationshipStatus.ACTIVE,
+          canCreateRequests: true,
+          canCreateOrders: true,
+          canViewBilling: true,
+          canManageContacts: true,
+          updatedBy: actorProfile.id,
+        },
+      });
+    }
 
-    return { brand, relationship, membership };
+    return { brand, relationship, membership: null };
   });
 }
 
@@ -1633,7 +1657,7 @@ export async function upsertAgencyClientRelationship(
   input: z.infer<typeof upsertAgencyClientRelationshipSchema>,
   actorUserId: string,
 ) {
-  if (input.agencyOrganizationId === input.advertiserOrganizationId) {
+  if (input.agencyOrganizationId === input.brandId) {
     throw new Error("La agencia y la marca no pueden ser la misma organización.");
   }
 
@@ -1645,14 +1669,23 @@ export async function upsertAgencyClientRelationship(
     throw new Error("No se encontró el perfil del usuario administrador.");
   }
 
-  const [agency, advertiser] = await Promise.all([
+  const [agency, brand] = await Promise.all([
     db.organization.findUnique({
       where: { id: input.agencyOrganizationId },
       select: { id: true, isActive: true, organizationType: true },
     }),
-    db.organization.findUnique({
-      where: { id: input.advertiserOrganizationId },
-      select: { id: true, isActive: true, organizationType: true },
+    db.brand.findUnique({
+      where: { id: input.brandId },
+      select: {
+        id: true,
+        isActive: true,
+        name: true,
+        ownerOrganization: {
+          select: {
+            organizationType: true,
+          },
+        },
+      },
     }),
   ]);
 
@@ -1661,33 +1694,32 @@ export async function upsertAgencyClientRelationship(
   }
 
   if (
-    !advertiser ||
-    !advertiser.isActive ||
-    advertiser.organizationType !== OrganizationType.ADVERTISER
+    !brand ||
+    !brand.isActive
   ) {
     throw new Error("La organización destino debe ser una marca activa.");
   }
 
   const permissions = resolveRelationshipPermissions(input);
 
-  return db.organizationRelationship.upsert({
+  const relationship = await db.brandAccess.upsert({
     where: {
-      sourceOrganizationId_targetOrganizationId_relationshipType: {
-        sourceOrganizationId: input.agencyOrganizationId,
-        targetOrganizationId: input.advertiserOrganizationId,
-        relationshipType: "AGENCY_CLIENT",
+      organizationId_brandId: {
+        organizationId: input.agencyOrganizationId,
+        brandId: input.brandId,
       },
     },
     create: {
-      sourceOrganizationId: input.agencyOrganizationId,
-      targetOrganizationId: input.advertiserOrganizationId,
-      relationshipType: "AGENCY_CLIENT",
+      organizationId: input.agencyOrganizationId,
+      brandId: input.brandId,
+      accessType: "DELEGATED",
       status: input.status ?? OrganizationRelationshipStatus.ACTIVE,
-      createdById: actorProfile.id,
+      createdBy: actorProfile.id,
       updatedBy: actorProfile.id,
       ...permissions,
     },
     update: {
+      accessType: "DELEGATED",
       status: input.status ?? OrganizationRelationshipStatus.ACTIVE,
       updatedBy: actorProfile.id,
       ...permissions,
@@ -1699,14 +1731,32 @@ export async function upsertAgencyClientRelationship(
       canCreateOrders: true,
       canViewBilling: true,
       canManageContacts: true,
-      sourceOrganization: {
+      organization: {
         select: { id: true, name: true, organizationType: true },
       },
-      targetOrganization: {
-        select: { id: true, name: true, organizationType: true },
+      brand: {
+        select: {
+          id: true,
+          name: true,
+          ownerOrganization: {
+            select: { organizationType: true },
+          },
+        },
       },
     },
   });
+
+  return {
+    ...relationship,
+    sourceOrganization: relationship.organization,
+    targetOrganization: {
+      id: relationship.brand.id,
+      name: relationship.brand.name,
+      organizationType:
+        relationship.brand.ownerOrganization?.organizationType ??
+        OrganizationType.DIRECT_CLIENT,
+    },
+  };
 }
 
 export async function updateAgencyClientRelationshipStatusPermissions(
@@ -1721,20 +1771,16 @@ export async function updateAgencyClientRelationshipStatusPermissions(
     throw new Error("No se encontró el perfil del usuario administrador.");
   }
 
-  const relationship = await db.organizationRelationship.findUnique({
+  const relationship = await db.brandAccess.findUnique({
     where: { id: input.relationshipId },
-    select: { id: true, relationshipType: true },
+    select: { id: true },
   });
 
   if (!relationship) {
     throw new Error("La relación agencia-marca no existe.");
   }
 
-  if (relationship.relationshipType !== "AGENCY_CLIENT") {
-    throw new Error("Solo se pueden actualizar relaciones de tipo agencia-marca.");
-  }
-
-  return db.organizationRelationship.update({
+  const updated = await db.brandAccess.update({
     where: { id: input.relationshipId },
     data: {
       status: input.status,
@@ -1751,12 +1797,30 @@ export async function updateAgencyClientRelationshipStatusPermissions(
       canCreateOrders: true,
       canViewBilling: true,
       canManageContacts: true,
-      sourceOrganization: {
+      organization: {
         select: { id: true, name: true, organizationType: true },
       },
-      targetOrganization: {
-        select: { id: true, name: true, organizationType: true },
+      brand: {
+        select: {
+          id: true,
+          name: true,
+          ownerOrganization: {
+            select: { organizationType: true },
+          },
+        },
       },
     },
   });
+
+  return {
+    ...updated,
+    sourceOrganization: updated.organization,
+    targetOrganization: {
+      id: updated.brand.id,
+      name: updated.brand.name,
+      organizationType:
+        updated.brand.ownerOrganization?.organizationType ??
+        OrganizationType.DIRECT_CLIENT,
+    },
+  };
 }

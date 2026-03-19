@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { listCatalogFaces } from "@/lib/services/catalog";
 import { getCampaignRequestStartGapDays } from "@/lib/server-config";
 import {
@@ -14,7 +15,6 @@ import {
   resolveSalesReviewActor,
 } from "@/lib/services/sales-review";
 import {
-  OrganizationReadScopeCondition,
   OrganizationReadViewScope,
   resolveActiveOrganizationContextForUser,
   resolveOrganizationOperationScope,
@@ -79,7 +79,7 @@ export const createCampaignRequestSchema = z
     contactName: z.string().trim().max(120).optional(),
     contactEmail: z.string().trim().email().max(160).optional(),
     contactPhone: z.string().trim().max(40).optional(),
-    organizationId: z.string().optional(),
+    brandId: z.string().optional(),
     selectedFaceIds: z.array(z.string().min(1)).max(200).optional(),
     selectedServices: z.array(selectedServiceSchema).max(50).optional(),
   })
@@ -236,9 +236,9 @@ export async function createCampaignRequest(
     );
   }
   const resolvedDates = normalizeDateRange(input.fromDate, input.toDate);
-  const organizationId =
+  const brandId =
     operationScope?.organizationId ??
-    input.organizationId ??
+    input.brandId ??
     activeContext?.organizationId ??
     null;
   const actingAgencyOrganizationId =
@@ -269,7 +269,7 @@ export async function createCampaignRequest(
         contactName: input.contactName || profileName || null,
         contactEmail: input.contactEmail || profileEmail || null,
         contactPhone: input.contactPhone || null,
-        organizationId: organizationId || null,
+        brandId: brandId || null,
         actingAgencyOrganizationId: actingAgencyOrganizationId || null,
         createdById: profile?.id || null,
         status: "NEW",
@@ -337,7 +337,7 @@ export async function createCampaignRequest(
     include: {
       zone: { include: { province: true } },
       structureType: true,
-      organization: true,
+      brand: true,
       actingAgencyOrganization: true,
       assignments: {
         include: {
@@ -366,7 +366,7 @@ export async function createCampaignRequest(
 const requestInclude = {
   zone: { include: { province: true } },
   structureType: true,
-  organization: true,
+  brand: true,
   actingAgencyOrganization: true,
   createdBy: {
     include: {
@@ -523,10 +523,10 @@ async function resolveCampaignRequestOwnershipScope(
   );
 
   return readScope.conditions.map((condition) => {
-    const ownershipFilter: OrganizationReadScopeCondition = {};
+    const ownershipFilter: Prisma.CampaignRequestWhereInput = {};
 
     if (condition.organizationId) {
-      ownershipFilter.organizationId = condition.organizationId;
+      ownershipFilter.brandId = condition.organizationId;
     }
 
     if (condition.actingAgencyOrganizationId !== undefined) {
@@ -858,7 +858,7 @@ export async function confirmCampaignRequest(
       await tx.catalogHold.create({
         data: {
           faceId: catalogFace.id,
-          organizationId: request.organizationId,
+          brandId: request.brandId,
           actingAgencyOrganizationId: request.actingAgencyOrganizationId,
           createdById: profile?.id || null,
           status: "ACTIVE",

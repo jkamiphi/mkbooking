@@ -582,7 +582,7 @@ export function BrandsContent() {
                   onClick={() =>
                     upsertRelationship.mutate({
                       agencyOrganizationId: effectiveLinkAgencyId,
-                      advertiserOrganizationId: linkAdvertiserId,
+                      brandId: linkAdvertiserId,
                       status: linkRelationshipStatus,
                       canCreateRequests: linkCanCreateRequests,
                       canCreateOrders: linkCanCreateOrders,

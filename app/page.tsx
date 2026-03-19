@@ -65,7 +65,7 @@ export default async function Home({
   const typeId = getParam(searchParams?.type) || undefined;
 
   const profile = session?.user?.id ? await caller.userProfile.current() : null;
-  const organizationId = profile?.activeOrganizationContext?.organizationId;
+  const brandId = profile?.activeOrganizationContext?.brandId ?? undefined;
 
   const [catalog, structureTypes, zones] = await Promise.all([
     caller.catalog.faces.publicList({
@@ -74,7 +74,7 @@ export default async function Home({
       structureTypeId: typeId,
       zoneId,
       take: 24,
-      organizationId,
+      brandId,
     }),
     caller.inventory.structureTypes.publicList(),
     caller.inventory.zones.publicList(),

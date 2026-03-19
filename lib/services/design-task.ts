@@ -630,7 +630,7 @@ export async function listDesignInbox(
             salesReviewStatus: true,
             clientName: true,
             clientEmail: true,
-            organization: {
+            brand: {
               select: {
                 name: true,
               },
@@ -1050,7 +1050,7 @@ export async function getDesignTaskByOrder(orderId: string) {
           code: true,
           status: true,
           salesReviewStatus: true,
-          organization: {
+          brand: {
             select: {
               name: true,
             },
@@ -1118,7 +1118,7 @@ export async function canUserAccessOrder(
       const filter: Prisma.OrderWhereInput = {};
 
       if (condition.organizationId) {
-        filter.organizationId = condition.organizationId;
+        filter.brandId = condition.organizationId;
       }
 
       if (condition.actingAgencyOrganizationId !== undefined) {

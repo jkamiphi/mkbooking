@@ -527,7 +527,7 @@ export function OperationsWorkOrdersTable() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm text-neutral-900">
-                          {workOrder.order.organization?.name || workOrder.order.clientName || "Sin cliente"}
+                          {workOrder.order.brand?.name || workOrder.order.clientName || "Sin cliente"}
                         </div>
                         <div className="text-xs text-neutral-500">{workOrder.order.clientEmail || "Sin email"}</div>
                       </td>
