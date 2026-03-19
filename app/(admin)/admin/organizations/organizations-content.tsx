@@ -34,10 +34,8 @@ import { OrganizationFormDialog } from "./_components/organization-form-dialog";
 
 const organizationTypeOptions = [
   { value: "ALL", label: "Todos los tipos" },
-  { value: "ADVERTISER", label: "Anunciante" },
+  { value: "DIRECT_CLIENT", label: "Cliente directo" },
   { value: "AGENCY", label: "Agencia" },
-  { value: "MEDIA_OWNER", label: "Dueño de medios" },
-  { value: "PLATFORM_ADMIN", label: "Admin de plataforma" },
 ] as const;
 
 const legalEntityTypeOptions = [
@@ -61,11 +59,9 @@ const verifiedOptions = [
 type OrganizationTypeFilter = (typeof organizationTypeOptions)[number]["value"];
 type LegalEntityTypeFilter = (typeof legalEntityTypeOptions)[number]["value"];
 
-const organizationTypeLabel: Record<string, string> = {
-  ADVERTISER: "Anunciante",
+const managedTypeLabel: Record<string, string> = {
+  DIRECT_CLIENT: "Cliente directo",
   AGENCY: "Agencia",
-  MEDIA_OWNER: "Dueño de medios",
-  PLATFORM_ADMIN: "Admin plataforma",
 };
 
 const legalEntityLabel: Record<string, string> = {
@@ -97,57 +93,36 @@ export function OrganizationsContent() {
   const [draftFilters, setDraftFilters] = useState(appliedFilters);
   const [page, setPage] = useState(0);
 
-  const isSearchMode = appliedFilters.search.trim().length >= 2;
+  const listQuery = trpc.admin.listManagedOrganizations.useQuery({
+    search: appliedFilters.search.trim() || undefined,
+    organizationType:
+      appliedFilters.organizationType === "ALL" ? undefined : appliedFilters.organizationType,
+    legalEntityType:
+      appliedFilters.legalEntityType === "ALL" ? undefined : appliedFilters.legalEntityType,
+    isActive:
+      appliedFilters.status === "ALL" ? undefined : appliedFilters.status === "ACTIVE",
+    isVerified:
+      appliedFilters.verified === "ALL"
+        ? undefined
+        : appliedFilters.verified === "VERIFIED"
+          ? true
+          : false,
+    skip: page * pageSize,
+    take: pageSize,
+  });
 
-  const listQuery = trpc.organization.list.useQuery(
-    {
-      organizationType:
-        appliedFilters.organizationType === "ALL" ? undefined : appliedFilters.organizationType,
-      legalEntityType:
-        appliedFilters.legalEntityType === "ALL" ? undefined : appliedFilters.legalEntityType,
-      isActive:
-        appliedFilters.status === "ALL" ? undefined : appliedFilters.status === "ACTIVE",
-      isVerified:
-        appliedFilters.verified === "ALL"
-          ? undefined
-          : appliedFilters.verified === "VERIFIED"
-            ? true
-            : false,
-      skip: page * pageSize,
-      take: pageSize,
-    },
-    { enabled: !isSearchMode },
-  );
-
-  const searchQuery = trpc.organization.search.useQuery(
-    {
-      query: appliedFilters.search.trim(),
-      take: 100,
-    },
-    { enabled: isSearchMode },
-  );
-
-  const rows = useMemo(() => {
-    if (isSearchMode) {
-      return searchQuery.data ?? [];
-    }
-    return listQuery.data?.organizations ?? [];
-  }, [isSearchMode, listQuery.data?.organizations, searchQuery.data]);
-
-  const total = isSearchMode ? rows.length : (listQuery.data?.total ?? 0);
-  const totalPages = isSearchMode
-    ? 1
-    : Math.max(1, Math.ceil(total / pageSize));
-  const isLoading = isSearchMode ? searchQuery.isLoading : listQuery.isLoading;
-  const queryError = isSearchMode ? searchQuery.error : listQuery.error;
+  const rows = listQuery.data?.managedOrganizations ?? [];
+  const total = listQuery.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const isLoading = listQuery.isLoading;
+  const queryError = listQuery.error;
 
   const rangeLabel = useMemo(() => {
     if (total === 0) return "0 resultados";
-    if (isSearchMode) return `Mostrando 1-${rows.length} de ${rows.length}`;
     const start = page * pageSize + 1;
     const end = Math.min((page + 1) * pageSize, total);
     return `Mostrando ${start}-${end} de ${total}`;
-  }, [isSearchMode, page, rows.length, total]);
+  }, [page, total]);
 
   function navigateWithFilters(nextFilters: typeof appliedFilters) {
     const params = serializeFilterState({
@@ -195,45 +170,42 @@ export function OrganizationsContent() {
   });
 
   const summaryChips = toSummaryChips(appliedFilters, [
-        {
-          key: "search",
-          isActive: (state) => state.search.trim().length > 0,
-          getLabel: (state) => `Buscar: ${state.search}`,
-        },
-        {
-          key: "organizationType",
-          isActive: (state) => state.organizationType !== "ALL",
-          getLabel: (state) =>
-            `Tipo: ${organizationTypeOptions.find((option) => option.value === state.organizationType)?.label ?? state.organizationType}`,
-        },
-        {
-          key: "legalEntityType",
-          isActive: (state) => state.legalEntityType !== "ALL",
-          getLabel: (state) =>
-            `Entidad: ${legalEntityTypeOptions.find((option) => option.value === state.legalEntityType)?.label ?? state.legalEntityType}`,
-        },
-        {
-          key: "status",
-          isActive: (state) => state.status !== "ALL",
-          getLabel: (state) =>
-            `Estado: ${statusOptions.find((option) => option.value === state.status)?.label ?? state.status}`,
-        },
-        {
-          key: "verified",
-          isActive: (state) => state.verified !== "ALL",
-          getLabel: (state) =>
-            `Verificación: ${verifiedOptions.find((option) => option.value === state.verified)?.label ?? state.verified}`,
-        },
-      ]).map((chip) => ({
+    {
+      key: "search",
+      isActive: (state) => state.search.trim().length > 0,
+      getLabel: (state) => `Buscar: ${state.search}`,
+    },
+    {
+      key: "organizationType",
+      isActive: (state) => state.organizationType !== "ALL",
+      getLabel: (state) =>
+        `Tipo: ${organizationTypeOptions.find((option) => option.value === state.organizationType)?.label ?? state.organizationType}`,
+    },
+    {
+      key: "legalEntityType",
+      isActive: (state) => state.legalEntityType !== "ALL",
+      getLabel: (state) =>
+        `Entidad: ${legalEntityTypeOptions.find((option) => option.value === state.legalEntityType)?.label ?? state.legalEntityType}`,
+    },
+    {
+      key: "status",
+      isActive: (state) => state.status !== "ALL",
+      getLabel: (state) =>
+        `Estado: ${statusOptions.find((option) => option.value === state.status)?.label ?? state.status}`,
+    },
+    {
+      key: "verified",
+      isActive: (state) => state.verified !== "ALL",
+      getLabel: (state) =>
+        `Verificación: ${verifiedOptions.find((option) => option.value === state.verified)?.label ?? state.verified}`,
+    },
+  ]).map((chip) => ({
     ...chip,
     onRemove: () => {
       setPage(0);
       navigateWithFilters({
         ...appliedFilters,
-        [chip.key]:
-          chip.key === "search"
-            ? ""
-            : "ALL",
+        [chip.key]: chip.key === "search" ? "" : "ALL",
       });
     },
   }));
@@ -263,7 +235,7 @@ export function OrganizationsContent() {
 
           <FilterSheetPanel
             title="Filtrar organizaciones"
-            description="Busca y segmenta por tipo, entidad legal, estado y verificación."
+            description="Gestiona clientes directos y agencias por datos comerciales y estado."
             onApply={applyFilters}
             onClear={clearFilters}
           >
@@ -362,7 +334,7 @@ export function OrganizationsContent() {
 
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <CardTitle>Lista de organizaciones</CardTitle>
+          <CardTitle>Lista de organizaciones comerciales</CardTitle>
           <p className="text-sm text-muted-foreground">{rangeLabel}</p>
         </CardHeader>
         <CardContent className="space-y-4 p-0 px-6 pb-6">
@@ -375,11 +347,7 @@ export function OrganizationsContent() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() =>
-                      void (isSearchMode
-                        ? searchQuery.refetch()
-                        : listQuery.refetch())
-                    }
+                    onClick={() => void listQuery.refetch()}
                     className="border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/40"
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />
@@ -415,10 +383,7 @@ export function OrganizationsContent() {
 
               {!isLoading && rows.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="py-8 text-center text-muted-foreground"
-                  >
+                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                     No se encontraron organizaciones con los criterios actuales.
                   </TableCell>
                 </TableRow>
@@ -429,19 +394,14 @@ export function OrganizationsContent() {
                     <TableRow key={organization.id}>
                       <TableCell className="px-6">
                         <div className="space-y-0.5">
-                          <p className="font-medium text-foreground">
-                            {organization.name}
-                          </p>
+                          <p className="font-medium text-foreground">{organization.name}</p>
                           {organization.legalName ? (
-                            <p className="text-xs text-muted-foreground">
-                              {organization.legalName}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{organization.legalName}</p>
                           ) : null}
                         </div>
                       </TableCell>
                       <TableCell className="px-6 text-muted-foreground">
-                        {organizationTypeLabel[organization.organizationType] ??
-                          organization.organizationType}
+                        {managedTypeLabel[organization.managedType] ?? organization.managedType}
                       </TableCell>
                       <TableCell className="px-6 text-muted-foreground">
                         {legalEntityLabel[organization.legalEntityType] ??
@@ -449,9 +409,7 @@ export function OrganizationsContent() {
                       </TableCell>
                       <TableCell className="px-6">
                         <div className="space-y-0.5 text-sm">
-                          <p className="text-muted-foreground">
-                            {organization.email ?? "Sin email"}
-                          </p>
+                          <p className="text-muted-foreground">{organization.email ?? "Sin email"}</p>
                           <p className="text-xs text-muted-foreground">
                             {organization.phone ?? "Sin teléfono"}
                           </p>
@@ -459,28 +417,16 @@ export function OrganizationsContent() {
                       </TableCell>
                       <TableCell className="px-6">
                         <div className="flex gap-1">
-                          <Badge
-                            variant={
-                              organization.isActive ? "success" : "destructive"
-                            }
-                          >
+                          <Badge variant={organization.isActive ? "success" : "destructive"}>
                             {organization.isActive ? "Activa" : "Inactiva"}
                           </Badge>
-                          <Badge
-                            variant={
-                              organization.isVerified ? "info" : "secondary"
-                            }
-                          >
-                            {organization.isVerified
-                              ? "Verificada"
-                              : "No verificada"}
+                          <Badge variant={organization.isVerified ? "info" : "secondary"}>
+                            {organization.isVerified ? "Verificada" : "No verificada"}
                           </Badge>
                         </div>
                       </TableCell>
                       <TableCell className="px-6 text-muted-foreground">
-                        {new Date(organization.createdAt).toLocaleDateString(
-                          "es-PA",
-                        )}
+                        {new Date(organization.createdAt).toLocaleDateString("es-PA")}
                       </TableCell>
                       <TableCell className="px-6 text-right">
                         <OrganizationFormDialog
@@ -500,7 +446,8 @@ export function OrganizationsContent() {
                             city: organization.city,
                             province: organization.province,
                             description: organization.description,
-                            organizationType: organization.organizationType,
+                            organizationType:
+                              organization.managedType === "AGENCY" ? "AGENCY" : "ADVERTISER",
                             legalEntityType: organization.legalEntityType,
                           }}
                         />
@@ -513,7 +460,7 @@ export function OrganizationsContent() {
         </CardContent>
       </Card>
 
-      {!isSearchMode && totalPages > 1 ? (
+      {totalPages > 1 ? (
         <div className="flex items-center justify-between rounded-md border bg-card px-4 py-3">
           <p className="text-sm text-muted-foreground">
             Página {page + 1} de {totalPages} · {total} resultados
@@ -530,9 +477,7 @@ export function OrganizationsContent() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() =>
-                setPage((current) => Math.min(totalPages - 1, current + 1))
-              }
+              onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
               disabled={page >= totalPages - 1}
             >
               Siguiente

@@ -19,10 +19,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
 
 const organizationTypeOptions = [
-  { value: "ADVERTISER", label: "Anunciante" },
+  { value: "ADVERTISER", label: "Cliente directo" },
   { value: "AGENCY", label: "Agencia" },
-  { value: "MEDIA_OWNER", label: "Dueño de medios" },
-  { value: "PLATFORM_ADMIN", label: "Admin de plataforma" },
 ] as const;
 
 const legalEntityTypeOptions = [
@@ -89,6 +87,8 @@ export function OrganizationFormDialog({
       await Promise.all([
         utils.organization.list.invalidate(),
         utils.organization.search.invalidate(),
+        utils.admin.listManagedOrganizations.invalidate(),
+        utils.admin.listBrands.invalidate(),
       ]);
       setOpen(false);
       setError(null);
@@ -104,6 +104,8 @@ export function OrganizationFormDialog({
       await Promise.all([
         utils.organization.list.invalidate(),
         utils.organization.search.invalidate(),
+        utils.admin.listManagedOrganizations.invalidate(),
+        utils.admin.listBrands.invalidate(),
       ]);
       setOpen(false);
       setError(null);

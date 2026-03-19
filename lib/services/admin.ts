@@ -81,6 +81,31 @@ export const adminListAccountsSchema = z.object({
   orderDirection: z.enum(["asc", "desc"]).optional(),
 });
 
+const managedOrganizationTypeSchema = z.enum(["DIRECT_CLIENT", "AGENCY"]);
+
+export const adminListManagedOrganizationsSchema = z.object({
+  organizationType: managedOrganizationTypeSchema.optional(),
+  legalEntityType: z.nativeEnum(LegalEntityType).optional(),
+  isActive: z.boolean().optional(),
+  isVerified: z.boolean().optional(),
+  search: z.string().optional(),
+  skip: z.number().min(0).default(0),
+  take: z.number().min(1).max(100).default(20),
+  orderBy: z.enum(["createdAt", "name"]).optional(),
+  orderDirection: z.enum(["asc", "desc"]).optional(),
+});
+
+export const adminListBrandsSchema = z.object({
+  isActive: z.boolean().optional(),
+  isVerified: z.boolean().optional(),
+  relationshipStatus: organizationRelationshipStatusSchema.optional(),
+  search: z.string().optional(),
+  skip: z.number().min(0).default(0),
+  take: z.number().min(1).max(100).default(20),
+  orderBy: z.enum(["createdAt", "name"]).optional(),
+  orderDirection: z.enum(["asc", "desc"]).optional(),
+});
+
 export const updateAccountTypeSchema = z.object({
   userId: z.string().min(1),
   accountType: userAccountTypeSchema,
@@ -143,6 +168,10 @@ export type UpdateSystemRoleInput = z.infer<typeof updateSystemRoleSchema>;
 export type CreateAdminUserInput = z.infer<typeof createAdminUserSchema>;
 export type AdminListUsersInput = z.infer<typeof adminListUsersSchema>;
 export type AdminListAccountsInput = z.infer<typeof adminListAccountsSchema>;
+export type AdminListManagedOrganizationsInput = z.infer<
+  typeof adminListManagedOrganizationsSchema
+>;
+export type AdminListBrandsInput = z.infer<typeof adminListBrandsSchema>;
 export type UpdateAccountTypeInput = z.infer<typeof updateAccountTypeSchema>;
 export type OrganizationMembershipMutationInput = z.infer<
   typeof addOrganizationMembershipSchema
@@ -259,6 +288,57 @@ export interface AdminAccountDetail {
   }>;
 }
 
+export interface AdminManagedOrganizationRow {
+  id: string;
+  name: string;
+  legalName: string | null;
+  tradeName: string | null;
+  organizationType: OrganizationType;
+  managedType: z.infer<typeof managedOrganizationTypeSchema>;
+  legalEntityType: LegalEntityType;
+  taxId: string | null;
+  cedula: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  industry: string | null;
+  addressLine1: string | null;
+  city: string | null;
+  province: string | null;
+  description: string | null;
+  isActive: boolean;
+  isVerified: boolean;
+  createdAt: Date;
+}
+
+export interface AdminBrandAgencyLink {
+  id: string;
+  status: OrganizationRelationshipStatus;
+  canCreateRequests: boolean;
+  canCreateOrders: boolean;
+  canViewBilling: boolean;
+  canManageContacts: boolean;
+  sourceOrganization: {
+    id: string;
+    name: string;
+    isActive: boolean;
+  };
+}
+
+export interface AdminBrandRow {
+  id: string;
+  name: string;
+  legalName: string | null;
+  tradeName: string | null;
+  legalEntityType: LegalEntityType;
+  taxId: string | null;
+  isActive: boolean;
+  isVerified: boolean;
+  createdAt: Date;
+  relationshipSummary: AdminAccountRelationshipSummary;
+  linkedAgencies: AdminBrandAgencyLink[];
+}
+
 // ============================================================================
 // Authorization Functions
 // ============================================================================
@@ -366,6 +446,23 @@ function buildRelationshipSummary(
     },
     { total: 0, active: 0, pending: 0, inactive: 0 },
   );
+}
+
+const CURRENT_BRAND_RELATIONSHIP_STATUSES: OrganizationRelationshipStatus[] = [
+  OrganizationRelationshipStatus.ACTIVE,
+  OrganizationRelationshipStatus.PENDING,
+];
+
+function getDirectClientWhereClause(): Prisma.OrganizationWhereInput {
+  return {
+    organizationType: OrganizationType.ADVERTISER,
+    incomingRelationships: {
+      none: {
+        relationshipType: "AGENCY_CLIENT",
+        status: { in: CURRENT_BRAND_RELATIONSHIP_STATUSES },
+      },
+    },
+  };
 }
 
 export async function createAdminUser(input: CreateAdminUserInput, createdBy: string) {
@@ -812,6 +909,249 @@ export async function adminListAccounts(
     accounts,
     total,
     hasMore: skip + accounts.length < total,
+  };
+}
+
+export async function adminListManagedOrganizations(
+  input: AdminListManagedOrganizationsInput,
+): Promise<{
+  managedOrganizations: AdminManagedOrganizationRow[];
+  total: number;
+  hasMore: boolean;
+}> {
+  const {
+    organizationType,
+    legalEntityType,
+    isActive,
+    isVerified,
+    search,
+    skip,
+    take,
+    orderBy,
+    orderDirection,
+  } = input;
+
+  const andFilters: Prisma.OrganizationWhereInput[] = [];
+
+  if (organizationType === "AGENCY") {
+    andFilters.push({ organizationType: OrganizationType.AGENCY });
+  } else if (organizationType === "DIRECT_CLIENT") {
+    andFilters.push(getDirectClientWhereClause());
+  } else {
+    andFilters.push({
+      OR: [
+        { organizationType: OrganizationType.AGENCY },
+        getDirectClientWhereClause(),
+      ],
+    });
+  }
+
+  if (legalEntityType) {
+    andFilters.push({ legalEntityType });
+  }
+  if (isActive !== undefined) {
+    andFilters.push({ isActive });
+  }
+  if (isVerified !== undefined) {
+    andFilters.push({ isVerified });
+  }
+  if (search?.trim()) {
+    const normalizedSearch = search.trim();
+    andFilters.push({
+      OR: [
+        { name: { contains: normalizedSearch, mode: "insensitive" } },
+        { legalName: { contains: normalizedSearch, mode: "insensitive" } },
+        { tradeName: { contains: normalizedSearch, mode: "insensitive" } },
+        { taxId: { contains: normalizedSearch, mode: "insensitive" } },
+        { cedula: { contains: normalizedSearch, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  const where: Prisma.OrganizationWhereInput =
+    andFilters.length > 0 ? { AND: andFilters } : {};
+
+  const prismaOrderBy: Prisma.OrganizationOrderByWithRelationInput =
+    orderBy === "name"
+      ? { name: orderDirection ?? "asc" }
+      : { createdAt: orderDirection ?? "desc" };
+
+  const [organizations, total] = await Promise.all([
+    db.organization.findMany({
+      where,
+      skip,
+      take,
+      orderBy: orderBy ? prismaOrderBy : { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        legalName: true,
+        tradeName: true,
+        organizationType: true,
+        legalEntityType: true,
+        taxId: true,
+        cedula: true,
+        email: true,
+        phone: true,
+        website: true,
+        industry: true,
+        addressLine1: true,
+        city: true,
+        province: true,
+        description: true,
+        isActive: true,
+        isVerified: true,
+        createdAt: true,
+      },
+    }),
+    db.organization.count({ where }),
+  ]);
+
+  return {
+    managedOrganizations: organizations.map((organization) => ({
+      ...organization,
+      managedType:
+        organization.organizationType === OrganizationType.AGENCY
+          ? "AGENCY"
+          : "DIRECT_CLIENT",
+    })),
+    total,
+    hasMore: skip + organizations.length < total,
+  };
+}
+
+export async function adminListBrands(
+  input: AdminListBrandsInput,
+): Promise<{ brands: AdminBrandRow[]; total: number; hasMore: boolean }> {
+  const {
+    isActive,
+    isVerified,
+    relationshipStatus,
+    search,
+    skip,
+    take,
+    orderBy,
+    orderDirection,
+  } = input;
+
+  const andFilters: Prisma.OrganizationWhereInput[] = [
+    { organizationType: OrganizationType.ADVERTISER },
+    {
+      incomingRelationships: {
+        some: {
+          relationshipType: "AGENCY_CLIENT",
+          status: { in: CURRENT_BRAND_RELATIONSHIP_STATUSES },
+        },
+      },
+    },
+  ];
+
+  if (relationshipStatus) {
+    andFilters.push({
+      incomingRelationships: {
+        some: {
+          relationshipType: "AGENCY_CLIENT",
+          status: relationshipStatus,
+        },
+      },
+    });
+  }
+  if (isActive !== undefined) {
+    andFilters.push({ isActive });
+  }
+  if (isVerified !== undefined) {
+    andFilters.push({ isVerified });
+  }
+  if (search?.trim()) {
+    const normalizedSearch = search.trim();
+    andFilters.push({
+      OR: [
+        { name: { contains: normalizedSearch, mode: "insensitive" } },
+        { legalName: { contains: normalizedSearch, mode: "insensitive" } },
+        { tradeName: { contains: normalizedSearch, mode: "insensitive" } },
+        { taxId: { contains: normalizedSearch, mode: "insensitive" } },
+        { cedula: { contains: normalizedSearch, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  const where: Prisma.OrganizationWhereInput = { AND: andFilters };
+  const prismaOrderBy: Prisma.OrganizationOrderByWithRelationInput =
+    orderBy === "name"
+      ? { name: orderDirection ?? "asc" }
+      : { createdAt: orderDirection ?? "desc" };
+
+  const [brands, total] = await Promise.all([
+    db.organization.findMany({
+      where,
+      skip,
+      take,
+      orderBy: orderBy ? prismaOrderBy : { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        legalName: true,
+        tradeName: true,
+        legalEntityType: true,
+        taxId: true,
+        isActive: true,
+        isVerified: true,
+        createdAt: true,
+        incomingRelationships: {
+          where: { relationshipType: "AGENCY_CLIENT" },
+          orderBy: [
+            { status: "asc" },
+            { sourceOrganization: { name: "asc" } },
+          ],
+          select: {
+            id: true,
+            status: true,
+            canCreateRequests: true,
+            canCreateOrders: true,
+            canViewBilling: true,
+            canManageContacts: true,
+            sourceOrganization: {
+              select: {
+                id: true,
+                name: true,
+                isActive: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    db.organization.count({ where }),
+  ]);
+
+  const mappedBrands: AdminBrandRow[] = brands.map((brand) => ({
+    id: brand.id,
+    name: brand.name,
+    legalName: brand.legalName,
+    tradeName: brand.tradeName,
+    legalEntityType: brand.legalEntityType,
+    taxId: brand.taxId,
+    isActive: brand.isActive,
+    isVerified: brand.isVerified,
+    createdAt: brand.createdAt,
+    relationshipSummary: buildRelationshipSummary(
+      brand.incomingRelationships.map((relationship) => relationship.status),
+    ),
+    linkedAgencies: brand.incomingRelationships.map((relationship) => ({
+      id: relationship.id,
+      status: relationship.status,
+      canCreateRequests: relationship.canCreateRequests,
+      canCreateOrders: relationship.canCreateOrders,
+      canViewBilling: relationship.canViewBilling,
+      canManageContacts: relationship.canManageContacts,
+      sourceOrganization: relationship.sourceOrganization,
+    })),
+  }));
+
+  return {
+    brands: mappedBrands,
+    total,
+    hasMore: skip + mappedBrands.length < total,
   };
 }
 

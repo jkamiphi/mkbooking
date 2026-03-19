@@ -3,7 +3,7 @@ import { OrganizationsContent } from "./organizations-content";
 
 export const metadata = {
   title: "Organizaciones - Admin",
-  description: "Gestionar organizaciones de la plataforma",
+  description: "Gestión de clientes directos y agencias",
 };
 
 export default function OrganizationsPage() {
@@ -11,7 +11,7 @@ export default function OrganizationsPage() {
     <AdminPageShell>
       <AdminPageHeader
         title="Organizaciones"
-        description="Crear, buscar y administrar organizaciones comerciales."
+        description="Administra clientes directos y agencias con sus datos comerciales."
       />
       <OrganizationsContent />
     </AdminPageShell>

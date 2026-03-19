@@ -7,6 +7,10 @@ import {
   adminListUsers,
   adminListAccounts,
   adminListAccountsSchema,
+  adminListManagedOrganizations,
+  adminListManagedOrganizationsSchema,
+  adminListBrands,
+  adminListBrandsSchema,
   adminGetUserDetail,
   adminGetStats,
   adminSearchUsers,
@@ -71,6 +75,18 @@ export const adminRouter = router({
     .input(adminListAccountsSchema)
     .query(async ({ input }) => {
       return adminListAccounts(input);
+    }),
+
+  listManagedOrganizations: adminProcedure
+    .input(adminListManagedOrganizationsSchema)
+    .query(async ({ input }) => {
+      return adminListManagedOrganizations(input);
+    }),
+
+  listBrands: adminProcedure
+    .input(adminListBrandsSchema)
+    .query(async ({ input }) => {
+      return adminListBrands(input);
     }),
 
   // Get detailed user info

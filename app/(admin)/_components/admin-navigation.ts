@@ -70,6 +70,14 @@ const adminNavigationTree: AdminNavigationNode[] = [
         icon: Building2,
         roles: ADMIN_ROLES,
       },
+      {
+        type: "item",
+        key: "brands",
+        name: "Marcas",
+        href: "/admin/accounts/brands",
+        icon: Building2,
+        roles: ADMIN_ROLES,
+      },
     ],
   },
   {
