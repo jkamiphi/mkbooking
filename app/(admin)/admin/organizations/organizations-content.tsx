@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, RotateCcw } from "lucide-react";
@@ -31,7 +32,6 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { OrganizationFormDialog } from "./_components/organization-form-dialog";
-import { AgencyBrandRelationshipPanel } from "../_components/agency-brand-relationship-panel";
 
 const organizationTypeOptions = [
   { value: "ALL", label: "Todos los tipos" },
@@ -78,7 +78,7 @@ export function OrganizationsContent() {
   const searchParams = useSearchParams();
   const parsedFilters = parseFilterState(
     searchParams,
-    ["search", "organizationType", "legalEntityType", "status", "verified"] as const,
+    ["search", "organizationType", "legalEntityType", "status", "verified", "page"] as const,
   );
   const appliedFilters = {
     search: parsedFilters.search || "",
@@ -92,7 +92,8 @@ export function OrganizationsContent() {
   };
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState(appliedFilters);
-  const [page, setPage] = useState(0);
+  const parsedPage = Number.parseInt(parsedFilters.page || "0", 10);
+  const page = Number.isFinite(parsedPage) && parsedPage >= 0 ? parsedPage : 0;
 
   const listQuery = trpc.admin.listManagedOrganizations.useQuery({
     search: appliedFilters.search.trim() || undefined,
@@ -125,7 +126,7 @@ export function OrganizationsContent() {
     return `Mostrando ${start}-${end} de ${total}`;
   }, [page, total]);
 
-  function navigateWithFilters(nextFilters: typeof appliedFilters) {
+  function navigateWithFilters(nextFilters: typeof appliedFilters, nextPage = page) {
     const params = serializeFilterState({
       search: nextFilters.search.trim() || undefined,
       organizationType:
@@ -134,6 +135,7 @@ export function OrganizationsContent() {
         nextFilters.legalEntityType === "ALL" ? undefined : nextFilters.legalEntityType,
       status: nextFilters.status === "ALL" ? undefined : nextFilters.status,
       verified: nextFilters.verified === "ALL" ? undefined : nextFilters.verified,
+      page: nextPage > 0 ? String(nextPage) : undefined,
     });
 
     const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
@@ -141,8 +143,7 @@ export function OrganizationsContent() {
   }
 
   function applyFilters() {
-    setPage(0);
-    navigateWithFilters(draftFilters);
+    navigateWithFilters(draftFilters, 0);
     setIsFiltersOpen(false);
   }
 
@@ -155,7 +156,6 @@ export function OrganizationsContent() {
       verified: "ALL" as const,
     };
     setDraftFilters(clearedFilters);
-    setPage(0);
     router.push(pathname);
     setIsFiltersOpen(false);
   }
@@ -203,15 +203,14 @@ export function OrganizationsContent() {
   ]).map((chip) => ({
     ...chip,
     onRemove: () => {
-      setPage(0);
       navigateWithFilters({
         ...appliedFilters,
         [chip.key]: chip.key === "search" ? "" : "ALL",
-      });
+      }, 0);
     },
   }));
 
-  const showAgencyRelationshipPanel = appliedFilters.organizationType === "AGENCY";
+  const returnTo = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
 
   return (
     <div className="space-y-6">
@@ -335,8 +334,6 @@ export function OrganizationsContent() {
         </div>
       </div>
 
-      {showAgencyRelationshipPanel ? <AgencyBrandRelationshipPanel /> : null}
-
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Lista de organizaciones comerciales</CardTitle>
@@ -434,28 +431,39 @@ export function OrganizationsContent() {
                         {new Date(organization.createdAt).toLocaleDateString("es-PA")}
                       </TableCell>
                       <TableCell className="px-6 text-right">
-                        <OrganizationFormDialog
-                          mode="edit"
-                          initialData={{
-                            id: organization.id,
-                            name: organization.name,
-                            legalName: organization.legalName,
-                            tradeName: organization.tradeName,
-                            email: organization.email,
-                            phone: organization.phone,
-                            website: organization.website,
-                            taxId: organization.taxId,
-                            cedula: organization.cedula,
-                            industry: organization.industry,
-                            addressLine1: organization.addressLine1,
-                            city: organization.city,
-                            province: organization.province,
-                            description: organization.description,
-                            organizationType:
-                              organization.managedType === "AGENCY" ? "AGENCY" : "DIRECT_CLIENT",
-                            legalEntityType: organization.legalEntityType,
-                          }}
-                        />
+                        <div className="flex justify-end gap-2">
+                          {organization.managedType === "AGENCY" ? (
+                            <Button asChild size="sm" variant="outline">
+                              <Link
+                                href={`/admin/organizations/${organization.id}/brands?returnTo=${encodeURIComponent(returnTo)}`}
+                              >
+                                Gestionar marcas
+                              </Link>
+                            </Button>
+                          ) : null}
+                          <OrganizationFormDialog
+                            mode="edit"
+                            initialData={{
+                              id: organization.id,
+                              name: organization.name,
+                              legalName: organization.legalName,
+                              tradeName: organization.tradeName,
+                              email: organization.email,
+                              phone: organization.phone,
+                              website: organization.website,
+                              taxId: organization.taxId,
+                              cedula: organization.cedula,
+                              industry: organization.industry,
+                              addressLine1: organization.addressLine1,
+                              city: organization.city,
+                              province: organization.province,
+                              description: organization.description,
+                              organizationType:
+                                organization.managedType === "AGENCY" ? "AGENCY" : "DIRECT_CLIENT",
+                              legalEntityType: organization.legalEntityType,
+                            }}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -474,7 +482,7 @@ export function OrganizationsContent() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              onClick={() => navigateWithFilters(appliedFilters, Math.max(0, page - 1))}
               disabled={page === 0}
             >
               Anterior
@@ -482,7 +490,7 @@ export function OrganizationsContent() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+              onClick={() => navigateWithFilters(appliedFilters, Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
             >
               Siguiente

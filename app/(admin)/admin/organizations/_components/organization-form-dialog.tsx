@@ -160,7 +160,6 @@ export function OrganizationFormDialog({
       phone: form.phone.trim() || undefined,
       website: form.website.trim() || undefined,
       taxId: form.taxId.trim() || undefined,
-      cedula: form.cedula.trim() || undefined,
       industry: form.industry.trim() || undefined,
       addressLine1: form.addressLine1.trim() || undefined,
       city: form.city.trim() || undefined,
@@ -263,13 +262,15 @@ export function OrganizationFormDialog({
               />
             </div>
 
-            <div>
-              <Label className="mb-1.5 block">Cédula</Label>
-              <Input
-                value={form.cedula}
-                onChange={(event) => setField("cedula", event.target.value)}
-              />
-            </div>
+            {isEdit ? (
+              <div>
+                <Label className="mb-1.5 block">Cédula</Label>
+                <Input
+                  value={form.cedula}
+                  onChange={(event) => setField("cedula", event.target.value)}
+                />
+              </div>
+            ) : null}
 
             <div>
               <Label className="mb-1.5 block">Email</Label>

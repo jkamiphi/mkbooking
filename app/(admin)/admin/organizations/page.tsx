@@ -11,7 +11,7 @@ export default function OrganizationsPage() {
     <AdminPageShell>
       <AdminPageHeader
         title="Organizaciones"
-        description="Administra clientes directos y agencias; al filtrar por agencia puedes gestionar relaciones agencia-marca."
+        description="Administra clientes directos y agencias, y gestiona marcas por cada agencia."
       />
       <OrganizationsContent />
     </AdminPageShell>

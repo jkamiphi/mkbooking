@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
@@ -35,7 +36,6 @@ import {
   RELATIONSHIP_STATUS_LABELS,
 } from "../_lib/account-labels";
 import { CreateBrandAndLinkModal } from "./_components/create-brand-and-link-modal";
-import { ManageAgencyBrandRelationshipsModal } from "./_components/manage-agency-brand-relationships-modal";
 
 const statusOptions = [
   { value: "ALL", label: "Todos los estados" },
@@ -67,7 +67,7 @@ export function BrandsContent() {
 
   const parsedFilters = parseFilterState(
     searchParams,
-    ["search", "status", "verified", "relationshipStatus"] as const,
+    ["search", "status", "verified", "relationshipStatus", "page"] as const,
   );
 
   const appliedFilters = {
@@ -81,7 +81,8 @@ export function BrandsContent() {
 
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState(appliedFilters);
-  const [page, setPage] = useState(0);
+  const parsedPage = Number.parseInt(parsedFilters.page || "0", 10);
+  const page = Number.isFinite(parsedPage) && parsedPage >= 0 ? parsedPage : 0;
 
   const brandsQuery = trpc.admin.listBrands.useQuery({
     search: appliedFilters.search.trim() || undefined,
@@ -110,7 +111,7 @@ export function BrandsContent() {
     return `Mostrando ${start}-${end} de ${total}`;
   }, [page, total]);
 
-  function navigateWithFilters(nextFilters: typeof appliedFilters) {
+  function navigateWithFilters(nextFilters: typeof appliedFilters, nextPage = page) {
     const params = serializeFilterState({
       search: nextFilters.search.trim() || undefined,
       status: nextFilters.status === "ALL" ? undefined : nextFilters.status,
@@ -119,6 +120,7 @@ export function BrandsContent() {
         nextFilters.relationshipStatus === "ALL"
           ? undefined
           : nextFilters.relationshipStatus,
+      page: nextPage > 0 ? String(nextPage) : undefined,
     });
 
     const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
@@ -126,8 +128,7 @@ export function BrandsContent() {
   }
 
   function applyFilters() {
-    setPage(0);
-    navigateWithFilters(draftFilters);
+    navigateWithFilters(draftFilters, 0);
     setIsFiltersOpen(false);
   }
 
@@ -139,7 +140,6 @@ export function BrandsContent() {
       relationshipStatus: "ALL" as RelationshipStatusFilter,
     };
     setDraftFilters(clearedFilters);
-    setPage(0);
     router.push(pathname);
     setIsFiltersOpen(false);
   }
@@ -179,13 +179,14 @@ export function BrandsContent() {
   ]).map((chip) => ({
     ...chip,
     onRemove: () => {
-      setPage(0);
       navigateWithFilters({
         ...appliedFilters,
         [chip.key]: chip.key === "search" ? "" : "ALL",
-      });
+      }, 0);
     },
   }));
+
+  const returnTo = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
 
   return (
     <div className="space-y-6">
@@ -288,7 +289,6 @@ export function BrandsContent() {
 
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <CreateBrandAndLinkModal />
-          <ManageAgencyBrandRelationshipsModal />
         </div>
       </div>
 
@@ -326,13 +326,14 @@ export function BrandsContent() {
                 <TableHead className="px-6">Agencias vinculadas</TableHead>
                 <TableHead className="px-6">Estado</TableHead>
                 <TableHead className="px-6">Creada</TableHead>
+                <TableHead className="px-6 text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {brandsQuery.isLoading
                 ? [...Array(6)].map((_, index) => (
                     <TableRow key={`brands-skeleton-${index}`}>
-                      <TableCell className="px-6" colSpan={5}>
+                      <TableCell className="px-6" colSpan={6}>
                         <Skeleton className="h-6 w-full" />
                       </TableCell>
                     </TableRow>
@@ -341,7 +342,7 @@ export function BrandsContent() {
 
               {!brandsQuery.isLoading && brands.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                     No se encontraron marcas con los criterios actuales.
                   </TableCell>
                 </TableRow>
@@ -405,6 +406,16 @@ export function BrandsContent() {
                       <TableCell className="px-6 text-muted-foreground">
                         {new Date(brand.createdAt).toLocaleDateString("es-PA")}
                       </TableCell>
+
+                      <TableCell className="px-6 text-right">
+                        <Button asChild size="sm" variant="outline">
+                          <Link
+                            href={`/admin/accounts/brands/${brand.id}?returnTo=${encodeURIComponent(returnTo)}`}
+                          >
+                            Gestionar relaciones
+                          </Link>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 : null}
@@ -422,7 +433,7 @@ export function BrandsContent() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              onClick={() => navigateWithFilters(appliedFilters, Math.max(0, page - 1))}
               disabled={page === 0}
             >
               Anterior
@@ -430,7 +441,7 @@ export function BrandsContent() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+              onClick={() => navigateWithFilters(appliedFilters, Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
             >
               Siguiente
