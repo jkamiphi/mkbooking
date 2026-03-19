@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type {
-  OrganizationRelationshipStatus,
   OrganizationType,
   SystemRole,
   UserAccountType,
@@ -23,7 +22,6 @@ interface AccountFiltersState {
   accountType?: UserAccountType;
   isActive?: boolean;
   organizationType?: OrganizationType;
-  relationshipStatus?: OrganizationRelationshipStatus;
 }
 
 const pageSize = 20;
@@ -40,7 +38,6 @@ export function AccountsContent() {
       "accountType",
       "isActive",
       "organizationType",
-      "relationshipStatus",
     ] as const,
   );
 
@@ -57,9 +54,6 @@ export function AccountsContent() {
           : undefined,
     organizationType:
       (parsedFilters.organizationType as OrganizationType | undefined) || undefined,
-    relationshipStatus:
-      (parsedFilters.relationshipStatus as OrganizationRelationshipStatus | undefined) ||
-      undefined,
   };
 
   const [page, setPage] = useState(0);
@@ -76,14 +70,11 @@ export function AccountsContent() {
     if (filters.accountType) {
       labels.push(ACCOUNT_TYPE_LABELS[filters.accountType]);
     }
-    if (filters.relationshipStatus) {
-      labels.push(`Relación ${filters.relationshipStatus.toLowerCase()}`);
-    }
     if (filters.organizationType) {
       labels.push(`Org ${filters.organizationType.toLowerCase()}`);
     }
     return labels;
-  }, [filters.accountType, filters.organizationType, filters.relationshipStatus]);
+  }, [filters.accountType, filters.organizationType]);
 
   function handleFiltersChange(nextFilters: AccountFiltersState) {
     setPage(0);
@@ -94,7 +85,6 @@ export function AccountsContent() {
       isActive:
         nextFilters.isActive === undefined ? undefined : String(nextFilters.isActive),
       organizationType: nextFilters.organizationType,
-      relationshipStatus: nextFilters.relationshipStatus,
     });
 
     const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;

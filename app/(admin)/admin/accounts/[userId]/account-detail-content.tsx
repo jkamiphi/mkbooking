@@ -1,16 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import type {
-  OrganizationRelationshipStatus,
   OrganizationRole,
   SystemRole,
   UserAccountType,
 } from "@prisma/client";
 import {
-  ArrowLeft,
-  Building2,
   Calendar,
   CheckCircle,
   Mail,
@@ -26,7 +22,6 @@ import { trpc } from "@/lib/trpc/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,31 +29,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ACCOUNT_TYPE_LABELS,
   getAccountTypeBadgeVariant,
-  getRelationshipStatusBadgeVariant,
   getSystemRoleBadgeVariant,
   ORGANIZATION_ROLE_LABELS,
   ORGANIZATION_TYPE_LABELS,
-  RELATIONSHIP_STATUS_LABELS,
   SYSTEM_ROLE_LABELS,
 } from "../_lib/account-labels";
 
 interface AccountDetailContentProps {
   userId: string;
 }
-
-interface RelationshipDraft {
-  status: OrganizationRelationshipStatus;
-  canCreateRequests: boolean;
-  canCreateOrders: boolean;
-  canViewBilling: boolean;
-  canManageContacts: boolean;
-}
-
-const relationshipStatusOptions: OrganizationRelationshipStatus[] = [
-  "ACTIVE",
-  "PENDING",
-  "INACTIVE",
-];
 
 const organizationRoleOptions: OrganizationRole[] = [
   "OWNER",
@@ -82,10 +61,6 @@ const systemRoleOptions: SystemRole[] = [
 
 const accountTypeOptions: UserAccountType[] = ["DIRECT_CLIENT", "AGENCY"];
 
-function permissionCheckboxClasses() {
-  return "h-4 w-4 rounded border border-neutral-300 text-[#0359A8] focus:ring-[#0359A8]";
-}
-
 export function AccountDetailContent({ userId }: AccountDetailContentProps) {
   const utils = trpc.useUtils();
   const { data: me } = trpc.userProfile.me.useQuery();
@@ -95,13 +70,6 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
     skip: 0,
     take: 300,
   });
-  const advertisersQuery = trpc.organization.list.useQuery({
-    organizationType: "DIRECT_CLIENT",
-    isActive: true,
-    skip: 0,
-    take: 300,
-  });
-
   const [selectedAccountType, setSelectedAccountType] =
     useState<UserAccountType | null>(null);
   const [selectedSystemRole, setSelectedSystemRole] =
@@ -111,25 +79,6 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
     useState<OrganizationRole>("ADMIN");
   const [membershipRoleDrafts, setMembershipRoleDrafts] = useState<
     Record<string, OrganizationRole>
-  >({});
-
-  const [newBrandAgencyId, setNewBrandAgencyId] = useState("");
-  const [newBrandName, setNewBrandName] = useState("");
-  const [newBrandLegalName, setNewBrandLegalName] = useState("");
-  const [newBrandTradeName, setNewBrandTradeName] = useState("");
-  const [newBrandTaxId, setNewBrandTaxId] = useState("");
-
-  const [linkAgencyId, setLinkAgencyId] = useState("");
-  const [linkAdvertiserId, setLinkAdvertiserId] = useState("");
-  const [linkRelationshipStatus, setLinkRelationshipStatus] =
-    useState<OrganizationRelationshipStatus>("ACTIVE");
-  const [linkCanCreateRequests, setLinkCanCreateRequests] = useState(true);
-  const [linkCanCreateOrders, setLinkCanCreateOrders] = useState(true);
-  const [linkCanViewBilling, setLinkCanViewBilling] = useState(false);
-  const [linkCanManageContacts, setLinkCanManageContacts] = useState(false);
-
-  const [relationshipDrafts, setRelationshipDrafts] = useState<
-    Record<string, RelationshipDraft>
   >({});
 
   async function invalidateAccountViews() {
@@ -224,55 +173,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
     },
   });
 
-  const createBrandAndLink = trpc.admin.createBrandAndLinkToAgency.useMutation({
-    onSuccess: async () => {
-      await invalidateAccountViews();
-      toast.success("Marca creada y vinculada.");
-      setNewBrandName("");
-      setNewBrandLegalName("");
-      setNewBrandTradeName("");
-      setNewBrandTaxId("");
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
-
-  const upsertRelationship =
-    trpc.admin.upsertAgencyClientRelationship.useMutation({
-      onSuccess: async () => {
-        await invalidateAccountViews();
-        toast.success("Relación agencia-marca actualizada.");
-        setLinkAdvertiserId("");
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    });
-
-  const updateRelationship =
-    trpc.admin.updateAgencyClientRelationshipStatusPermissions.useMutation({
-      onSuccess: async () => {
-        await invalidateAccountViews();
-        toast.success("Relación actualizada.");
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    });
-
   const allOrganizations = organizationsQuery.data?.organizations ?? [];
-  const allAdvertisers = advertisersQuery.data?.organizations ?? [];
 
   const account = accountQuery.data;
-
-  const agencyMemberships = useMemo(
-    () =>
-      account?.organizationRoles.filter(
-        (membership) => membership.organization.organizationType === "AGENCY",
-      ) ?? [],
-    [account?.organizationRoles],
-  );
 
   if (accountQuery.isLoading) {
     return (
@@ -297,9 +200,6 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
       : account.user.name;
 
   const canChangeSystemRole = me?.systemRole === "SUPERADMIN";
-  const defaultAgencyId = agencyMemberships[0]?.organization.id ?? "";
-  const effectiveNewBrandAgencyId = newBrandAgencyId || defaultAgencyId;
-  const effectiveLinkAgencyId = linkAgencyId || defaultAgencyId;
   const effectiveAccountType = selectedAccountType ?? account.accountType;
   const effectiveSystemRole = selectedSystemRole ?? account.systemRole;
 
@@ -334,12 +234,9 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
           <TabsTrigger value="memberships">Membresías</TabsTrigger>
-          <TabsTrigger value="relationships">
-            Relaciones agencia-marca
-          </TabsTrigger>
           <TabsTrigger value="security">Seguridad/Acceso</TabsTrigger>
         </TabsList>
 
@@ -565,430 +462,6 @@ export function AccountDetailContent({ userId }: AccountDetailContentProps) {
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Sin membresías activas.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="relationships" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Crear marca y vincularla a agencia</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {agencyMemberships.length > 0 ? (
-                <>
-                  <div>
-                    <Label className="mb-1.5 block">Agencia operativa</Label>
-                    <SelectNative
-                      value={effectiveNewBrandAgencyId}
-                      onChange={(event) =>
-                        setNewBrandAgencyId(event.target.value)
-                      }
-                    >
-                      {agencyMemberships.map((membership) => (
-                        <option
-                          key={membership.organization.id}
-                          value={membership.organization.id}
-                        >
-                          {membership.organization.name}
-                        </option>
-                      ))}
-                    </SelectNative>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div>
-                      <Label className="mb-1.5 block">Nombre de marca *</Label>
-                      <Input
-                        value={newBrandName}
-                        onChange={(event) =>
-                          setNewBrandName(event.target.value)
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label className="mb-1.5 block">Razón social</Label>
-                      <Input
-                        value={newBrandLegalName}
-                        onChange={(event) =>
-                          setNewBrandLegalName(event.target.value)
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label className="mb-1.5 block">Nombre comercial</Label>
-                      <Input
-                        value={newBrandTradeName}
-                        onChange={(event) =>
-                          setNewBrandTradeName(event.target.value)
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label className="mb-1.5 block">RUC / Tax ID</Label>
-                      <Input
-                        value={newBrandTaxId}
-                        onChange={(event) =>
-                          setNewBrandTaxId(event.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={() =>
-                      createBrandAndLink.mutate({
-                        agencyOrganizationId: effectiveNewBrandAgencyId,
-                        name: newBrandName,
-                        legalName: newBrandLegalName || undefined,
-                        tradeName: newBrandTradeName || undefined,
-                        taxId: newBrandTaxId || undefined,
-                        assignUserId: userId,
-                      })
-                    }
-                    disabled={
-                      createBrandAndLink.isPending ||
-                      !effectiveNewBrandAgencyId ||
-                      !newBrandName.trim()
-                    }
-                  >
-                    {createBrandAndLink.isPending
-                      ? "Creando..."
-                      : "Crear y vincular"}
-                  </Button>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Esta cuenta no tiene membresías en agencias. Agrega una
-                  membresía de agencia para habilitar este flujo.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Vincular marca existente</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div>
-                  <Label className="mb-1.5 block">Agencia</Label>
-                  <SelectNative
-                    value={effectiveLinkAgencyId}
-                    onChange={(event) => setLinkAgencyId(event.target.value)}
-                  >
-                    <option value="">Selecciona agencia</option>
-                    {agencyMemberships.map((membership) => (
-                      <option
-                        key={membership.organization.id}
-                        value={membership.organization.id}
-                      >
-                        {membership.organization.name}
-                      </option>
-                    ))}
-                  </SelectNative>
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Marca</Label>
-                  <SelectNative
-                    value={linkAdvertiserId}
-                    onChange={(event) =>
-                      setLinkAdvertiserId(event.target.value)
-                    }
-                  >
-                    <option value="">Selecciona marca</option>
-                    {allAdvertisers.map((organization) => (
-                      <option key={organization.id} value={organization.id}>
-                        {organization.name}
-                      </option>
-                    ))}
-                  </SelectNative>
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Estado</Label>
-                  <SelectNative
-                    value={linkRelationshipStatus}
-                    onChange={(event) =>
-                      setLinkRelationshipStatus(
-                        event.target.value as OrganizationRelationshipStatus,
-                      )
-                    }
-                  >
-                    {relationshipStatusOptions.map((status) => (
-                      <option key={status} value={status}>
-                        {RELATIONSHIP_STATUS_LABELS[status]}
-                      </option>
-                    ))}
-                  </SelectNative>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    className={permissionCheckboxClasses()}
-                    checked={linkCanCreateRequests}
-                    onChange={(event) =>
-                      setLinkCanCreateRequests(event.target.checked)
-                    }
-                  />
-                  Puede crear solicitudes
-                </label>
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    className={permissionCheckboxClasses()}
-                    checked={linkCanCreateOrders}
-                    onChange={(event) =>
-                      setLinkCanCreateOrders(event.target.checked)
-                    }
-                  />
-                  Puede crear órdenes
-                </label>
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    className={permissionCheckboxClasses()}
-                    checked={linkCanViewBilling}
-                    onChange={(event) =>
-                      setLinkCanViewBilling(event.target.checked)
-                    }
-                  />
-                  Puede ver facturación
-                </label>
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    className={permissionCheckboxClasses()}
-                    checked={linkCanManageContacts}
-                    onChange={(event) =>
-                      setLinkCanManageContacts(event.target.checked)
-                    }
-                  />
-                  Puede gestionar contactos
-                </label>
-              </div>
-
-              <Button
-                onClick={() =>
-                  upsertRelationship.mutate({
-                    agencyOrganizationId: effectiveLinkAgencyId,
-                    brandId: linkAdvertiserId,
-                    status: linkRelationshipStatus,
-                    canCreateRequests: linkCanCreateRequests,
-                    canCreateOrders: linkCanCreateOrders,
-                    canViewBilling: linkCanViewBilling,
-                    canManageContacts: linkCanManageContacts,
-                  })
-                }
-                disabled={
-                  upsertRelationship.isPending ||
-                  !effectiveLinkAgencyId ||
-                  !linkAdvertiserId
-                }
-              >
-                {upsertRelationship.isPending
-                  ? "Guardando..."
-                  : "Vincular marca"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Relaciones gestionadas por sus agencias</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {account.managedRelationships.length > 0 ? (
-                account.managedRelationships.map((relationship) => {
-                  const draft = relationshipDrafts[relationship.id] ?? {
-                    status: relationship.status,
-                    canCreateRequests: relationship.canCreateRequests,
-                    canCreateOrders: relationship.canCreateOrders,
-                    canViewBilling: relationship.canViewBilling,
-                    canManageContacts: relationship.canManageContacts,
-                  };
-
-                  return (
-                    <div
-                      key={relationship.id}
-                      className="rounded-md border p-3"
-                    >
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm text-foreground">
-                          <span className="font-medium">
-                            {relationship.sourceOrganization.name}
-                          </span>{" "}
-                          →{" "}
-                          <span className="font-medium">
-                            {relationship.targetOrganization.name}
-                          </span>
-                        </p>
-                        <Badge
-                          variant={getRelationshipStatusBadgeVariant(
-                            draft.status,
-                          )}
-                        >
-                          {RELATIONSHIP_STATUS_LABELS[draft.status]}
-                        </Badge>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <div>
-                          <Label className="mb-1.5 block">Estado</Label>
-                          <SelectNative
-                            value={draft.status}
-                            onChange={(event) =>
-                              setRelationshipDrafts((current) => ({
-                                ...current,
-                                [relationship.id]: {
-                                  ...draft,
-                                  status: event.target
-                                    .value as OrganizationRelationshipStatus,
-                                },
-                              }))
-                            }
-                          >
-                            {relationshipStatusOptions.map((status) => (
-                              <option key={status} value={status}>
-                                {RELATIONSHIP_STATUS_LABELS[status]}
-                              </option>
-                            ))}
-                          </SelectNative>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-                        <label className="flex items-center gap-2 text-sm text-foreground">
-                          <input
-                            type="checkbox"
-                            className={permissionCheckboxClasses()}
-                            checked={draft.canCreateRequests}
-                            onChange={(event) =>
-                              setRelationshipDrafts((current) => ({
-                                ...current,
-                                [relationship.id]: {
-                                  ...draft,
-                                  canCreateRequests: event.target.checked,
-                                },
-                              }))
-                            }
-                          />
-                          Puede crear solicitudes
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-foreground">
-                          <input
-                            type="checkbox"
-                            className={permissionCheckboxClasses()}
-                            checked={draft.canCreateOrders}
-                            onChange={(event) =>
-                              setRelationshipDrafts((current) => ({
-                                ...current,
-                                [relationship.id]: {
-                                  ...draft,
-                                  canCreateOrders: event.target.checked,
-                                },
-                              }))
-                            }
-                          />
-                          Puede crear órdenes
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-foreground">
-                          <input
-                            type="checkbox"
-                            className={permissionCheckboxClasses()}
-                            checked={draft.canViewBilling}
-                            onChange={(event) =>
-                              setRelationshipDrafts((current) => ({
-                                ...current,
-                                [relationship.id]: {
-                                  ...draft,
-                                  canViewBilling: event.target.checked,
-                                },
-                              }))
-                            }
-                          />
-                          Puede ver facturación
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-foreground">
-                          <input
-                            type="checkbox"
-                            className={permissionCheckboxClasses()}
-                            checked={draft.canManageContacts}
-                            onChange={(event) =>
-                              setRelationshipDrafts((current) => ({
-                                ...current,
-                                [relationship.id]: {
-                                  ...draft,
-                                  canManageContacts: event.target.checked,
-                                },
-                              }))
-                            }
-                          />
-                          Puede gestionar contactos
-                        </label>
-                      </div>
-
-                      <Button
-                        className="mt-3"
-                        variant="outline"
-                        onClick={() =>
-                          updateRelationship.mutate({
-                            relationshipId: relationship.id,
-                            status: draft.status,
-                            canCreateRequests: draft.canCreateRequests,
-                            canCreateOrders: draft.canCreateOrders,
-                            canViewBilling: draft.canViewBilling,
-                            canManageContacts: draft.canManageContacts,
-                          })
-                        }
-                        disabled={updateRelationship.isPending}
-                      >
-                        Guardar relación
-                      </Button>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Sin relaciones gestionadas.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Relaciones donde participa como marca</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {account.clientRelationships.length > 0 ? (
-                account.clientRelationships.map((relationship) => (
-                  <div
-                    key={relationship.id}
-                    className="flex items-center justify-between rounded-md border p-3"
-                  >
-                    <p className="text-sm text-foreground">
-                      {relationship.sourceOrganization.name} →{" "}
-                      {relationship.targetOrganization.name}
-                    </p>
-                    <Badge
-                      variant={getRelationshipStatusBadgeVariant(
-                        relationship.status,
-                      )}
-                    >
-                      {RELATIONSHIP_STATUS_LABELS[relationship.status]}
-                    </Badge>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Sin relaciones como marca.
                 </p>
               )}
             </CardContent>

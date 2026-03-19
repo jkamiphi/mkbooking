@@ -12,7 +12,7 @@ export default async function AccountDetailPage({ params }: AccountDetailPagePro
     <AdminPageShell>
       <AdminPageHeader
         title="Detalle de cuenta"
-        description="Administra cuenta, organizaciones, relaciones agencia-marca y permisos de acceso."
+        description="Administra tipo de cuenta, membresías organizacionales y permisos de acceso."
       />
       <AccountDetailContent userId={userId} />
     </AdminPageShell>

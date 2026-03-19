@@ -63,12 +63,6 @@ interface AccountsListTableProps {
       image: string | null;
       emailVerified: boolean;
     };
-    relationshipSummary: {
-      total: number;
-      active: number;
-      pending: number;
-      inactive: number;
-    };
     organizationRoles: Array<{
       membershipId: string;
       role: OrganizationRole;
@@ -214,7 +208,6 @@ export function AccountsListTable({
               <TableHead className="px-6">Tipo de cuenta</TableHead>
               <TableHead className="px-6">Rol de sistema</TableHead>
               <TableHead className="px-6">Organizaciones</TableHead>
-              <TableHead className="px-6">Relaciones</TableHead>
               <TableHead className="px-6">Estado</TableHead>
               <TableHead className="px-6">Registrado</TableHead>
               <TableHead className="px-6 text-right">Acciones</TableHead>
@@ -224,7 +217,7 @@ export function AccountsListTable({
             {isLoading
               ? [...Array(6)].map((_, index) => (
                   <TableRow key={`accounts-skeleton-${index}`}>
-                    <TableCell className="px-6" colSpan={8}>
+                    <TableCell className="px-6" colSpan={7}>
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
                   </TableRow>
@@ -233,7 +226,7 @@ export function AccountsListTable({
 
             {!isLoading && accounts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   No se encontraron cuentas que coincidan con los filtros actuales.
                 </TableCell>
               </TableRow>
@@ -288,21 +281,6 @@ export function AccountsListTable({
                         </div>
                       ) : (
                         <span>Ninguna</span>
-                      )}
-                    </TableCell>
-
-                    <TableCell className="px-6 text-sm">
-                      {account.relationshipSummary.total > 0 ? (
-                        <div className="space-y-1">
-                          <p className="font-medium text-foreground">
-                            {account.relationshipSummary.total} total
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {account.relationshipSummary.active} activas · {account.relationshipSummary.pending} pendientes
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Sin relaciones</span>
                       )}
                     </TableCell>
 

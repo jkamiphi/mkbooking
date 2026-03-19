@@ -4,7 +4,7 @@ import { AccountsContent } from "./accounts-content";
 
 export const metadata = {
   title: "Cuentas - Admin",
-  description: "Gestión unificada de usuarios, organizaciones y relaciones agencia-marca.",
+  description: "Gestión de usuarios, roles y membresías organizacionales.",
 };
 
 export default function AccountsPage() {
@@ -12,7 +12,7 @@ export default function AccountsPage() {
     <AdminPageShell>
       <AdminPageHeader
         title="Cuentas"
-        description="Gestiona en una sola vista el acceso de usuarios, sus organizaciones y los vínculos agencia-marca."
+        description="Gestiona cuentas de usuario, roles de sistema y membresías en organizaciones."
       />
       <Suspense fallback={null}>
         <AccountsContent />

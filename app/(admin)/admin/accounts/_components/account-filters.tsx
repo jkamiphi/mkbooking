@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type {
-  OrganizationRelationshipStatus,
   OrganizationType,
   SystemRole,
   UserAccountType,
@@ -22,7 +21,6 @@ import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import {
   ACCOUNT_TYPE_LABELS,
   ORGANIZATION_TYPE_LABELS,
-  RELATIONSHIP_STATUS_LABELS,
   SYSTEM_ROLE_LABELS,
 } from "../_lib/account-labels";
 
@@ -32,7 +30,6 @@ interface AccountFiltersValue {
   accountType?: UserAccountType;
   isActive?: boolean;
   organizationType?: OrganizationType;
-  relationshipStatus?: OrganizationRelationshipStatus;
 }
 
 interface AccountFiltersProps {
@@ -60,7 +57,6 @@ export function AccountFilters({
       accountType: draftFilters.accountType,
       isActive: draftFilters.isActive,
       organizationType: draftFilters.organizationType,
-      relationshipStatus: draftFilters.relationshipStatus,
     });
     setIsOpen(false);
   }
@@ -72,7 +68,6 @@ export function AccountFilters({
       accountType: undefined,
       isActive: undefined,
       organizationType: undefined,
-      relationshipStatus: undefined,
     };
     setDraftFilters(cleared);
     onFiltersChange(cleared);
@@ -86,7 +81,6 @@ export function AccountFilters({
     isActive:
       filters.isActive === undefined ? undefined : String(filters.isActive),
     organizationType: filters.organizationType,
-    relationshipStatus: filters.relationshipStatus,
   });
 
   const summaryChips = useMemo(
@@ -120,12 +114,6 @@ export function AccountFilters({
           getLabel: (state) =>
             `Tipo organización: ${state.organizationType ? ORGANIZATION_TYPE_LABELS[state.organizationType] : ""}`,
         },
-        {
-          key: "relationshipStatus",
-          isActive: (state) => Boolean(state.relationshipStatus),
-          getLabel: (state) =>
-            `Relación: ${state.relationshipStatus ? RELATIONSHIP_STATUS_LABELS[state.relationshipStatus] : ""}`,
-        },
       ]).map((chip) => ({
         ...chip,
         onRemove: () => {
@@ -149,7 +137,6 @@ export function AccountFilters({
             onFiltersChange({ ...filters, organizationType: undefined });
             return;
           }
-          onFiltersChange({ ...filters, relationshipStatus: undefined });
         },
       })),
     [filters, onFiltersChange],
@@ -169,7 +156,7 @@ export function AccountFilters({
 
         <FilterSheetPanel
           title="Filtrar cuentas"
-          description="Segmenta por tipo de cuenta, rol, estado y relaciones agencia-marca."
+          description="Segmenta por tipo de cuenta, rol, estado y organización."
           onApply={applyFilters}
           onClear={clearFilters}
         >
@@ -281,27 +268,6 @@ export function AccountFilters({
             </SelectNative>
           </FilterSheetSection>
 
-          <FilterSheetSection title="Estado de relación agencia-marca">
-            <SelectNative
-              value={draftFilters.relationshipStatus ?? "ALL"}
-              onChange={(event) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  relationshipStatus:
-                    event.target.value === "ALL"
-                      ? undefined
-                      : (event.target.value as OrganizationRelationshipStatus),
-                }))
-              }
-            >
-              <option value="ALL">Todas</option>
-              {Object.entries(RELATIONSHIP_STATUS_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </SelectNative>
-          </FilterSheetSection>
         </FilterSheetPanel>
       </Sheet>
 

@@ -3,8 +3,6 @@
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, RotateCcw } from "lucide-react";
-import { toast } from "sonner";
-import type { OrganizationRelationshipStatus } from "@prisma/client";
 import { trpc } from "@/lib/trpc/client";
 import {
   countActiveFilters,
@@ -21,8 +19,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +34,8 @@ import {
   getRelationshipStatusBadgeVariant,
   RELATIONSHIP_STATUS_LABELS,
 } from "../_lib/account-labels";
+import { CreateBrandAndLinkModal } from "./_components/create-brand-and-link-modal";
+import { ManageAgencyBrandRelationshipsModal } from "./_components/manage-agency-brand-relationships-modal";
 
 const statusOptions = [
   { value: "ALL", label: "Todos los estados" },
@@ -58,22 +56,11 @@ const relationshipStatusOptions = [
   { value: "INACTIVE", label: RELATIONSHIP_STATUS_LABELS.INACTIVE },
 ] as const;
 
-const relationshipFormStatusOptions: OrganizationRelationshipStatus[] = [
-  "PENDING",
-  "ACTIVE",
-  "INACTIVE",
-];
-
 const pageSize = 15;
-
-function permissionCheckboxClasses() {
-  return "h-4 w-4 rounded border border-neutral-300 text-[#0359A8] focus:ring-[#0359A8]";
-}
 
 type RelationshipStatusFilter = (typeof relationshipStatusOptions)[number]["value"];
 
 export function BrandsContent() {
-  const utils = trpc.useUtils();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -112,111 +99,9 @@ export function BrandsContent() {
     skip: page * pageSize,
     take: pageSize,
   });
-
-  const agenciesQuery = trpc.admin.listManagedOrganizations.useQuery({
-    organizationType: "AGENCY",
-    isActive: true,
-    skip: 0,
-    take: 300,
-    orderBy: "name",
-    orderDirection: "asc",
-  });
-
-  const directClientsQuery = trpc.admin.listManagedOrganizations.useQuery({
-    organizationType: "DIRECT_CLIENT",
-    isActive: true,
-    skip: 0,
-    take: 300,
-    orderBy: "name",
-    orderDirection: "asc",
-  });
-
-  const allBrandsForLinkQuery = trpc.admin.listBrands.useQuery({
-    isActive: true,
-    skip: 0,
-    take: 300,
-    orderBy: "name",
-    orderDirection: "asc",
-  });
-
-  const [newBrandAgencyId, setNewBrandAgencyId] = useState("");
-  const [newBrandName, setNewBrandName] = useState("");
-  const [newBrandLegalName, setNewBrandLegalName] = useState("");
-  const [newBrandTradeName, setNewBrandTradeName] = useState("");
-  const [newBrandTaxId, setNewBrandTaxId] = useState("");
-
-  const [linkAgencyId, setLinkAgencyId] = useState("");
-  const [linkAdvertiserId, setLinkAdvertiserId] = useState("");
-  const [linkRelationshipStatus, setLinkRelationshipStatus] =
-    useState<OrganizationRelationshipStatus>("ACTIVE");
-  const [linkCanCreateRequests, setLinkCanCreateRequests] = useState(true);
-  const [linkCanCreateOrders, setLinkCanCreateOrders] = useState(true);
-  const [linkCanViewBilling, setLinkCanViewBilling] = useState(false);
-  const [linkCanManageContacts, setLinkCanManageContacts] = useState(false);
-
-  const agencies = agenciesQuery.data?.managedOrganizations ?? [];
   const brands = brandsQuery.data?.brands ?? [];
   const total = brandsQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-  const defaultAgencyId = agencies[0]?.id ?? "";
-  const effectiveNewBrandAgencyId = newBrandAgencyId || defaultAgencyId;
-  const effectiveLinkAgencyId = linkAgencyId || defaultAgencyId;
-
-  const advertiserOptions = useMemo(() => {
-    const unique = new Map<string, { id: string; name: string; sourceLabel: string }>();
-
-    for (const organization of directClientsQuery.data?.managedOrganizations ?? []) {
-      unique.set(organization.id, {
-        id: organization.id,
-        name: organization.name,
-        sourceLabel: "Cliente directo",
-      });
-    }
-
-    for (const brand of allBrandsForLinkQuery.data?.brands ?? []) {
-      unique.set(brand.id, {
-        id: brand.id,
-        name: brand.name,
-        sourceLabel: "Marca",
-      });
-    }
-
-    return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name, "es"));
-  }, [allBrandsForLinkQuery.data?.brands, directClientsQuery.data?.managedOrganizations]);
-
-  async function invalidateBrandViews() {
-    await Promise.all([
-      utils.admin.listBrands.invalidate(),
-      utils.admin.listManagedOrganizations.invalidate(),
-      utils.admin.listAccounts.invalidate(),
-      utils.admin.stats.invalidate(),
-    ]);
-  }
-
-  const createBrandAndLink = trpc.admin.createBrandAndLinkToAgency.useMutation({
-    onSuccess: async () => {
-      await invalidateBrandViews();
-      setNewBrandName("");
-      setNewBrandLegalName("");
-      setNewBrandTradeName("");
-      setNewBrandTaxId("");
-      toast.success("Marca creada y vinculada.");
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
-
-  const upsertRelationship = trpc.admin.upsertAgencyClientRelationship.useMutation({
-    onSuccess: async () => {
-      await invalidateBrandViews();
-      toast.success("Relación agencia-marca actualizada.");
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
 
   const rangeLabel = useMemo(() => {
     if (total === 0) return "0 resultados";
@@ -400,210 +285,11 @@ export function BrandsContent() {
             </FilterSheetSection>
           </FilterSheetPanel>
         </Sheet>
-      </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Crear marca y vincularla a agencia</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {agencies.length > 0 ? (
-              <>
-                <div>
-                  <Label className="mb-1.5 block">Agencia operativa</Label>
-                  <SelectNative
-                    value={effectiveNewBrandAgencyId}
-                    onChange={(event) => setNewBrandAgencyId(event.target.value)}
-                  >
-                    {agencies.map((agency) => (
-                      <option key={agency.id} value={agency.id}>
-                        {agency.name}
-                      </option>
-                    ))}
-                  </SelectNative>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div>
-                    <Label className="mb-1.5 block">Nombre de marca *</Label>
-                    <Input
-                      value={newBrandName}
-                      onChange={(event) => setNewBrandName(event.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block">Razón social</Label>
-                    <Input
-                      value={newBrandLegalName}
-                      onChange={(event) => setNewBrandLegalName(event.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block">Nombre comercial</Label>
-                    <Input
-                      value={newBrandTradeName}
-                      onChange={(event) => setNewBrandTradeName(event.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block">RUC / Tax ID</Label>
-                    <Input
-                      value={newBrandTaxId}
-                      onChange={(event) => setNewBrandTaxId(event.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  onClick={() =>
-                    createBrandAndLink.mutate({
-                      agencyOrganizationId: effectiveNewBrandAgencyId,
-                      name: newBrandName,
-                      legalName: newBrandLegalName || undefined,
-                      tradeName: newBrandTradeName || undefined,
-                      taxId: newBrandTaxId || undefined,
-                    })
-                  }
-                  disabled={
-                    createBrandAndLink.isPending ||
-                    !effectiveNewBrandAgencyId ||
-                    !newBrandName.trim()
-                  }
-                >
-                  {createBrandAndLink.isPending ? "Creando..." : "Crear y vincular"}
-                </Button>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No hay agencias activas disponibles para vincular marcas.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Vincular marca existente</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {agencies.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <div>
-                    <Label className="mb-1.5 block">Agencia</Label>
-                    <SelectNative
-                      value={effectiveLinkAgencyId}
-                      onChange={(event) => setLinkAgencyId(event.target.value)}
-                    >
-                      <option value="">Selecciona agencia</option>
-                      {agencies.map((agency) => (
-                        <option key={agency.id} value={agency.id}>
-                          {agency.name}
-                        </option>
-                      ))}
-                    </SelectNative>
-                  </div>
-
-                  <div>
-                    <Label className="mb-1.5 block">Marca / cliente</Label>
-                    <SelectNative
-                      value={linkAdvertiserId}
-                      onChange={(event) => setLinkAdvertiserId(event.target.value)}
-                    >
-                      <option value="">Selecciona marca o cliente</option>
-                      {advertiserOptions.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.name} ({option.sourceLabel})
-                        </option>
-                      ))}
-                    </SelectNative>
-                  </div>
-
-                  <div>
-                    <Label className="mb-1.5 block">Estado</Label>
-                    <SelectNative
-                      value={linkRelationshipStatus}
-                      onChange={(event) =>
-                        setLinkRelationshipStatus(
-                          event.target.value as OrganizationRelationshipStatus,
-                        )
-                      }
-                    >
-                      {relationshipFormStatusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {RELATIONSHIP_STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </SelectNative>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  <label className="flex items-center gap-2 text-sm text-foreground">
-                    <input
-                      type="checkbox"
-                      className={permissionCheckboxClasses()}
-                      checked={linkCanCreateRequests}
-                      onChange={(event) => setLinkCanCreateRequests(event.target.checked)}
-                    />
-                    Puede crear solicitudes
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-foreground">
-                    <input
-                      type="checkbox"
-                      className={permissionCheckboxClasses()}
-                      checked={linkCanCreateOrders}
-                      onChange={(event) => setLinkCanCreateOrders(event.target.checked)}
-                    />
-                    Puede crear órdenes
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-foreground">
-                    <input
-                      type="checkbox"
-                      className={permissionCheckboxClasses()}
-                      checked={linkCanViewBilling}
-                      onChange={(event) => setLinkCanViewBilling(event.target.checked)}
-                    />
-                    Puede ver facturación
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-foreground">
-                    <input
-                      type="checkbox"
-                      className={permissionCheckboxClasses()}
-                      checked={linkCanManageContacts}
-                      onChange={(event) => setLinkCanManageContacts(event.target.checked)}
-                    />
-                    Puede gestionar contactos
-                  </label>
-                </div>
-
-                <Button
-                  onClick={() =>
-                    upsertRelationship.mutate({
-                      agencyOrganizationId: effectiveLinkAgencyId,
-                      brandId: linkAdvertiserId,
-                      status: linkRelationshipStatus,
-                      canCreateRequests: linkCanCreateRequests,
-                      canCreateOrders: linkCanCreateOrders,
-                      canViewBilling: linkCanViewBilling,
-                      canManageContacts: linkCanManageContacts,
-                    })
-                  }
-                  disabled={
-                    upsertRelationship.isPending || !effectiveLinkAgencyId || !linkAdvertiserId
-                  }
-                >
-                  {upsertRelationship.isPending ? "Guardando..." : "Vincular marca"}
-                </Button>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No hay agencias activas disponibles para crear relaciones.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <CreateBrandAndLinkModal />
+          <ManageAgencyBrandRelationshipsModal />
+        </div>
       </div>
 
       <Card className="overflow-hidden">

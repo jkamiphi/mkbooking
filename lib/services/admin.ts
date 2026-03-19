@@ -73,7 +73,6 @@ export const adminListAccountsSchema = z.object({
   accountType: userAccountTypeSchema.optional(),
   isActive: z.boolean().optional(),
   organizationType: z.nativeEnum(OrganizationType).optional(),
-  relationshipStatus: brandAccessStatusSchema.optional(),
   search: z.string().optional(),
   skip: z.number().min(0).default(0),
   take: z.number().min(1).max(100).default(20),
@@ -223,7 +222,6 @@ export interface AdminAccountRow {
   };
   displayName: string;
   organizationRoles: AdminAccountOrganizationMembership[];
-  relationshipSummary: AdminAccountRelationshipSummary;
 }
 
 export interface AdminAccountDetail {
@@ -250,42 +248,6 @@ export interface AdminAccountDetail {
     updatedAt: Date;
   };
   organizationRoles: AdminAccountOrganizationMembership[];
-  managedRelationships: Array<{
-    id: string;
-    status: OrganizationRelationshipStatus;
-    canCreateRequests: boolean;
-    canCreateOrders: boolean;
-    canViewBilling: boolean;
-    canManageContacts: boolean;
-    sourceOrganization: {
-      id: string;
-      name: string;
-      organizationType: OrganizationType;
-    };
-    targetOrganization: {
-      id: string;
-      name: string;
-      organizationType: OrganizationType;
-    };
-  }>;
-  clientRelationships: Array<{
-    id: string;
-    status: OrganizationRelationshipStatus;
-    canCreateRequests: boolean;
-    canCreateOrders: boolean;
-    canViewBilling: boolean;
-    canManageContacts: boolean;
-    sourceOrganization: {
-      id: string;
-      name: string;
-      organizationType: OrganizationType;
-    };
-    targetOrganization: {
-      id: string;
-      name: string;
-      organizationType: OrganizationType;
-    };
-  }>;
 }
 
 export interface AdminManagedOrganizationRow {
@@ -693,7 +655,6 @@ export async function adminListAccounts(
     accountType,
     isActive,
     organizationType,
-    relationshipStatus,
     search,
     skip,
     take,
@@ -799,55 +760,7 @@ export async function adminListAccounts(
     db.userProfile.count({ where }),
   ]);
 
-  const agencyOrganizationIds = Array.from(
-    new Set(
-      profiles.flatMap((profile) =>
-        profile.organizationRoles
-          .filter(
-            (membership) =>
-              membership.organization.organizationType ===
-              OrganizationType.AGENCY,
-          )
-          .map((membership) => membership.organization.id),
-      ),
-    ),
-  );
-
-  const relationships =
-    agencyOrganizationIds.length > 0
-      ? await db.brandAccess.findMany({
-          where: {
-            organizationId: { in: agencyOrganizationIds },
-          },
-          select: {
-            organizationId: true,
-            status: true,
-          },
-        })
-      : [];
-
-  const relationshipStatusesByAgency = new Map<
-    string,
-    OrganizationRelationshipStatus[]
-  >();
-
-  for (const relationship of relationships) {
-    const existing =
-      relationshipStatusesByAgency.get(relationship.organizationId) ?? [];
-    existing.push(relationship.status);
-    relationshipStatusesByAgency.set(relationship.organizationId, existing);
-  }
-
-  let accounts: AdminAccountRow[] = profiles.map((profile) => {
-    const agencyStatuses = profile.organizationRoles
-      .filter(
-        (membership) =>
-          membership.organization.organizationType === OrganizationType.AGENCY,
-      )
-      .flatMap(
-        (membership) =>
-          relationshipStatusesByAgency.get(membership.organization.id) ?? [],
-      );
+  const accounts: AdminAccountRow[] = profiles.map((profile) => {
     const displayName =
       profile.firstName && profile.lastName
         ? `${profile.firstName} ${profile.lastName}`
@@ -863,7 +776,6 @@ export async function adminListAccounts(
       createdAt: profile.createdAt,
       user: profile.user,
       displayName,
-      relationshipSummary: buildRelationshipSummary(agencyStatuses),
       organizationRoles: profile.organizationRoles.map((membership) => ({
         membershipId: membership.id,
         role: membership.role,
@@ -874,22 +786,10 @@ export async function adminListAccounts(
     };
   });
 
-  if (relationshipStatus) {
-    accounts = accounts.filter((account) => {
-      if (relationshipStatus === OrganizationRelationshipStatus.ACTIVE) {
-        return account.relationshipSummary.active > 0;
-      }
-      if (relationshipStatus === OrganizationRelationshipStatus.PENDING) {
-        return account.relationshipSummary.pending > 0;
-      }
-      return account.relationshipSummary.inactive > 0;
-    });
-  }
-
   return {
     accounts,
-    total: relationshipStatus ? accounts.length : total,
-    hasMore: relationshipStatus ? false : skip + accounts.length < total,
+    total,
+    hasMore: skip + accounts.length < total,
   };
 }
 
@@ -1179,124 +1079,6 @@ export async function adminGetAccountDetail(
     return null;
   }
 
-  const agencyOrganizationIds = profile.organizationRoles
-    .filter(
-      (membership) =>
-        membership.organization.organizationType === OrganizationType.AGENCY,
-    )
-    .map((membership) => membership.organization.id);
-
-  const organizationIds = profile.organizationRoles.map(
-    (membership) => membership.organization.id,
-  );
-
-  const [managedAccesses, clientAccesses] = await Promise.all([
-    agencyOrganizationIds.length > 0
-      ? db.brandAccess.findMany({
-          where: {
-            organizationId: { in: agencyOrganizationIds },
-          },
-          orderBy: [{ status: "asc" }, { brand: { name: "asc" } }],
-          select: {
-            id: true,
-            status: true,
-            canCreateRequests: true,
-            canCreateOrders: true,
-            canViewBilling: true,
-            canManageContacts: true,
-            organization: {
-              select: {
-                id: true,
-                name: true,
-                organizationType: true,
-              },
-            },
-            brand: {
-              select: {
-                id: true,
-                name: true,
-                ownerOrganization: {
-                  select: {
-                    organizationType: true,
-                  },
-                },
-              },
-            },
-          },
-        })
-      : Promise.resolve([]),
-    organizationIds.length > 0
-      ? db.brandAccess.findMany({
-          where: {
-            brand: {
-              ownerOrganizationId: { in: organizationIds },
-            },
-          },
-          orderBy: [{ status: "asc" }, { organization: { name: "asc" } }],
-          select: {
-            id: true,
-            status: true,
-            canCreateRequests: true,
-            canCreateOrders: true,
-            canViewBilling: true,
-            canManageContacts: true,
-            organization: {
-              select: {
-                id: true,
-                name: true,
-                organizationType: true,
-              },
-            },
-            brand: {
-              select: {
-                id: true,
-                name: true,
-                ownerOrganization: {
-                  select: {
-                    organizationType: true,
-                  },
-                },
-              },
-            },
-          },
-        })
-      : Promise.resolve([]),
-  ]);
-
-  const managedRelationships = managedAccesses.map((relationship) => ({
-    id: relationship.id,
-    status: relationship.status,
-    canCreateRequests: relationship.canCreateRequests,
-    canCreateOrders: relationship.canCreateOrders,
-    canViewBilling: relationship.canViewBilling,
-    canManageContacts: relationship.canManageContacts,
-    sourceOrganization: relationship.organization,
-    targetOrganization: {
-      id: relationship.brand.id,
-      name: relationship.brand.name,
-      organizationType:
-        relationship.brand.ownerOrganization?.organizationType ??
-        OrganizationType.DIRECT_CLIENT,
-    },
-  }));
-
-  const clientRelationships = clientAccesses.map((relationship) => ({
-    id: relationship.id,
-    status: relationship.status,
-    canCreateRequests: relationship.canCreateRequests,
-    canCreateOrders: relationship.canCreateOrders,
-    canViewBilling: relationship.canViewBilling,
-    canManageContacts: relationship.canManageContacts,
-    sourceOrganization: relationship.organization,
-    targetOrganization: {
-      id: relationship.brand.id,
-      name: relationship.brand.name,
-      organizationType:
-        relationship.brand.ownerOrganization?.organizationType ??
-        OrganizationType.DIRECT_CLIENT,
-    },
-  }));
-
   return {
     ...profile,
     organizationRoles: profile.organizationRoles.map((membership) => ({
@@ -1306,8 +1088,6 @@ export async function adminGetAccountDetail(
       acceptedAt: membership.acceptedAt,
       organization: membership.organization,
     })),
-    managedRelationships,
-    clientRelationships,
   };
 }
 

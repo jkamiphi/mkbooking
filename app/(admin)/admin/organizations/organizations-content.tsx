@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { OrganizationFormDialog } from "./_components/organization-form-dialog";
+import { AgencyBrandRelationshipPanel } from "../_components/agency-brand-relationship-panel";
 
 const organizationTypeOptions = [
   { value: "ALL", label: "Todos los tipos" },
@@ -210,6 +211,8 @@ export function OrganizationsContent() {
     },
   }));
 
+  const showAgencyRelationshipPanel = appliedFilters.organizationType === "AGENCY";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -331,6 +334,8 @@ export function OrganizationsContent() {
           <OrganizationFormDialog mode="create" />
         </div>
       </div>
+
+      {showAgencyRelationshipPanel ? <AgencyBrandRelationshipPanel /> : null}
 
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between gap-3">
