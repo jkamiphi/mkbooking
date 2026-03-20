@@ -10,6 +10,8 @@ interface ServerConfig {
 
 let cachedServerConfig: ServerConfig | null = null;
 let cachedCampaignRequestStartGapDays: number | null = null;
+let cachedGoogleMapsStaticApiKey: string | null | undefined;
+let cachedPublicAppUrl: string | null | undefined;
 
 function readRequiredEnvironmentVariable(name: string): string {
   const value = process.env[name];
@@ -63,6 +65,46 @@ export function getCampaignRequestStartGapDays() {
   );
 
   return cachedCampaignRequestStartGapDays;
+}
+
+export function getGoogleMapsStaticApiKey() {
+  if (cachedGoogleMapsStaticApiKey !== undefined) {
+    return cachedGoogleMapsStaticApiKey;
+  }
+
+  const dedicatedApiKey = process.env.GOOGLE_MAPS_STATIC_API_KEY?.trim();
+  if (dedicatedApiKey) {
+    cachedGoogleMapsStaticApiKey = dedicatedApiKey;
+    return cachedGoogleMapsStaticApiKey;
+  }
+
+  const fallbackApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
+  cachedGoogleMapsStaticApiKey = fallbackApiKey || null;
+  return cachedGoogleMapsStaticApiKey;
+}
+
+export function getPublicAppUrl() {
+  if (cachedPublicAppUrl !== undefined) {
+    return cachedPublicAppUrl;
+  }
+
+  const rawValue =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    process.env.BETTER_AUTH_URL?.trim() ||
+    "";
+
+  if (!rawValue) {
+    cachedPublicAppUrl = "http://localhost:3000";
+    return cachedPublicAppUrl;
+  }
+
+  try {
+    cachedPublicAppUrl = new URL(rawValue).origin;
+    return cachedPublicAppUrl;
+  } catch {
+    cachedPublicAppUrl = "http://localhost:3000";
+    return cachedPublicAppUrl;
+  }
 }
 
 export function getServerConfig(): ServerConfig {

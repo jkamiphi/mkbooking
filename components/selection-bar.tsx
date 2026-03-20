@@ -4,10 +4,28 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { CheckCircle2, ChevronUp, ShoppingCart, Trash2, X } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronUp,
+  Download,
+  LoaderCircle,
+  ShoppingCart,
+  Trash2,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
 import { useFaceSelection } from "@/components/face-selection-context";
 import { brandPrimaryButtonClass } from "@/components/public/brand-styles";
+import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type SearchContext = {
   returnTo: string;
@@ -47,12 +65,32 @@ function extractSearchContextFromPath(path: string) {
   };
 }
 
+function parseDownloadFileName(contentDisposition: string | null) {
+  if (!contentDisposition) return null;
+
+  const utfMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch?.[1]) {
+    try {
+      return decodeURIComponent(utfMatch[1]);
+    } catch {
+      return utfMatch[1];
+    }
+  }
+
+  const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  return plainMatch?.[1] ?? null;
+}
+
 export function SelectionBar() {
   const { selectedFaces, selectionCount, removeFace, clearSelection } =
     useFaceSelection();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
+  const [isGeneratingTechnicalSheet, setIsGeneratingTechnicalSheet] =
+    useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { data: sessionData } = useSession();
 
   // Hide on campaign-requests pages (the form already shows selected faces)
   if (pathname.startsWith("/campaign-requests")) return null;
@@ -97,6 +135,61 @@ export function SelectionBar() {
   if (searchContext?.to) quoteParams.set("to", searchContext.to);
 
   const quoteUrl = `/campaign-requests/new?${quoteParams.toString()}`;
+  const canDownloadTechnicalSheet = Boolean(sessionData?.user);
+
+  async function handleDownloadTechnicalSheet() {
+    if (isGeneratingTechnicalSheet) return;
+
+    setIsGeneratingTechnicalSheet(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("faces", faceIdsParam);
+
+      const response = await fetch(`/api/catalog/technical-sheet?${params.toString()}`, {
+        credentials: "include",
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        let errorMessage = "No se pudo generar la ficha técnica.";
+        try {
+          const payload = (await response.json()) as { error?: string };
+          if (payload?.error) {
+            errorMessage = payload.error;
+          }
+        } catch {
+          // Ignore invalid JSON payload and keep fallback message.
+        }
+        throw new Error(errorMessage);
+      }
+
+      const fileName =
+        parseDownloadFileName(response.headers.get("content-disposition")) ||
+        `fichas-tecnicas-${Date.now()}.pdf`;
+      const fileBlob = await response.blob();
+      const objectUrl = URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+
+      setIsDownloadDialogOpen(false);
+      toast.success("Descarga iniciada.");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo generar la ficha técnica.";
+      toast.error("Error al descargar ficha técnica", {
+        description: message,
+      });
+    } finally {
+      setIsGeneratingTechnicalSheet(false);
+    }
+  }
 
   return (
     <>
@@ -207,6 +300,21 @@ export function SelectionBar() {
             >
               Limpiar
             </button>
+            {canDownloadTechnicalSheet ? (
+              <button
+                type="button"
+                onClick={() => setIsDownloadDialogOpen(true)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-mkmedia-blue/25 bg-mkmedia-blue/10 text-mkmedia-blue transition hover:border-mkmedia-blue/35 hover:bg-mkmedia-blue/15 disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Descargar ficha técnica de selección"
+                disabled={isGeneratingTechnicalSheet}
+              >
+                {isGeneratingTechnicalSheet ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+              </button>
+            ) : null}
             <Link
               href={quoteUrl}
               className={cn(
@@ -233,6 +341,59 @@ export function SelectionBar() {
         `}</style>
         </div>
       </div>
+
+      <Dialog
+        open={isDownloadDialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (isGeneratingTechnicalSheet) return;
+          setIsDownloadDialogOpen(nextOpen);
+        }}
+      >
+        <DialogContent className="rounded-md">
+          <DialogHeader>
+            <DialogTitle>Descargar ficha técnica</DialogTitle>
+            <DialogDescription>
+              Se generará un PDF multipágina con{" "}
+              {selectionCount === 1
+                ? "la cara seleccionada"
+                : `las ${selectionCount} caras seleccionadas`}
+              .
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setIsDownloadDialogOpen(false)}
+              className="inline-flex items-center justify-center rounded-md border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isGeneratingTechnicalSheet}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadTechnicalSheet}
+              className={cn(
+                "inline-flex min-w-[180px] items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold",
+                brandPrimaryButtonClass,
+              )}
+              disabled={isGeneratingTechnicalSheet}
+            >
+              {isGeneratingTechnicalSheet ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Descargar PDF
+                </>
+              )}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
